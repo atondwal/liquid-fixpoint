@@ -346,7 +346,7 @@ let wstring w =
   |> Misc.map_to_string string_of_int
 
 (* API *)
-let wpop me w =
+let wpop_ me w =
   try 
     let _, r = WH.maximum w in
     let _    = Hashtbl.remove me.pend r.id in
@@ -355,6 +355,21 @@ let wpop me w =
     let _    = Co.cprintf Co.ol_solve "from wkl = %s \n" (wstring w) in 
     (Some c, WH.remove w)
   with Heaps.EmptyHeap -> (None, w) 
+
+let neg_constraint me c =
+  c |> C.lhs_of_t
+    |> reft_ks 
+    |> List.exists (fun x -> List.mem x me.negs) 
+
+(* NIKI TODO: move this search in a previous state *)
+let rec wpop me w = 
+  match wpop_ me w with
+    | (None, w') -> (None, w)
+    | (Some c, w') -> if neg_constraint me c 
+                      then match wpop me w' with
+                            | (None, w'') -> (Some c, w'')
+                            | (Some c'', w'') -> (Some c'', wpush me w'' [c])
+                      else (Some c, w')
 
 let roots me =
   IM.fold begin fun id r sccm ->
