@@ -468,7 +468,7 @@ let split_by_assertion cfg =
 
 let slice_by_assertion cfg = 
   let cs' =  cfg.Cg.cs 
-          |> Cindex.create cfg.Cg.kuts cfg.Cg.ds 
+          |> Cindex.create cfg.Cg.negs cfg.Cg.kuts cfg.Cg.ds 
           |> Cindex.slice 
           |> Cindex.to_list
   in {cfg with Cg.cs = cs' }

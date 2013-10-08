@@ -61,6 +61,7 @@ module type SOLVER = sig
   val save      : string -> t -> soln -> unit 
   val read      : soln -> FixConstraint.soln
   val min_read  : soln -> FixConstraint.soln
+  val mkbind    : bool -> SolverArch.qbind -> bind 
   val read_bind : soln -> Ast.Symbol.t -> bind
   val cone      : t -> FixConstraint.id -> FixConstraint.tag Ast.Cone.t
   (* val meet   : soln -> soln -> soln  *)
@@ -70,6 +71,7 @@ module Make (Dom : SolverArch.DOMAIN) = struct
   type soln     = Dom.t
   type bind     = Dom.bind
   let min_read  = Dom.min_read
+  let mkbind    = Dom.mkbind
   let read      = Dom.read
   let read_bind = Dom.read_bind  
 (* let meet = Dom.meet *)
@@ -197,8 +199,15 @@ let true_unconstrained sri s =
     in s
 *)
 
+let mk_negs ws = 
+  List.filter C.is_neg_of_wf ws 
+  |> List.map (C.reft_of_wf <+> C.kvars_of_reft)
+  |> List.concat
+  |> List.map snd
+
 (* API *)
 let solve me s = 
+  let me = {me with sri = Ci.set_negs me.sri (mk_negs me.ws)} in 
   let _  = Co.bprintflush mydebug "Fixpoint: Validating Initial Solution \n" in
   (* let _ = F.printf "create: SOLUTION \n %a \n" Dom.print s in *)
   let _  = BS.time "Prepass.profile" PP.profile me.sri in
@@ -234,13 +243,13 @@ let create cfg kf =
             |> BS.time  "Constant Env" (List.map (C.add_consts_t gts))
             |> BS.time  "Simplify" FixSimplify.simplify_ts
             >> Co.bprintf mydebug "Post-Simplify Stats\n%a" print_constr_stats
-            |> BS.time  "Ref Index" Ci.create cfg.Cg.kuts cfg.Cg.ds
+            |> BS.time  "Ref Index" Ci.create cfg.Cg.negs cfg.Cg.kuts cfg.Cg.ds
             |> (!Co.slice <?> BS.time "Slice" Ci.slice) in
   let ws  = cfg.Cg.ws
             |> (!Co.slice <?> BS.time "slice_wf" (Ci.slice_wf sri))
             |> BS.time  "Constant EnvWF" (List.map (C.add_consts_wf gts))
             |> PP.validate_wfs in
-  let cfg = { cfg with Cg.cs = Ci.to_list sri; Cg.ws = ws } in
+  let cfg = { cfg with Cg.negs = mk_negs ws; Cg.cs = Ci.to_list sri; Cg.ws = ws } in
   let s   = if !Constants.dump_simp <> "" then Dom.empty else BS.time "Dom.create" (Dom.create cfg) kf in
   let _   = Co.bprintflush mydebug "\nDONE: Dom.create\n" in
   let _   = Co.bprintflush mydebug "\nBEGIN: PP.validate\n" in

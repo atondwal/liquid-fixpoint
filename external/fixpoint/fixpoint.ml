@@ -76,7 +76,8 @@ let solve ac  =
 
 let dump_solve ac = 
   try 
-    let cs' = solve { ac with Cg.bm = SM.map PA.mkbind ac.Cg.bm } in
+    let mkbind k = SPA.mkbind (List.mem k ac.Cg.negs) in
+    let cs' = solve { ac with Cg.bm = SM.mapi mkbind ac.Cg.bm } in
     let _   = if Co.ck_olev 1 then BNstats.print stdout "Fixpoint Solver Time \n" in
     match cs' with 
     | [] -> (F.printf "\nSAT\n" ; exit 0)

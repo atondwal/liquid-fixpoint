@@ -21,7 +21,7 @@
  *
  *)
 
-type qbind   = Qualifier.t list
+type qbind   = Qualifier.t Solution.b
 
 module type DOMAIN = sig
   type t
@@ -40,5 +40,5 @@ module type DOMAIN = sig
   val dump         : t -> unit
   val simplify     : t -> t
   val ctr_examples : t -> FixConstraint.t list -> FixConstraint.t list -> Counterexample.cex list 
-  val mkbind       : qbind -> bind
+  val mkbind       : bool -> qbind -> bind
 end
