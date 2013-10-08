@@ -1,0 +1,56 @@
+qualif Bot(v:@(0))    : 0 = 1 
+qualif Bot(v:obj)     : 0 = 1 
+qualif Bot(v:a)       : 0 = 1 
+qualif Bot(v:bool)    : 0 = 1 
+qualif Bot(v:int)     : 0 = 1 
+qualif CmpZ(v:a)      : v [ < ; <= ; > ; >= ; = ; != ] 0
+qualif Cmp(v:a,~A:a)  : v [ < ; <= ; > ; >= ; = ; != ] ~A
+qualif One(v:int)     : v = 1
+
+
+constant Prop : func(0, [GHC.Types.Bool; bool])
+bind 0 GHC.Types.I##6c : {VV : func(0, [int; int]) | []}
+bind 1 GHC.Types.I##6c : {VV : func(0, [int; int]) | []}
+bind 2 GHC.Types.EQ#6U : {VV : GHC.Types.Ordering | [(cmp([VV#37]) = GHC.Types.EQ#6U)]}
+bind 3 GHC.Types.GT#6W : {VV : GHC.Types.Ordering | [(cmp([VV#48]) = GHC.Types.GT#6W)]}
+bind 4 GHC.Types.LT#6S : {VV : GHC.Types.Ordering | [(cmp([VV#49]) = GHC.Types.LT#6S)]}
+bind 5 x#a1Y3 : {VV : int | [k_51]}
+bind 6 Fixme.boo#r1XV : {VV : func(0, [int; int]) | []}
+bind 7 VV#54 : {VV : int | [(VV#54 = 3)]}
+bind 8 VV#50 : {VV#50 : int | [k_51]}
+
+constraint: 
+ env [5] 
+ grd true 
+ lhs {VV : int | [k_51]} 
+ rhs {VV : int | [k_52]} 
+ id 2 tag [1] 
+
+constraint: 
+ env [5] 
+ grd true 
+ lhs {VV : int | [k_53[VVV:=VV]]} 
+ rhs {VV : int | [k_52]} 
+ id 4 tag [1] 
+
+
+
+constraint: 
+ env [5] 
+ grd true 
+ lhs {VV : int | [VV = 0]} 
+ rhs {VV : int | [k_52]} 
+ id 1 tag [1] 
+
+wf: neg
+  env [0; 1; 2; 3; 4]
+  reft {VV : int | [k_51]}
+ 
+wf: neg
+  env [0; 1; 2; 3; 4]
+  reft {VVV : int | [k_53]}
+
+wf:
+  env []
+  reft {VV : int | [k_52]}
+ 
