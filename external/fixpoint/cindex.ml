@@ -410,3 +410,7 @@ let data_sliced_deps cs =
   
 (* API *)
 let data_cones cs = cs |> data_sliced_deps |> cone
+
+(* NIKI TODO: rm this interface, set negs by contruction *)
+(* API *)
+let set_negs t negs = {t with negs = negs}
