@@ -37,6 +37,7 @@ module Su  = A.Subst
 module SM  = Sy.SMap
 module SS  = Sy.SSet
 module C   = FixConstraint
+module S   = Solution
 
 module BS  = BNstats
 module Co  = Constants
@@ -91,7 +92,7 @@ end
 module G   = Graph.Persistent.Digraph.ConcreteLabeled(V)(Id)
 module SCC = Graph.Components.Make(G)
 
-type bind = Q.t list
+type bind = Q.t Solution.b 
 
 type t   = 
   { tpc  : ProverArch.prover
@@ -134,6 +135,22 @@ let pprint_qs' ppf =
   List.map (fst <+> snd <+> snd <+> fst) <+> pprint_qs ppf 
 
 (*************************************************************)
+(***************** Bind operations on Map ********************)
+(*************************************************************)
+
+let finds_bind k bs = 
+  S.get_bind (SM.find_default (S.def) k bs)
+
+let find_arity_bind k m = 
+  SM.find_default S.def k m
+  |> S.is_pos
+
+let update_bind k ds m = 
+  SM.find_default (S.def) k m 
+  |> S.set_bind ds
+  |> fun b -> SM.add k b m
+
+(*************************************************************)
 (************* Breadcrumbs for Cex Generation ****************)
 (*************************************************************)
 
@@ -147,7 +164,7 @@ let cx_ctrace b c me =
 
 let cx_update ks kqsm' me : t = 
   List.fold_left begin fun me k -> 
-    let qs    = QS.of_list  (SM.finds k me.m)  in
+    let qs    = QS.of_list  (finds_bind k me.m)  in
     let qs'   = QS.of_list  (SM.finds k kqsm') in
     let kills = QS.elements (QS.diff qs qs')   in
     if Misc.nonnull kills 
@@ -208,17 +225,27 @@ let dump_graph s g =
     >> (fun oc -> Dot.output_graph oc g)
     |> close_out 
 
+let cand_read s k =
+  let _ = asserts (SM.mem k s.m) "ERROR: cand_read : unknown kvar %s\n" (Sy.to_string k) in
+  SM.find k s.m |> S.get_cand |>: (fun q -> ((k, q), Q.pred_of_t q))
+
 let p_read s k =
   let _ = asserts (SM.mem k s.m) "ERROR: p_read : unknown kvar %s\n" (Sy.to_string k) in
-  SM.find k s.m  |>: (fun q -> ((k, q), Q.pred_of_t q))
+  SM.find k s.m |> S.get_bind |>: (fun q -> ((k, q), Q.pred_of_t q))
 
 (* INV: qs' \subseteq qs *)
 let update m k ds' =
-  let ds = SM.finds k m in
+  let ds = finds_bind k m in
   let n  = List.length ds  in
   let n' = List.length ds' in 
-  let _  = asserts (n = 0 || n' <= n) "PredAbs.update: Non-monotone k = %s |ds| = %d |ds'| = %d \n" (Sy.to_string k) n n' in 
-  ((n != n'), SM.add k ds' m)
+  let _  = 
+    if (find_arity_bind k m) then 
+    asserts (n = 0 || n' <= n) "PredAbs.update: Non-monotone k = %s |ds| = %d |ds'| = %d \n" (Sy.to_string k) n n' 
+     else 
+    asserts (n = 0 || n <= n') "PredAbs.update: Non-monotone neg k = %s |ds| = %d |ds'| = %d \n" (Sy.to_string k) n n' 
+  
+  in 
+  ((n != n'), update_bind k ds' m)
   (* >> begin fun _ -> 
         if n' > n && n > 0 then 
           Co.bprintflush mydebug  <| Printf.sprintf "OMFG: update k = %s |ds| = %d |ds'| = %d \n" 
@@ -266,13 +293,18 @@ let top s ks =
 (************************** Refinement *************************)
 (***************************************************************)
 
-let rhs_cands s = function
-  | C.Kvar (su, k) -> k (* >> (fun k -> Co.bprintflush mydebug ("rhs_cands: k = "^(Sy.to_string k)^"\n")) *)
-                        |> p_read s 
-                        (* >> (fun xs -> Co.bprintflush mydebug ("rhs_cands: size="^(string_of_int (List.length xs))^" BEGIN \n")) *)
+let cands msg cond read s = function
+  | C.Kvar (su, k) when cond k
+                        -> k (* >> (fun k -> Co.bprintflush mydebug (msg^"_cands: k = "^(Sy.to_string k)^"\n")) *)
+                        |> read s 
+                        (* >> (fun xs -> Co.bprintflush mydebug (msg^"_cands: size="^(string_of_int (List.length xs))^" BEGIN \n")) *)
                         |>: (Misc.app_snd (Misc.flip A.substs_pred su))
-                        (* >> (fun xs -> Co.bprintflush mydebug ("rhs_cands: size="^(string_of_int (List.length xs))^" DONE\n")) *)
+                        (* >> (fun xs -> Co.bprintflush mydebug (msg^"_cands: size="^(string_of_int (List.length xs))^" DONE\n")) *)
   | _ -> []
+    
+let lhs_cands f = cands "lhs" f p_read
+let rhs_cands   = cands "rhs" (const true) cand_read
+let ras_cands   = cands "ras" (const true) p_read
 
 let check_tp me env vv t lps =  function [] -> [] | rcs ->
   (* let rv  = TP.set_filter me.tpc env vv lps rcs               in
@@ -295,9 +327,42 @@ let read me k = (me.assm k) ++ (if SM.mem k me.m then p_read me k |>: snd else [
 let read_bind s k = failwith "PredAbs.read_bind"
 
 let refine me c =
+  let is_pos k = S.is_pos (SM.find_default S.def k (me.m)) in 
+  let is_neg k = S.is_neg (SM.find_default S.def k (me.m)) in 
   let (_,_,ra2s) as r2 = C.rhs_of_t c in
+  let (_,_,ra1s) as r1 = C.lhs_of_t c in
   let k2s = r2 |> C.kvars_of_reft |> List.map snd in
-  let rcs = BS.time "rhs_cands" (Misc.flap (rhs_cands me)) ra2s in
+  let k1s = r1 |> C.kvars_of_reft |> List.map snd in
+  if (List.exists is_neg k1s) then (
+  (* REFINE NEGATIVE VARIABLES IN NEGATIVE RULES *)
+    let rcs = BS.time "rhs_cands" (Misc.flap (rhs_cands me)) ra1s in
+  if rcs = [] then
+    let _ = me.stat_emptyRHS += 1 in
+    (false, me)
+  else 
+    let lps = BS.time "preds_of_rhs" (C.preds_of_rhs (read me)) c in
+    if BS.time "rhs_auto" (List.for_all P.is_tauto) lps then 
+    let _ = me.stat_unsatLHS += 1 in
+    let _ = me.stat_umatches += List.length rcs in
+    (false, me)
+  else 
+    let rcs     = List.filter (fun (_,p) -> not (P.is_tauto p)) rcs in
+    let lt      = PH.create 17 in
+    let _       = List.iter (fun p -> PH.add lt p ()) lps in
+    let (x1,x2) = List.partition (fun (_,p) -> PH.mem lt p) rcs in
+    let _       = me.stat_matches += (List.length x1) in
+    let kqs1    = List.map fst x1 in
+    (if C.is_simple c 
+     then (
+       ignore(me.stat_simple_refines += 1); kqs1) 
+     else let senv = C.senv_of_t c in
+          let vv   = C.vv_of_t c   in
+          let t    = C.sort_of_t c in
+          kqs1 ++ (BS.time "check tp" (check_tp me senv vv t lps) x2))
+    |> p_update me k1s 
+) else(
+  (* REFINE POSITIVE VARIABLES IN POSITIVE RULES *)
+  let rcs = BS.time "lhs_cands" (Misc.flap (lhs_cands is_pos me)) ra2s in
   if rcs = [] then
     let _ = me.stat_emptyRHS += 1 in
     (false, me)
@@ -321,6 +386,7 @@ let refine me c =
           let t    = C.sort_of_t c in
           kqs1 ++ (BS.time "check tp" (check_tp me senv vv t lps) x2))
     |> p_update me k2s
+)
 
 let refine me c = 
   let me      = me |> (!Co.cex <?> cx_iter c)     in
@@ -341,14 +407,14 @@ let refine_sort_reft env me ((vv, so, ras) as r) =
   let ks   = r |> C.kvars_of_reft |>: snd in
   (* let _    = let s =  String.concat ", " (List.map Sy.to_string ks) in Co.bprintflush mydebug ("\n refine_sort_reft ks = "^s^"\n")  in  *)
   ras 
-  |> Misc.flap (rhs_cands me) (* OMFG blowup due to FLAP if kv appears multiple times...*)
+  |> Misc.flap (ras_cands me) (* OMFG blowup due to FLAP if kv appears multiple times...*)
   |> Misc.filter (fun (_, p) -> C.wellformed_pred env' p)
   |> List.rev_map fst
 (* |> (fun xs -> Co.bprintflush mydebug (Printf.sprintf "refine_sort_reft map: size = %d\n" (List.length xs)); 
                 List.rev_map fst xs)
   >> (fun _ -> Co.bprintflush mydebug "\n refine_sort_reft TICK 4 \n")
   *)
-  |> p_update me ks
+  |> p_update me ks 
   |> snd
 
 let refine_sort me c =
@@ -404,14 +470,16 @@ let pred_of_bind q =
   then pred_of_bind_name q 
   else pred_of_bind_raw q 
 
-let min_binds_bot ds = 
-  match Misc.list_find_maybe (P.is_contra <.> pred_of_bind_raw) ds with
-    | None   -> ds
-    | Some d -> [d] 
 
-(* API *)
-let min_binds s ds = ds |> min_binds_bot |> Misc.rootsBy (def_leq s)
-let min_read s k   = SM.finds k s.m |> min_binds s |>: pred_of_bind
+
+let min_binds_bot ds = 
+  match Misc.list_find_maybe (P.is_contra <.> pred_of_bind_raw) (S.get_bind ds) with
+    | None   -> ds
+    | Some d -> S.set_bind [d] ds
+
+  (* API *)
+let min_binds s ds = ds |> min_binds_bot |> S.get_bind |> (Misc.rootsBy (def_leq s))
+let min_read s k   = SM.find_default S.def k s.m |> min_binds s |>: pred_of_bind
 let min_read s k   = if !Co.minquals then min_read s k else read s k
 let min_read s k   = BS.time "min_read" (min_read s) k
 
@@ -678,7 +746,7 @@ let update_pruned ks me fqm =
     if not (SM.mem k fqm) then m else
       let false_qs = SM.safeFind k fqm "update_pruned 1" in
       let qs = SM.safeFind k m "update_pruned 2" 
-               |> List.filter (fun q -> (not (List.mem (k,q) false_qs))) 
+               |> S.map_bind (List.filter (fun q -> (not (List.mem (k,q) false_qs))))
       in SM.add k qs m
   end me.m ks
 
@@ -703,10 +771,12 @@ let apply_facts_c kf me c =
 
 let apply_facts cs kf me =
   let numqs = me.m |> Ast.Symbol.SMap.to_list
-              |> List.map snd |> List.concat |> List.length in
+              |> List.map (snd <+> S.get_bind) 
+              |> List.concat |> List.length in
   let sol   = List.fold_left (apply_facts_c kf) me cs in
   let numqs' = sol.m |> Ast.Symbol.SMap.to_list
-               |> List.map snd |> List.concat |> List.length in
+               |> List.map (snd <+> S.get_bind) 
+               |> List.concat |> List.length in
   let _ = Printf.printf "Started with %d, proved %d false\n" numqs (numqs-numqs') in
     sol
 
@@ -727,11 +797,15 @@ let binds_of_quals ws qs =
   | "" -> binds_of_quals ws qs  (* regular solving mode *)
   | _  -> SM.empty              (* constraint simplification mode *)
 
+(* API *)
+let meet_bind _ = S.meet_bind 
 
 (* API *)
 let create c facts = 
+  let init k = S.init ~ispos:(not (List.mem k (c.Cg.negs))) in
   binds_of_quals c.Cg.ws c.Cg.qs
-  |> SM.extendWith (fun _ -> (++)) c.Cg.bm
+  |> SM.mapi init
+  |> SM.extendWith meet_bind c.Cg.bm
   |> create c.Cg.ts c.Cg.uops c.Cg.ps c.Cg.cons c.Cg.assm c.Cg.qs
   >> (fun _ -> Co.bprintflush mydebug "\nBEGIN: refine_sort\n")
   |> ((!Constants.refine_sort) <?> Misc.flip (List.fold_left refine_sort) c.Cg.cs)
@@ -745,7 +819,7 @@ let create c facts =
 let empty = create Cg.empty None
 
 (* API *)
-let meet me you = {me with m = SM.extendWith (fun _ -> (++)) me.m you.m} 
+let meet me you = {me with m = SM.extendWith meet_bind me.m you.m} 
 
 (****************************************************************)
 (************* Simplify Solution Using min_read *****************)
@@ -755,7 +829,7 @@ let meet me you = {me with m = SM.extendWith (fun _ -> (++)) me.m you.m}
               >> Printf.printf "minBinds: [%a] \n\n"  pprint_ds
  *)
 
-let simplify s = {s with m = SM.map (min_binds s) s.m} 
+let simplify s = {s with m = SM.map (min_binds s <+> S.init) s.m} 
 
 (************************************************************************)
 (****************** Counterexample Generation ***************************)
@@ -773,7 +847,8 @@ let ctr_examples me cs ucs =
 
 let print_m ppf s = 
   SM.iter begin fun k ds ->
-    ds |> (<?>) (!Co.minquals) (min_binds s)
+    ds |> (<?>) (!Co.minquals) (min_binds s <+> S.init)
+       |> S.get_bind
        |> F.fprintf ppf "solution: %a := [%a] \n\n"  Sy.print k pprint_ds 
   end s.m 
  
@@ -793,10 +868,10 @@ let botInt qs = if List.exists (Q.pred_of_t <+> P.is_contra) qs then 1 else 0
 (* API *)
 let print_stats ppf me =
   let (sum, max, min, bot) =   
-    (SM.fold (fun _ qs x -> (+) x (List.length qs)) me.m 0,
-     SM.fold (fun _ qs x -> max x (List.length qs)) me.m min_int,
-     SM.fold (fun _ qs x -> min x (List.length qs)) me.m max_int,
-     SM.fold (fun _ qs x -> x + botInt qs) me.m 0) in
+    (SM.fold (fun _ qs x -> (+) x (List.length (S.get_bind qs))) me.m 0,
+     SM.fold (fun _ qs x -> max x (List.length (S.get_bind qs))) me.m min_int,
+     SM.fold (fun _ qs x -> min x (List.length (S.get_bind qs))) me.m max_int,
+     SM.fold (fun _ qs x -> x + botInt (S.get_bind qs)) me.m 0) in
   let n   = SM.length me.m in
   let avg = (float_of_int sum) /. (float_of_int n) in
   F.fprintf ppf "# Vars: (Total=%d, False=%d) Quals: (Total=%d, Avg=%f, Max=%d, Min=%d)\n" 
@@ -822,13 +897,13 @@ let key_of_quals qs =
      |> String.concat ","
 
 (* API *)
-let mkbind = id (* Misc.flatten <+> Misc.sort_and_compact *)
+let mkbind _ = id (* Misc.flatten <+> Misc.sort_and_compact *)
 
 (* API *)
 let dump s = 
   s.m 
   |> SM.to_list 
-  |> List.map (snd <+> List.map Q.pred_of_t)
+  |> List.map (snd <+> S.get_bind <+> List.map Q.pred_of_t)
   |> Misc.groupby key_of_quals
   |> List.map begin function 
      | []             -> assertf "impossible" 
