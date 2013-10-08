@@ -55,7 +55,7 @@ let env_of_ibindings is =
 %token <string> Id
 %token <int> Num
 %token TVAR 
-%token TAG ID 
+%token NEG TAG ID 
 %token BEXP
 %token TRUE FALSE
 %token LPAREN  RPAREN LB RB LC RC
@@ -317,8 +317,10 @@ consne:
   ;
 
 wf:
-    ENV env REF reft                              { C.make_wf $2 $4 None }
-  | ENV env REF reft ID Num                       { C.make_wf $2 $4 (Some $6) }
+    ENV env REF reft                              { C.make_wf $2 $4 false None }
+  | NEG ENV env REF reft                          { C.make_wf $3 $5 true None }
+  | NEG ENV env REF reft ID Num                   { C.make_wf $3 $5 true (Some $7) }
+  | ENV env REF reft ID Num                       { C.make_wf $2 $4 false (Some $6) }
   ;
 
 tagsne:

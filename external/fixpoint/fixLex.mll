@@ -91,6 +91,7 @@ rule token = parse
   | '.'                 { DOT }
   | "not"               { NOTWORD }
   | "tag"               { TAG }
+  | "neg"               { NEG }
   | "id"                { ID }
   | "Bexp"              { BEXP }
   | "false"             { FALSE }
