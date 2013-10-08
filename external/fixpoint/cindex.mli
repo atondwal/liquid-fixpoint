@@ -32,7 +32,7 @@ type wkl
 val to_list      : t -> FixConstraint.t list 
 
 (* val to_live_list : t -> FixConstraint.t list *)
-val create       : Ast.Symbol.t list -> FixConstraint.dep list -> FixConstraint.t list -> t 
+val create       : Ast.Symbol.t list -> Ast.Symbol.t list -> FixConstraint.dep list -> FixConstraint.t list -> t 
 val deps         : t -> FixConstraint.t -> FixConstraint.t list
 val slice        : t -> t 
 val slice_wf     : t -> FixConstraint.wf list -> FixConstraint.wf list
@@ -41,6 +41,8 @@ val slice_wf     : t -> FixConstraint.wf list -> FixConstraint.wf list
 val wpush        : t -> wkl -> FixConstraint.t list -> wkl 
 val wpop         : t -> wkl -> FixConstraint.t option * wkl
 val winit        : t -> wkl
+
+val set_negs     : t -> (Ast.Symbol.t) list -> t
 
 (** printing *)
 val print        : Format.formatter -> t -> unit 

@@ -53,7 +53,9 @@ val wellformed_pred  : envt -> Ast.pred -> bool
 val preds_of_refa    : soln -> refa -> Ast.pred list
 val preds_of_reft    : soln -> reft -> Ast.pred list
 val preds_of_lhs     : soln -> t -> Ast.pred list
+val preds_of_rhs     : soln -> t -> Ast.pred list
 val preds_of_lhs_nofilter : soln -> t -> Ast.pred list
+val preds_of_rhs_nofilter : soln -> t -> Ast.pred list
 
 val vars_of_t        : soln -> t -> Ast.Symbol.t list
 val is_tauto         : t -> bool
@@ -125,10 +127,11 @@ val ido_of_t         : t -> id option
 val tag_of_t         : t -> tag
 val add_ids          : id -> t list -> id * t list
 val add_wf_ids       : wf list -> wf list
-val make_wf          : envt -> reft -> id option -> wf
-val make_filtered_wf : envt -> reft -> id option -> (Qualifier.t -> bool) -> wf
+val make_wf          : envt -> reft -> bool -> id option -> wf
+val make_filtered_wf : envt -> reft -> bool -> id option -> (Qualifier.t -> bool) -> wf
 val env_of_wf        : wf -> envt
 val reft_of_wf       : wf -> reft
+val is_neg_of_wf     : wf -> bool
 val id_of_wf         : wf -> id 
 val filter_of_wf     : wf -> (Qualifier.t -> bool)
   

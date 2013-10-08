@@ -23,6 +23,7 @@
 module Sy  = Ast.Symbol
 module SM  = Sy.SMap
 module Q   = Qualifier
+module S   = Solution
 module C   = FixConstraint
 module So  = Ast.Sort
 module Co  = Constants
@@ -57,6 +58,7 @@ type 'bind cfg = {
  ; ws     : FixConstraint.wf list             (* Well-formedness Constraints          *)
  ; ds     : FixConstraint.dep list            (* Constraint Dependencies              *)
  ; qs     : Q.t list                          (* Qualifiers                           *)
+ ; negs   : Ast.Symbol.t list                 (* Negative-Kvars, solved with mfp      *)
  ; kuts   : Ast.Symbol.t list                 (* "Cut"-Kvars, which break cycles      *)
  ; bm     : 'bind SM.t                        (* Initial Sol Bindings                 *)
  ; uops   : Ast.Sort.t Ast.Symbol.SMap.t      (* Globals: measures + distinct consts) *)
@@ -98,6 +100,7 @@ let empty =
   ; ws     = []
   ; ds     = []
   ; qs     = []
+  ; negs   = []
   ; kuts   = []
   ; bm     = SM.empty
   ; cons   = []
@@ -126,9 +129,12 @@ let normalize_defts ds =
 (* API *)
 let create ds =
   let qm, ds' = normalize_defts ds in
+  let ispos negs x = not (List.mem x negs) in
+  let init negs  x = S.init ~ispos:(ispos negs x) in
   ds' |> List.fold_left (extend (fes2q qm)) empty
       |> (fun cfg -> {cfg with a  = get_arity cfg.cs})
       |> (fun cfg -> {cfg with ws = C.add_wf_ids cfg.ws})
+      |> (fun cfg -> {cfg with bm = SM.mapi (init cfg.negs) cfg.bm})
 
 (* API *)
 let create_raw ts env ps a ds cs ws qs kuts assm = 

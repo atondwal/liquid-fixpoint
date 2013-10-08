@@ -23,6 +23,7 @@ type 'bind cfg = {
  ; ws    : FixConstraint.wf list             (* Well-formedness Constraints          *)
  ; ds    : FixConstraint.dep list            (* Constraint Dependencies              *)
  ; qs    : Qualifier.t list                  (* Qualifiers                           *)
+ ; negs  : Ast.Symbol.t list                 (* Negative-Kvars, solved with mfp      *)
  ; kuts  : Ast.Symbol.t list                 (* "Cut"-Kvars, which break cycles      *)
  ; bm    : 'bind Ast.Symbol.SMap.t           (* Initial Sol Bindings                 *)
  ; uops  : Ast.Sort.t Ast.Symbol.SMap.t      (* Globals: measures + distinct consts) *)
@@ -38,7 +39,7 @@ module type SIMPLIFIER = sig
 end
 
 val empty     : 'a cfg 
-val create    : deft list -> (Qualifier.t list) cfg
+val create    : deft list -> (Qualifier.t Solution.b) cfg
 val print     : Format.formatter -> 'a cfg -> unit
 val create_raw:  Ast.Sort.t list 
               -> Ast.Sort.t Ast.Symbol.SMap.t 

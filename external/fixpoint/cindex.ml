@@ -84,6 +84,7 @@ type t =
   ; ds    : C.dep list               (* add/del dep list *)
   ; rdeps : (int * int) list         (* real dependencies *)  
   ; kuts  : Ast.Symbol.t list        (* CUT KVars *)
+  ; negs  : Ast.Symbol.t list        (* Negative KVars *)
   }
 
 let get_ref_rank me c =
@@ -244,10 +245,10 @@ let make_lives cm real_deps =
   |> (fst <+> snd) 
   >> (IS.cardinal <+> Co.bprintf mydebug "#Live Constraints: %d \n") 
 
-let create_raw kuts ds cm dm real_deps =
+let create_raw negs kuts ds cm dm real_deps =
   let deps = adjust_deps cm ds real_deps in
   let rnkm = make_ranks cm deps kuts     in
-  { cnst = cm; ds  = ds; kuts = kuts; rdeps = real_deps; rnkm  = rnkm
+  { negs=negs; cnst = cm; ds  = ds; kuts = kuts; rdeps = real_deps; rnkm  = rnkm
   ; depm = dm; rts = make_roots rnkm deps ;  pend = H.create 17}
 
 
@@ -272,10 +273,10 @@ let save fname me =
  * "successors" into the worklist. *)
 
 (* API *)
-let create kuts ds cs =
+let create negs kuts ds cs =
   let cm            = cs |>: (Misc.pad_fst C.id_of_t) |> IM.of_list in 
   let dm, real_deps = make_deps cm in
-  create_raw kuts ds cm dm real_deps 
+  create_raw negs kuts ds cm dm real_deps 
 
 (* API *)
 let slice me = 
@@ -287,7 +288,7 @@ let slice me =
               |> IM.map (List.filter (fun j -> IS.mem j lives)) in
   let rdeps = me.rdeps 
               |> Misc.filter (fun (i,j) -> IS.mem i lives && IS.mem j lives) in  
-  create_raw me.kuts me.ds cm dm rdeps
+  create_raw me.negs me.kuts me.ds cm dm rdeps
   >> save !Co.save_file
 
 (* API *) 
