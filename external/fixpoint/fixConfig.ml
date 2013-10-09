@@ -47,6 +47,7 @@ type deft = Srt of Ast.Sort.t
           | Qul of Q.t
           | Dep of FixConstraint.dep
           | Kut of Ast.Symbol.t
+          | Neg of Ast.Symbol.t
           | IBind of int * Ast.Symbol.t * FixConstraint.reft  
 
 type 'bind cfg = { 
@@ -58,6 +59,7 @@ type 'bind cfg = {
  ; ds     : FixConstraint.dep list            (* Constraint Dependencies              *)
  ; qs     : Q.t list                          (* Qualifiers                           *)
  ; kuts   : Ast.Symbol.t list                 (* "Cut"-Kvars, which break cycles      *)
+ ; negs   : Ast.Symbol.t list                 (* Negative k variables                 *)
  ; bm     : 'bind SM.t                        (* Initial Sol Bindings                 *)
  ; uops   : Ast.Sort.t Ast.Symbol.SMap.t      (* Globals: measures + distinct consts) *)
  ; cons   : Ast.Symbol.t list                 (* Distinct Constants, defined in uops  *)
@@ -83,6 +85,7 @@ let extend f cfg = function
   | Wfc w         -> {cfg with ws   = w     :: cfg.ws   }
   | Dep d         -> {cfg with ds   = d     :: cfg.ds   }
   | Kut k         -> {cfg with kuts = k     :: cfg.kuts }
+  | Neg n         -> {cfg with negs = n     :: cfg.negs }
   | Qul q         -> {cfg with qs   = q     :: cfg.qs   }
   | Sol (k, fess) -> {cfg with bm   = SM.add k (List.map f fess) cfg.bm  }
   | Con (s,t)     -> {cfg with cons = if So.is_func t then cfg.cons else s :: cfg.cons
@@ -99,6 +102,7 @@ let empty =
   ; ds     = []
   ; qs     = []
   ; kuts   = []
+  ; negs   = []
   ; bm     = SM.empty
   ; cons   = []
   ; uops   = SM.empty 
@@ -131,7 +135,7 @@ let create ds =
       |> (fun cfg -> {cfg with ws = C.add_wf_ids cfg.ws})
 
 (* API *)
-let create_raw ts env ps a ds cs ws qs kuts assm = 
+let create_raw ts env ps a ds cs ws qs kuts negs assm = 
   { empty with 
     a     = a
   ; ts    = ts
@@ -141,6 +145,7 @@ let create_raw ts env ps a ds cs ws qs kuts assm =
   ; cs    = cs
   ; ws    = C.add_wf_ids ws
   ; kuts  = kuts
+  ; negs  = negs
   ; qs    = Q.normalize qs 
   ; assm  = assm
   }
