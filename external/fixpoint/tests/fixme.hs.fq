@@ -7,6 +7,8 @@ qualif CmpZ(v:a)      : v [ < ; <= ; > ; >= ; = ; != ] 0
 qualif Cmp(v:a,~A:a)  : v [ < ; <= ; > ; >= ; = ; != ] ~A
 qualif One(v:int)     : v = 1
 
+neg k_51
+neg k_53
 
 constant Prop : func(0, [GHC.Types.Bool; bool])
 bind 0 GHC.Types.I##6c : {VV : func(0, [int; int]) | []}
@@ -42,11 +44,11 @@ constraint:
  rhs {VV : int | [k_52]} 
  id 1 tag [1] 
 
-wf: neg
+wf:
   env [0; 1; 2; 3; 4]
   reft {VV : int | [k_51]}
  
-wf: neg
+wf:
   env [0; 1; 2; 3; 4]
   reft {VVV : int | [k_53]}
 

@@ -55,7 +55,7 @@ let env_of_ibindings is =
 %token <string> Id
 %token <int> Num
 %token TVAR 
-%token NEG TAG ID 
+%token TAG ID 
 %token BEXP
 %token TRUE FALSE
 %token LPAREN  RPAREN LB RB LC RC
@@ -69,7 +69,7 @@ let env_of_ibindings is =
 %token DIV 
 %token QM DOT ASGN
 %token OBJ INT NUM PTR LFUN BOOL UNINT FUNC
-%token SRT AXM CON CST WF SOL QUL KUT BIND ADP DDP
+%token SRT AXM CON CST WF SOL QUL KUT NEG BIND ADP DDP
 %token ENV GRD LHS RHS REF
 
 %right IFF IFFWORD
@@ -130,6 +130,7 @@ def:
   | sol                                 { FixConfig.Sol $1 } 
   | QUL qual                            { FixConfig.Qul $2 }
   | KUT Id                              { FixConfig.Kut (Sy.of_string $2) }
+  | NEG Id                              { FixConfig.Neg (Sy.of_string $2) }
   | dep                                 { FixConfig.Dep $1 }
   | BIND Num Id COLON reft              { let (i, x, r) = ($2, Sy.of_string $3, $5) 
                                                           >> set_ibind 
@@ -317,10 +318,8 @@ consne:
   ;
 
 wf:
-    ENV env REF reft                              { C.make_wf $2 $4 false None }
-  | NEG ENV env REF reft                          { C.make_wf $3 $5 true None }
-  | NEG ENV env REF reft ID Num                   { C.make_wf $3 $5 true (Some $7) }
-  | ENV env REF reft ID Num                       { C.make_wf $2 $4 false (Some $6) }
+    ENV env REF reft                              { C.make_wf $2 $4 None }
+  | ENV env REF reft ID Num                       { C.make_wf $2 $4 (Some $6) }
   ;
 
 tagsne:

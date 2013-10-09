@@ -45,7 +45,7 @@ type dep  = Adp of tag * tag | Ddp of tag * tag | Ddp_s of tag | Ddp_t of tag
 type refa = Conc of A.pred | Kvar of Su.t * Sy.t
 type reft = Sy.t * A.Sort.t * refa list                (* { VV: t | [ra] } *)
 type envt = reft SM.t
-type wf   = envt * reft * bool * (id option) * (Qualifier.t -> bool)
+type wf   = envt * reft * (id option) * (Qualifier.t -> bool)
 type t    = { full    : envt; 
               nontriv : envt;
               guard   : A.pred;
@@ -362,9 +362,8 @@ let print_dep ppf = function
     -> F.fprintf ppf "del_dep: * => [%s]" (string_of_intlist t')
 
 (* API *)
-let print_wf so ppf (env, r, neg, io, _) =
-  F.fprintf ppf "wf:%s env @[%a@] @\n reft %a @\n %a @\n"
-    (if neg then "NEG" else "")
+let print_wf so ppf (env, r, io, _) =
+  F.fprintf ppf "wf: env @[%a@] @\n reft %a @\n %a @\n"
     (print_env so) env
     (print_reft so) r
     pprint_id io
@@ -457,29 +456,27 @@ let add_consts_env consts env =
   |> List.fold_left (fun env (x,r) -> SM.add x r env) env
 
 (* API *)
-let add_consts_wf consts (env,w,x,y,z) = (add_consts_env consts env, w, x, y, z)
+let add_consts_wf consts (env,x,y,z) = (add_consts_env consts env, x, y, z)
 
 (* API *)
 let add_consts_t consts t = {t with full = add_consts_env consts t.full}
 
 (* API *)
-let make_wf          = fun env r neg io -> (env, r, neg, io, fun _ -> true)
-let make_filtered_wf = fun env r neg io fltr -> (env, r, neg, io, fltr)
-let is_neg_of_wf     = fun (_,_,neg,_,_) -> neg
-let env_of_wf        = fun (x,_,_,_,_) -> x
-let reft_of_wf       = fun (_,x,_,_,_) -> x
-let id_of_wf         = function (_,_,_,Some i,_) -> i | _ -> assertf "C.id_of_wf"
-let filter_of_wf     = fun (_,_,_,_,x) -> x
+let make_wf          = fun env r io -> (env, r, io, fun _ -> true)
+let make_filtered_wf = fun env r io fltr -> (env, r, io, fltr)
+let env_of_wf        = fst4
+let reft_of_wf       = snd4
+let id_of_wf         = function (_,_,Some i,_) -> i | _ -> assertf "C.id_of_wf"
+let filter_of_wf     = fun (_,_,_,x) -> x
   
 let intersect_maps m1 m2 = SM.filter begin fun k elt ->
   SM.mem k m2 && SM.find k m2 = elt
 end m1
   
-let intersect_wfs (e1, r1, neg1, id1, qf1) (e2, r2, neg2, id2, qf2) =
+let intersect_wfs (e1, r1, id1, qf1) (e2, r2, id2, qf2) =
   let _ = assert (r1 = r2) in
-  let _ = assert (neg1 = neg2) in
   let env = intersect_maps e1 e2 in
-  (env, r1, neg1, id1, fun x -> (qf1 x && qf2 x))
+  (env, r1, id1, fun x -> (qf1 x && qf2 x))
     
 let reduce_wfs wfs = 
   wfs 
@@ -535,14 +532,14 @@ let max_id n cs =
      |> List.fold_left max n
 
 let max_wf_id n ws =
-  ws |> Misc.map_partial (fun (_,_,_,ido,_) -> ido) 
+  ws |> Misc.map_partial (fun (_,_,ido,_) -> ido) 
      >> (fun ids -> asserts (Misc.distinct ids) "Duplicate WF Ids")
      |> List.fold_left max n
 
 (* API *)
 let add_wf_ids ws = 
   Misc.mapfold begin fun j wf -> match wf with
-    | (w,x,y,None,z) -> j+1, (w, x, y, Some j, z) 
+    | (x,y,None,z) -> j+1, (x, y, Some j, z) 
     | _            -> j, wf
   end ((max_wf_id 0 ws) + 1) ws
   |> snd

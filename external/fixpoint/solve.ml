@@ -199,15 +199,8 @@ let true_unconstrained sri s =
     in s
 *)
 
-let mk_negs ws = 
-  List.filter C.is_neg_of_wf ws 
-  |> List.map (C.reft_of_wf <+> C.kvars_of_reft)
-  |> List.concat
-  |> List.map snd
-
 (* API *)
 let solve me s = 
-  let me = {me with sri = Ci.set_negs me.sri (mk_negs me.ws)} in 
   let _  = Co.bprintflush mydebug "Fixpoint: Validating Initial Solution \n" in
   (* let _ = F.printf "create: SOLUTION \n %a \n" Dom.print s in *)
   let _  = BS.time "Prepass.profile" PP.profile me.sri in
@@ -249,7 +242,7 @@ let create cfg kf =
             |> (!Co.slice <?> BS.time "slice_wf" (Ci.slice_wf sri))
             |> BS.time  "Constant EnvWF" (List.map (C.add_consts_wf gts))
             |> PP.validate_wfs in
-  let cfg = { cfg with Cg.negs = mk_negs ws; Cg.cs = Ci.to_list sri; Cg.ws = ws } in
+  let cfg = { cfg with Cg.cs = Ci.to_list sri; Cg.ws = ws } in
   let s   = if !Constants.dump_simp <> "" then Dom.empty else BS.time "Dom.create" (Dom.create cfg) kf in
   let _   = Co.bprintflush mydebug "\nDONE: Dom.create\n" in
   let _   = Co.bprintflush mydebug "\nBEGIN: PP.validate\n" in

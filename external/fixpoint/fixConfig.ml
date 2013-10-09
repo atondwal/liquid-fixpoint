@@ -48,6 +48,7 @@ type deft = Srt of Ast.Sort.t
           | Qul of Q.t
           | Dep of FixConstraint.dep
           | Kut of Ast.Symbol.t
+          | Neg of Ast.Symbol.t
           | IBind of int * Ast.Symbol.t * FixConstraint.reft  
 
 type 'bind cfg = { 
@@ -84,6 +85,7 @@ let extend f cfg = function
   | Cst c         -> {cfg with cs   = c     :: cfg.cs   }
   | Wfc w         -> {cfg with ws   = w     :: cfg.ws   }
   | Dep d         -> {cfg with ds   = d     :: cfg.ds   }
+  | Neg n         -> {cfg with negs = n     :: cfg.negs }
   | Kut k         -> {cfg with kuts = k     :: cfg.kuts }
   | Qul q         -> {cfg with qs   = q     :: cfg.qs   }
   | Sol (k, fess) -> {cfg with bm   = SM.add k (List.map f fess) cfg.bm  }
