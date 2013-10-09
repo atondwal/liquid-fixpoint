@@ -42,8 +42,6 @@ val wpush        : t -> wkl -> FixConstraint.t list -> wkl
 val wpop         : t -> wkl -> FixConstraint.t option * wkl
 val winit        : t -> wkl
 
-val set_negs     : t -> (Ast.Symbol.t) list -> t
-
 (** printing *)
 val print        : Format.formatter -> t -> unit 
 
