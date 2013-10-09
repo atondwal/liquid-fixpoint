@@ -106,6 +106,9 @@ module Language.Fixpoint.Types (
   -- * Cut KVars
   , Kuts (..), ksEmpty, ksUnion
 
+  -- * Negative KVars
+  , Negs (..), nsEmpty, nsUnion
+
   -- * Qualifiers
   , Qualifier (..)
 
@@ -190,14 +193,25 @@ reftKVars (Reft (_,ras)) = [k | (RKvar k _) <- ras]
 
 newtype Kuts = KS (S.HashSet Symbol) 
 
+newtype Negs = NS (S.HashSet Symbol) 
+
 instance NFData Kuts where
   rnf (KS _) = () -- rnf s
+
+instance NFData Negs where
+  rnf (NS _) = () -- rnf s
 
 instance Fixpoint Kuts where
   toFix (KS s) = vcat $ ((text "cut " <>) . toFix) <$> S.toList s
 
+instance Fixpoint Negs where
+  toFix (NS s) = vcat $ ((text "neg " <>) . toFix) <$> S.toList s
+
 ksEmpty             = KS S.empty
 ksUnion kvs (KS s') = KS (S.union (S.fromList kvs) s')
+
+nsEmpty             = NS S.empty
+nsUnion nvs (NS s') = NS (S.union (S.fromList nvs) s')
 
 ---------------------------------------------------------------
 ---------- Converting Constraints to Fixpoint Input -----------
@@ -1233,16 +1247,18 @@ data FInfo a = FI { cm    :: M.HashMap Integer (SubC a)
                   , gs    :: !FEnv
                   , lits  :: ![(Symbol, Sort)]
                   , kuts  :: Kuts 
+                  , negs  :: Negs 
                   , quals :: ![Qualifier]
                   }
 
 -- toFixs = brackets . hsep . punctuate comma -- . map toFix 
 
-toFixpoint x'    = kutsDoc x' $+$ gsDoc x' $+$ conDoc x' $+$ bindsDoc x' $+$ csDoc x' $+$ wsDoc x'
+toFixpoint x'    = kutsDoc x' $+$ negsDoc x' $+$ gsDoc x' $+$ conDoc x' $+$ bindsDoc x' $+$ csDoc x' $+$ wsDoc x'
   where conDoc   = vcat     . map toFix_constant . getLits 
         csDoc    = vcat     . map toFix . M.elems . cm 
         wsDoc    = vcat     . map toFix . ws 
         kutsDoc  = toFix    . kuts
+        negsDoc  = toFix    . negs
         bindsDoc = toFix    . bs
         gsDoc    = toFix_gs . gs
 

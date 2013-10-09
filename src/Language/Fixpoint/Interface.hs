@@ -50,7 +50,7 @@ checkValid n xts p
        return (sinfo <$> r)  
 
 validFInfo         :: a -> [(Symbol, Sort)] -> Pred -> FInfo a
-validFInfo l xts p = FI constrm [] benv emptySEnv [] ksEmpty []
+validFInfo l xts p = FI constrm [] benv emptySEnv [] ksEmpty nsEmpty []
   where 
     constrm        = M.singleton 0 $ validSubc l ibenv p 
     binds          = [(x, trueSortedReft t) | (x, t) <- xts]
