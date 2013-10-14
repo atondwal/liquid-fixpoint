@@ -820,6 +820,7 @@ data FixResult a = Crash [a] String
                  | Safe 
                  | Unsafe ![a] 
                  | UnknownError !Doc
+                 | Sol !Int
                    deriving (Show)
 
 type FixSolution = M.HashMap Symbol Pred
@@ -828,10 +829,12 @@ instance Eq a => Eq (FixResult a) where
   Crash xs _ == Crash ys _         = xs == ys
   Unsafe xs == Unsafe ys           = xs == ys
   Safe      == Safe                = True
+  Sol _     == Sol _               = True
   _         == _                   = False
 
 instance Monoid (FixResult a) where
   mempty                          = Safe
+  mappend (Sol n1) (Sol n2)       = Sol (n1 * n2)
   mappend Safe x                  = x
   mappend x Safe                  = x
   mappend _ c@(Crash _ _)         = c 
@@ -844,9 +847,11 @@ instance Functor FixResult where
   fmap f (Crash xs msg)   = Crash (f <$> xs) msg
   fmap f (Unsafe xs)      = Unsafe (f <$> xs)
   fmap _ Safe             = Safe
+  fmap _ (Sol n)          = Sol n
   fmap _ (UnknownError d) = UnknownError d
 
 instance (Ord a, Fixpoint a) => Fixpoint (FixResult (SubC a)) where
+  toFix (Sol n)          = int n <+> text "Solutions"
   toFix Safe             = text "Safe"
   toFix (UnknownError d) = text "Unknown Error!" <+> d
   toFix (Crash xs msg)   = vcat $ [ text "Crash!" ] ++  ppr_sinfos "CRASH: " xs ++ [parens (text msg)] 
@@ -857,6 +862,7 @@ ppr_sinfos msg = map ((text msg <>) . toFix) . sort . fmap sinfo
 
 
 resultDoc :: (Ord a, Fixpoint a) => FixResult a -> Doc
+resultDoc (Sol n)          = int n <+> text "Safe"
 resultDoc Safe             = text "Safe"
 resultDoc (UnknownError d) = text "Unknown Error!" <+> d
 resultDoc (Crash xs msg)   = vcat $ (text ("Crash!: " ++ msg)) : (((text "CRASH:" <+>) . toFix) <$> xs)

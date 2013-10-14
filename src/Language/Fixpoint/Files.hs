@@ -58,7 +58,9 @@ checkM f msg p
 data Ext = Cgi    -- ^ Constraint Generation Information 
          | Fq     -- ^ Input to constraint solving (fixpoint)
          | Out    -- ^ Output from constraint solving (fixpoint)
+         | Oi Int -- ^ ith Output from constraint solving (fixpoint)
          | Html   -- ^ HTML file with inferred type annotations 
+         | Hi Int -- ^ ith HTML file with inferred type annotations 
          | Annot  -- ^ Text file with inferred types 
          | Hs     -- ^ Target source 
          | LHs    -- ^ Literate Haskell target source file
@@ -81,8 +83,10 @@ extMap e = go e
     go PAss   = ".pass"
     go Dat    = ".dat"
     go Out    = ".fqout"
+    go (Oi i) = ".fqout." ++ show i
     go Fq     = ".fq"
     go Html   = ".html"
+    go (Hi i) = "." ++ show i ++ ".html"
     go Cst    = ".cst"
     go Annot  = ".annot"
     go Hs     = ".hs"

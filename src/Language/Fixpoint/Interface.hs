@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Language.Fixpoint.Interface (
     
     -- * Containing Constraints
@@ -37,6 +39,7 @@ import Text.PrettyPrint.HughesPJ
 import System.Console.CmdArgs.Default
 import System.Console.CmdArgs.Verbosity
 
+import qualified Control.Exception as Err
 ---------------------------------------------------------------------------
 -- | One Shot validity query ----------------------------------------------
 ---------------------------------------------------------------------------
@@ -76,7 +79,7 @@ result x False = Unsafe [x]
 
 ---------------------------------------------------------------------------
 solve :: Config -> FilePath -> [FilePath] -> FInfo a 
-      -> IO (FixResult (SubC a), M.HashMap Symbol Pred)
+      -> IO (FixResult (SubC a), [M.HashMap Symbol Pred])
 ---------------------------------------------------------------------------
 solve cfg fn hqs fi
   =   {-# SCC "Solve" #-}  execFq cfg fn hqs fi
@@ -106,12 +109,27 @@ fixCommand cfg fp z3 verbosity
   = printf "LD_LIBRARY_PATH=%s %s %s -notruekvars -refinesort -noslice -nosimple -strictsortcheck -sortedquals %s" 
            z3 fp verbosity (command cfg)
 
-exitFq _ _ (ExitFailure n) | (n /= 1) 
-  = return (Crash [] "Unknown Error", M.empty)
+exitFq _ _ (ExitFailure n) | ((n /= 1) && (n /= 2))
+  = return (Crash [] "Unknown Error", [M.empty])
 exitFq fn cm _ 
-  = do str <- {-# SCC "readOut" #-} readFile (extFileName Out fn)
-       let (x, y) = {-# SCC "parseFixOut" #-} rr ({-# SCC "sanitizeFixpointOutput" #-} sanitizeFixpointOutput str)
-       return  $ (plugC cm x, y) 
+  = Err.catch (do str <- {-# SCC "readOut" #-} readFile (extFileName Out fn)
+                  let (x, y) = {-# SCC "parseFixOut" #-} rr ({-# SCC "sanitizeFixpointOutput" #-} sanitizeFixpointOutput str)
+                  return  $ (plugC cm x, [y]))
+              (\(e::Err.IOException) -> exitFqs fn cm)
+
+exitFqs fn cm
+  = do ss <- readOutFiles fns
+       let ys = (rr . sanitizeFixpointOutput <$> ss) :: [(FixResult Integer, FixSolution)]
+       return $ (Sol $ length ys, snd <$> ys)
+  where fns = [extFileName (Oi i) fn | i <- [1..20]]
+
+readOutFiles [] 
+ = return []
+readOutFiles (fn:fns)
+ = Err.catch (do s     <- readFile fn
+                 ss    <- readOutFiles fns
+                 return $ s : ss)
+             (\(e::Err.IOException) -> return [])
 
 plugC = fmap . mlookup
 
@@ -123,5 +141,6 @@ sanitizeFixpointOutput
 
 resultExit Safe        = ExitSuccess
 resultExit (Unsafe _)  = ExitFailure 1
-resultExit _           = ExitFailure 2
+resultExit (Sol n)     = ExitFailure 2
+resultExit _           = ExitFailure 3
 
