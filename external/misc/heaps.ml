@@ -130,6 +130,7 @@ module type FunctionalSig = sig
   val remove : t -> t
   val iter : (elt -> unit) -> t -> unit
   val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+  val map  : (elt -> elt) -> t -> t
 end
 
 module Functional(X : Ordered) = struct
@@ -215,6 +216,11 @@ module Functional(X : Ordered) = struct
   let rec iter f = function
     | Empty -> ()
     | Same (l, x, r) | Diff (l, x, r) -> iter f l; f x; iter f r
+
+  let rec map f = function
+    | Empty -> Empty
+    | Same (l, x, r) -> Same (map f l, f x, map f r)
+    | Diff (l, x, r) -> Diff (map f l, f x, map f r)
 
   let rec fold f h x0 = match h with
     | Empty -> x0

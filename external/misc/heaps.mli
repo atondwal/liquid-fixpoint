@@ -93,6 +93,8 @@ module type FunctionalSig = sig
 
   val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
 
+  val map  : (elt -> elt) -> t -> t
+
 end
 
 module Functional(X: Ordered) : FunctionalSig with type elt = X.t
