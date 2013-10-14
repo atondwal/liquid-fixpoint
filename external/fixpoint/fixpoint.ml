@@ -92,26 +92,31 @@ let dump_solve ac =
 (********************* Exhaustive Solution ***********************)
 (*****************************************************************)
 
+let n = ref 0
+
+let save_soln (s, cs, _) = 
+  incr n; 
+  let fname = String.concat "." [!Co.out_file; string_of_int !n] in 
+  save_raw fname cs s
+
+  
 let esolve ac  = 
   let _         = Co.bprintflush mydebug "Fixpoint: Creating  CI\n" in
   let ctx, s    = BS.time "create" EPA.create ac None in
   let _         = Co.bprintflush mydebug "Fixpoint: Solving \n" in
-  let s, cs',_  = BS.time "solve" (EPA.solve ctx) s in
+  let scs       = BS.time "solve" (EPA.solve ctx) s in
   
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result \n" in
-  let _         = BS.time "save" (save_raw !Co.out_file cs') s in
+  let _         = List.map save_soln scs in
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result DONE \n" in
-  cs'
+  scs
 
 let edump_solve ac = 
   try 
-    let mkbind k = EPA.mkbind (List.mem k ac.Cg.negs) in
-    let cs' = esolve { ac with Cg.bm = SM.mapi mkbind ac.Cg.bm } in
-    let _   = if Co.ck_olev 1 then BNstats.print stdout "Fixpoint Solver Time \n" in
-    match cs' with 
-    | [] -> (F.printf "\nSAT\n" ; exit 0)
-    | _  -> (F.printf "\nUNSAT\n" ; exit 1)
-  with (C.BadConstraint (id, tag, msg)) -> begin
+    let sols = esolve { ac with Cg.bm = SM.map PA.mkbind ac.Cg.bm } in
+    let _   = if Co.ck_olev 1 then BNstats.print stdout "Fixpoint Solver Time\n" in
+    F.printf "\n%d SOLUTIONS\n" (List.length sols); exit 2
+    with (C.BadConstraint (id, tag, msg)) -> begin
     Format.printf "Fixpoint: Bad Constraint! id = %d (%s) tag = %a \n" 
     id msg C.print_tag tag;
     save_crash !Co.out_file (id, tag, msg); 
