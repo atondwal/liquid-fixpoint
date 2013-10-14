@@ -344,6 +344,9 @@ let wstring w =
   |> List.sort compare
   |> Misc.map_to_string string_of_int
 
+let wapply_psoln su me = 
+    {me with cnst = IM.map (C.apply_partial_solution su) me.cnst }
+
 (* API *)
 let wpop me w =
   try 

@@ -56,6 +56,7 @@ type t    = { full    : envt;
               tag     : tag; }
 
 type soln = Ast.Symbol.t -> Ast.pred list
+type psoln = Ast.Symbol.t -> (Ast.pred list) option
 
 exception BadConstraint of (id * tag * string)
 
@@ -211,9 +212,31 @@ let empty_solution      = fun _ -> []
 let apply_solution_refa f ra = 
   Conc (A.pAnd (preds_of_refa f ra))
 
+let apply_partial_solution_refa s = function
+  | Conc p      -> Conc p
+  | Kvar (su,k) -> (
+      match soln_read s k with
+      | None -> Kvar (su, k)
+      | Some p -> p |> List.map (Misc.flip A.substs_pred su)
+                    |> A.pAnd 
+                    |> function x -> Conc x
+  )
+  
+
 (* API *)
 let apply_solution f (v, t, ras) = 
   (v, t, List.map (apply_solution_refa f) ras)
+
+let apply_partial_solution_reft f (v, t, ras) = 
+  (v, t, List.map (apply_partial_solution_refa f) ras)
+
+(* API *)
+let apply_partial_solution f me = 
+  let su = apply_partial_solution_reft f in
+  {me with full    = SM.map su me.full; 
+           nontriv = SM.map su me.nontriv;
+           lhs     = su me.lhs;
+           rhs     = su me.rhs}
 
 let preds_of_envt f env =
   SM.fold

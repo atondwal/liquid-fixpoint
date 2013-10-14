@@ -42,6 +42,8 @@ val wpush        : t -> wkl -> FixConstraint.t list -> wkl
 val wpop         : t -> wkl -> FixConstraint.t option * wkl
 val winit        : t -> wkl
 
+
+val wapply_psoln : FixConstraint.psoln -> t -> t
 (** printing *)
 val print        : Format.formatter -> t -> unit 
 

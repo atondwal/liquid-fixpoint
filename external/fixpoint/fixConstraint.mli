@@ -34,6 +34,7 @@ type id   = int         (* for identifying: must be unique *)
 exception BadConstraint of (id * tag * string)
 
 type soln = Ast.Symbol.t -> Ast.pred list
+type psoln = Ast.Symbol.t -> Ast.pred list option
 type refa = Conc of Ast.pred | Kvar of Ast.Subst.t * Ast.Symbol.t
 type reft = Ast.Symbol.t * Ast.Sort.t * refa list   (* { VV: t | [ra] } *)
 type envt = reft Ast.Symbol.SMap.t
@@ -48,6 +49,8 @@ val is_conc_rhs      : t -> bool
 val empty_solution   : soln
 val meet_solution    : soln -> soln -> soln
 val apply_solution   : soln -> reft -> reft
+
+val apply_partial_solution : psoln -> t -> t
 
 val wellformed_pred  : envt -> Ast.pred -> bool
 val preds_of_refa    : soln -> refa -> Ast.pred list
