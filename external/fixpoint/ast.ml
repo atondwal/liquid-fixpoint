@@ -974,7 +974,6 @@ module Predicate = struct
             |> List.iter (fun p-> PredHash.replace t p ()) in 
     fun p -> PredHash.mem t p 
    
-
   let rec is_tauto  = function
     | Atom(e1, Eq, e2), _ -> snd e1 == snd e2
     | Imp (p1, p2), _     -> snd p1 == snd p2
@@ -1200,11 +1199,11 @@ and sortcheck_pred g f p =
     | Or ps ->
         List.for_all (sortcheck_pred g f) ps
     
-    | Atom ((Con (Constant.Int(0)),_), _, e) 
-    | Atom (e, _, (Con (Constant.Int(0)),_)) 
+    | Atom ((Con (Constant.Int(_)),_), _, e) 
+    | Atom (e, _, (Con (Constant.Int(_)),_)) 
       when not (!Constants.strictsortcheck)
       -> not (None = sortcheck_expr g f e)
-    
+ 
     | Atom ((Var x, _) , Eq, (App (uf, es), _))
     | Atom ((App (uf, es), _), Eq, (Var x, _))
       -> begin match sortcheck_sym f x with 
