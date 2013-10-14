@@ -51,5 +51,6 @@ val create_raw:  Ast.Sort.t list
               -> FixConstraint.wf list 
               -> Qualifier.t list
               -> Ast.Symbol.t list
+              -> Ast.Symbol.t list
               -> FixConstraint.soln 
               -> 'a cfg
