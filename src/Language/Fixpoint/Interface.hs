@@ -105,6 +105,10 @@ solveFile cfg
        ec  <- {-# SCC "sysCall:Fixpoint" #-} executeShellCommand "fixpoint" $ fixCommand cfg fp z3 v
        return ec
  
+fixCommand cfg fp z3 verbosity | negVars cfg 
+  = printf "LD_LIBRARY_PATH=%s %s %s -notruekvars -refinesort -noslice -nosimple -strictsortcheck -sortedquals -varpoly -exhaustive %s" 
+           z3 fp verbosity (command cfg)
+
 fixCommand cfg fp z3 verbosity 
   = printf "LD_LIBRARY_PATH=%s %s %s -notruekvars -refinesort -noslice -nosimple -strictsortcheck -sortedquals %s" 
            z3 fp verbosity (command cfg)
