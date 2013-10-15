@@ -29,6 +29,7 @@ module F   = Format
 module A   = Ast
 module E   = A.Expression
 module P   = A.Predicate
+module AC  = A.Constant
 
 module Q   = Qualifier
 module QS  = Q.QSet
@@ -286,7 +287,15 @@ let check_tp me env vv t lps =  function [] -> [] | rcs ->
   >> (fun rv -> me.stat_valid_queries += List.length rv) 
 
 
+(* API *)
+let drop me ks = 
+  let (p1, p2) = SM.partition (fun k _ -> List.mem k ks) me.m in 
+  (p1, {me with m = p2})
 
+(* API *)
+let add me xs =
+  {me with m = List.fold_left begin fun m (k, v) -> 
+                  SM.add k v m end me.m (SM.bindings xs)}
 
 (* API *)
 let read me k = (me.assm k) ++ (if SM.mem k me.m then p_read me k |>: snd else [])
@@ -411,6 +420,27 @@ let min_binds_bot ds =
 
 (* API *)
 let min_binds s ds = ds |> min_binds_bot |> Misc.rootsBy (def_leq s)
+
+
+let is_contra_pred (sm : Ast.Sort.t Ast.Symbol.SMap.t) (me : t) (ds : Ast.pred list) : bool =
+  ds |> A.pAnd |> me.tpc#is_contra sm 
+
+let is_contra (sm : Ast.Sort.t Ast.Symbol.SMap.t) (me : t) (ds : Q.t list) : bool =
+ let sm = SM.extend sm
+   (SM.of_list (List.map (fun q -> (Q.vv_of_t q, Q.sort_of_t q)) ds)) in  
+ ds |> List.map Q.pred_of_t
+    |> A.pAnd
+    |> me.tpc#is_contra sm
+
+let is_equiv (sm : Ast.Sort.t Ast.Symbol.SMap.t) (me : t) (ds : Q.t list) (ps : Q.t list) : bool =
+ let dpsm = ds @ ps
+            |> List.map (fun q -> (Q.vv_of_t q, Q.sort_of_t q))
+            |> SM.of_list in
+ let sm = SM.extend sm dpsm in
+ let ps = ps |> List.map Q.pred_of_t |> A.pAnd in 
+ let ds = ds |> List.map Q.pred_of_t |> A.pAnd in
+ me.tpc#is_contra sm (A.pNot (A.pIff(ps,ds)))
+
 let min_read s k   = SM.finds k s.m |> min_binds s |>: pred_of_bind
 let min_read s k   = if !Co.minquals then min_read s k else read s k
 let min_read s k   = BS.time "min_read" (min_read s) k

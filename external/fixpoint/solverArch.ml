@@ -41,4 +41,13 @@ module type DOMAIN = sig
   val simplify     : t -> t
   val ctr_examples : t -> FixConstraint.t list -> FixConstraint.t list -> Counterexample.cex list 
   val mkbind       : qbind -> bind
+
+  val min_binds    : t -> Qualifier.t list -> Qualifier.t list
+  val is_contra    : Ast.Sort.t Ast.Symbol.SMap.t -> t -> Qualifier.t list -> bool
+  val is_equiv     : Ast.Sort.t Ast.Symbol.SMap.t -> t -> Qualifier.t list -> Qualifier.t list -> bool
+  val is_contra_pred : Ast.Sort.t Ast.Symbol.SMap.t -> t -> Ast.pred list -> bool
+
+
+  val drop         : t -> Ast.Symbol.t list -> (qbind Ast.Symbol.SMap.t * t)
+  val add          : t -> qbind Ast.Symbol.SMap.t -> t
 end
