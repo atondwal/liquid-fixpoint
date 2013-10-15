@@ -47,6 +47,7 @@ val args_of_t       : t -> (Ast.Symbol.t * Ast.expr) list
 val normalize       : t list -> t list
 val inst            : t -> (Ast.Symbol.t * Ast.expr) list -> t
 val print           : Format.formatter -> t -> unit
+val print_pred      : Format.formatter -> t -> unit
 val print_args      : Format.formatter -> t -> unit
 val expandPred      : Ast.Symbol.t -> Ast.expr list -> Ast.pred option
 

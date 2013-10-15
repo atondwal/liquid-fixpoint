@@ -92,7 +92,11 @@ let print ppf q =
     print_params (all_params_of_t q) 
     P.print q.pred
 
-  
+(* API *) 
+let print_pred ppf q = 
+  F.fprintf ppf "%a" 
+    P.print q.pred
+ 
 (**********************************************************************)
 (****************** Canonizing Wildcards (e.g. _ ---> ~A) *************)
 (**********************************************************************)
