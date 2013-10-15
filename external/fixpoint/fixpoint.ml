@@ -99,7 +99,7 @@ let save_solns (s, cs, _) =
   let fname = String.concat "." [!Co.out_file; string_of_int !n] in 
   save_raw fname cs s
 
-let save_soln (s, cs, _) = 
+let save_soln [(s, cs, _)] = 
   save_raw !Co.out_file cs s
 
   
@@ -111,7 +111,7 @@ let esolve ac  =
   let ns        = List.length scs in
   
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result \n" in
-  let _         = if n == 1 then save_soln scs else List.map save_solns scs in
+  let _         = if ns == 1 then (save_soln scs; ()) else (List.map save_solns scs; ()) in
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result DONE \n" in
   scs
 
@@ -121,10 +121,10 @@ let edump_solve ac =
     let ns  = List.length sols in  
     let _   = if Co.ck_olev 1 then BNstats.print stdout "Fixpoint Solver Time\n" in
     if ns == 1 then 
-      F.printf "\n1 SOLUTION\n" (List.length sols); exit 1
+      (F.printf "\n1 SOLUTION\n"; exit 1)
     else if ns > 0 then 
-      F.printf "\n%d SOLUTIONS\n" (List.length sols); exit 2
-    else F.printf "\nNO SOLUTIONS \n"; exit 0
+      (F.printf "\n%d SOLUTIONS\n" (List.length sols); exit 2)
+    else (F.printf "\nNO SOLUTIONS \n"; exit 0)
     with (C.BadConstraint (id, tag, msg)) -> begin
     Format.printf "Fixpoint: Bad Constraint! id = %d (%s) tag = %a \n" 
     id msg C.print_tag tag;
