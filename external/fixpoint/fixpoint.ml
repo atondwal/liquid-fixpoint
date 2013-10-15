@@ -94,26 +94,26 @@ let dump_solve ac =
 
 let n = ref 0
 
-let save_solns (s, cs, _) = 
+let save_solns (s,_,_) = 
   incr n; 
   let fname = String.concat "." [!Co.out_file; string_of_int !n] in 
-  save_raw fname cs s
+  save_raw fname [] s
 
-let save_soln [(s, cs, _)] = 
-  save_raw !Co.out_file cs s
+let save_soln [(s,_,_)] = 
+  save_raw !Co.out_file [] s
 
   
 let esolve ac  = 
   let _         = Co.bprintflush mydebug "Fixpoint: Creating  CI\n" in
   let ctx, s    = BS.time "create" EPA.create ac None in
   let _         = Co.bprintflush mydebug "Fixpoint: Solving \n" in
-  let scs       = BS.time "solve" (EPA.solve ctx) s in
-  let ns        = List.length scs in
+  let ss        = BS.time "solve" (EPA.solve ctx) s in
+  let ns        = List.length ss in
   
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result \n" in
-  let _         = if ns == 1 then (save_soln scs; ()) else (List.map save_solns scs; ()) in
+  let _         = if ns == 1 then (save_soln ss; ()) else (List.map save_solns ss; ()) in
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result DONE \n" in
-  scs
+  ss
 
 let edump_solve ac = 
   try 
