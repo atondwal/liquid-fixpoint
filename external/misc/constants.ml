@@ -42,6 +42,7 @@ let inccheck            = ref SS.empty         (* -inccheck *)
 let cex                 = ref false            (* -counterexamples *)
 let shortannots         = ref true             (* -shortannots *)
 let strictsortcheck     = ref false            (* -strictsortcheck *)
+let varpoly             = ref false            (* -varpoly *)
 let latex_file: string option ref = ref None   (* translate to LaTeX *)
 let armc_file: string option ref  = ref None   (* translate to ARMC *)
 let horn_file: string option ref  = ref None   (* translate to Horn clauses *)
@@ -65,7 +66,7 @@ let true_unconstrained          = ref true  (* -true_unconstrained *)
 let do_nothing                  = ref false (* -nop *)
 let smt_solver                  = ref (Some "z3") (* -smtsolver [z3, yices, cvc4, ...] *)
 let dump_imp                    = ref false (* -imp *)
-let dump_exhaustive             = ref true  (* -exhaustive *)
+let dump_exhaustive             = ref false (* -exhaustive *)
 let dump_smtlib                 = ref false (* -smtlib *)
 let dump_simp                   = ref ""    (* -simp *)
 let prune_live                  = ref false (* -prunelive *)
@@ -190,6 +191,10 @@ let arg_spec =
    ("-strictsortcheck",
     Arg.Set strictsortcheck,
     " Strict Sort Checking -- e.g. ptr/int comparisons -- for non-C constraints
+    [false]");
+   ("-varpoly",
+    Arg.Set varpoly,
+    " Varible Sort Polymorphism -- e.g. @(1)/int comparisons -- for negative constraints
     [false]");
    ("-ctypes",
     Arg.Set ctypes_only,
@@ -334,6 +339,10 @@ let arg_spec =
    ("-imp",
     Arg.Set dump_imp,
     " print constraints as IMP program (experimental)"
+   );
+   ("-exhaustive",
+    Arg.Set dump_exhaustive,
+    " find most general solution for negative kvars"
    );
    ("-smtsolver",
     Arg.String (fun s -> smt_solver := if s = "z3mem" then None else Some s),

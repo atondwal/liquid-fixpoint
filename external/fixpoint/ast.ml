@@ -1166,6 +1166,9 @@ and sortcheck_op g f (e1, op, e2) =
 and sortcheck_rel g f (e1, r, e2) =
   let t1o, t2o = (e1,e2) |> Misc.map_pair (sortcheck_expr g f) in
   match r, t1o, t2o with
+  | _, Some (Sort.Var _) , Some _
+  | _, Some _, Some (Sort.Var _)
+   when !Constants.varpoly -> true
   | _, Some (Sort.Ptr _) , Some (Sort.Ptr Sort.LFun)
   | _, Some (Sort.Ptr Sort.LFun), Some (Sort.Ptr _)
     -> true
