@@ -106,6 +106,8 @@ module Language.Fixpoint.Types (
   -- * Cut KVars
   , Kuts (..), ksEmpty, ksUnion
 
+  , Deps (..), dsEmpty, dsAdd
+
   -- * Negative KVars
   , Negs (..), nsEmpty, nsUnion
 
@@ -122,10 +124,10 @@ import Data.Generics        (Data)
 import Data.Monoid hiding   ((<>))
 import Data.Functor
 import Data.Char            (ord, chr, isAlpha, isUpper, toLower)
-import Data.List            (sort, stripPrefix)
+import Data.List            (nub, sort, stripPrefix)
 import Data.Hashable        
 
-import Data.Maybe           (fromMaybe)
+import Data.Maybe           (fromMaybe, fromJust)
 import Text.Printf          (printf)
 import Control.DeepSeq
 import Control.Arrow        ((***))
@@ -193,7 +195,12 @@ reftKVars (Reft (_,ras)) = [k | (RKvar k _) <- ras]
 
 newtype Kuts = KS (S.HashSet Symbol) 
 
+newtype Deps = DS (S.HashSet (Integer, Integer)) 
+
 newtype Negs = NS (S.HashSet Symbol) 
+
+instance NFData Deps where
+  rnf (DS _) = () -- rnf s
 
 instance NFData Kuts where
   rnf (KS _) = () -- rnf s
@@ -201,11 +208,17 @@ instance NFData Kuts where
 instance NFData Negs where
   rnf (NS _) = () -- rnf s
 
+instance Fixpoint Deps where
+  toFix (DS s) = vcat $ ((text "dep " <>) . toFix) <$> S.toList s
+
 instance Fixpoint Kuts where
   toFix (KS s) = vcat $ ((text "cut " <>) . toFix) <$> S.toList s
 
 instance Fixpoint Negs where
   toFix (NS s) = vcat $ ((text "neg " <>) . toFix) <$> S.toList s
+
+dsEmpty             = DS S.empty
+dsAdd ds (DS s')    = DS (S.insert ds s')
 
 ksEmpty             = KS S.empty
 ksUnion kvs (KS s') = KS (S.union (S.fromList kvs) s')
@@ -820,7 +833,6 @@ data FixResult a = Crash [a] String
                  | Safe 
                  | Unsafe ![a] 
                  | UnknownError !Doc
-                 | Sol !Int
                    deriving (Show)
 
 type FixSolution = M.HashMap Symbol Pred
@@ -829,12 +841,10 @@ instance Eq a => Eq (FixResult a) where
   Crash xs _ == Crash ys _         = xs == ys
   Unsafe xs == Unsafe ys           = xs == ys
   Safe      == Safe                = True
-  Sol _     == Sol _               = True
   _         == _                   = False
 
 instance Monoid (FixResult a) where
   mempty                          = Safe
-  mappend (Sol n1) (Sol n2)       = Sol (n1 * n2)
   mappend Safe x                  = x
   mappend x Safe                  = x
   mappend _ c@(Crash _ _)         = c 
@@ -847,11 +857,9 @@ instance Functor FixResult where
   fmap f (Crash xs msg)   = Crash (f <$> xs) msg
   fmap f (Unsafe xs)      = Unsafe (f <$> xs)
   fmap _ Safe             = Safe
-  fmap _ (Sol n)          = Sol n
   fmap _ (UnknownError d) = UnknownError d
 
 instance (Ord a, Fixpoint a) => Fixpoint (FixResult (SubC a)) where
-  toFix (Sol n)          = int n <+> text "Solutions"
   toFix Safe             = text "Safe"
   toFix (UnknownError d) = text "Unknown Error!" <+> d
   toFix (Crash xs msg)   = vcat $ [ text "Crash!" ] ++  ppr_sinfos "CRASH: " xs ++ [parens (text msg)] 
@@ -862,7 +870,6 @@ ppr_sinfos msg = map ((text msg <>) . toFix) . sort . fmap sinfo
 
 
 resultDoc :: (Ord a, Fixpoint a) => FixResult a -> Doc
-resultDoc (Sol n)          = int n <+> text "Safe"
 resultDoc Safe             = text "Safe"
 resultDoc (UnknownError d) = text "Unknown Error!" <+> d
 resultDoc (Crash xs msg)   = vcat $ (text ("Crash!: " ++ msg)) : (((text "CRASH:" <+>) . toFix) <$> xs)
@@ -1197,7 +1204,24 @@ shiftVV r@(Reft (v, ras)) v'
    | otherwise = Reft (v', (subst1 ras (v, EVar v')))
 
 
-addIds = zipWith (\i c -> (i, shiftId i $ c {sid = Just i})) [1..]
+addIds cs 
+  | hasUniqueIds
+  = shiftIds cs
+  | otherwise
+  = addIds' cs
+  where hasUniqueIds = (length (nub ids)) == (length cs)
+        ids = [i | Just i <- (sid <$> cs)]
+
+shiftIds cs = zipWith (\i c -> (i, shiftId i $ c {sid = Just i})) (fromJust . sid <$> cs) cs
+  where -- Adding shiftId to have distinct VV for SMT conversion 
+    shiftId i c = c { slhs = shiftSR i $ slhs c } 
+                    { srhs = shiftSR i $ srhs c }
+    shiftSR i sr = sr { sr_reft = shiftR i $ sr_reft sr }
+    shiftR i r@(Reft (S v, _)) = shiftVV r (S (v ++ show i))
+
+
+
+addIds' = zipWith (\i c -> (i, shiftId i $ c {sid = Just i})) [1..]
   where -- Adding shiftId to have distinct VV for SMT conversion 
     shiftId i c = c { slhs = shiftSR i $ slhs c } 
                     { srhs = shiftSR i $ srhs c }
@@ -1253,17 +1277,19 @@ data FInfo a = FI { cm    :: M.HashMap Integer (SubC a)
                   , gs    :: !FEnv
                   , lits  :: ![(Symbol, Sort)]
                   , kuts  :: Kuts 
+                  , deps  :: Deps 
                   , negs  :: Negs 
                   , quals :: ![Qualifier]
                   }
 
 -- toFixs = brackets . hsep . punctuate comma -- . map toFix 
 
-toFixpoint x'    = kutsDoc x' $+$ negsDoc x' $+$ gsDoc x' $+$ conDoc x' $+$ bindsDoc x' $+$ csDoc x' $+$ wsDoc x'
+toFixpoint x'    = kutsDoc x' $+$ depsDoc x' $+$ negsDoc x' $+$ gsDoc x' $+$ conDoc x' $+$ bindsDoc x' $+$ csDoc x' $+$ wsDoc x'
   where conDoc   = vcat     . map toFix_constant . getLits 
         csDoc    = vcat     . map toFix . M.elems . cm 
         wsDoc    = vcat     . map toFix . ws 
         kutsDoc  = toFix    . kuts
+        depsDoc  = toFix    . deps
         negsDoc  = toFix    . negs
         bindsDoc = toFix    . bs
         gsDoc    = toFix_gs . gs
