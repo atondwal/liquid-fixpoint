@@ -292,6 +292,9 @@ let drop me ks =
   let (p1, p2) = SM.partition (fun k _ -> List.mem k ks) me.m in 
   (p1, {me with m = p2})
 
+  (* API *)
+let take_sln me = me.m
+
 (* API *)
 let add me xs =
   {me with m = List.fold_left begin fun m (k, v) -> 
@@ -299,6 +302,8 @@ let add me xs =
 
 (* API *)
 let read me k = (me.assm k) ++ (if SM.mem k me.m then p_read me k |>: snd else [])
+let pread me k = 
+  if SM.mem k me.m then Some ((me.assm k)++(p_read me k |>: snd)) else None
 
 (* API *)
 let read_bind s k = failwith "PredAbs.read_bind"

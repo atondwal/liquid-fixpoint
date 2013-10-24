@@ -30,6 +30,7 @@ module type DOMAIN = sig
   (* val meet         : t -> t -> t *)
   val min_read     : t -> FixConstraint.soln
   val read         : t -> FixConstraint.soln
+  val pread        : t -> FixConstraint.psoln
   val read_bind    : t -> Ast.Symbol.t -> bind
   val top          : t -> Ast.Symbol.t list -> t
   val refine       : t -> FixConstraint.t -> (bool * t)
@@ -48,6 +49,7 @@ module type DOMAIN = sig
   val is_contra_pred : Ast.Sort.t Ast.Symbol.SMap.t -> t -> Ast.pred list -> bool
 
 
+  val take_sln    : t -> qbind Ast.Symbol.SMap.t
   val drop         : t -> Ast.Symbol.t list -> (qbind Ast.Symbol.SMap.t * t)
   val add          : t -> qbind Ast.Symbol.SMap.t -> t
 end
