@@ -41,6 +41,7 @@ type envt = reft Ast.Symbol.SMap.t
 
 val fresh_kvar       : unit -> Ast.Symbol.t
 val kvars_of_reft    : reft -> (Ast.Subst.t * Ast.Symbol.t) list
+val kvars_of_env     : envt -> (Ast.Subst.t * Ast.Symbol.t) list
 val kvars_of_t       : t -> (Ast.Subst.t * Ast.Symbol.t) list
 
 val is_conc_refa     : refa -> bool
@@ -50,7 +51,9 @@ val empty_solution   : soln
 val meet_solution    : soln -> soln -> soln
 val apply_solution   : soln -> reft -> reft
 
+val apply_partial_solution_rhs : psoln -> t -> t
 val apply_partial_solution : psoln -> t -> t
+val apply_partial_solution_wf: psoln -> wf -> wf
 
 val wellformed_pred  : envt -> Ast.pred -> bool
 val preds_of_refa    : soln -> refa -> Ast.pred list

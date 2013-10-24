@@ -94,6 +94,9 @@ let kvars_of_reft (_, _, rs) =
     | _              -> None 
   end rs
 
+let kvars_of_env env = 
+  SM.fold begin fun _ r acc -> (kvars_of_reft r)@acc end env []
+
 let meet x (v1, t1, ra1s) (v2, t2, ra2s) = 
   asserts (v1=v2 && t1=t2) "ERROR: FixConstraint.meet x=%s (v1=%s, t1=%s) (v2=%s, t2=%s)" 
   (Sy.to_string x) (Sy.to_string v1) (A.Sort.to_string t1) (Sy.to_string v2) (A.Sort.to_string t2) ;
@@ -230,6 +233,13 @@ let apply_solution f (v, t, ras) =
 let apply_partial_solution_reft f (v, t, ras) = 
   (v, t, List.map (apply_partial_solution_refa f) ras)
 
+  (* API *)
+let apply_partial_solution_wf f (e,r,ido,g) = 
+  let su = apply_partial_solution_reft f in
+  let e = SM.map su e in
+  let r = su r in
+  (e,r,ido,g)
+
 (* API *)
 let apply_partial_solution f me = 
   let su = apply_partial_solution_reft f in
@@ -237,6 +247,10 @@ let apply_partial_solution f me =
            nontriv = SM.map su me.nontriv;
            lhs     = su me.lhs;
            rhs     = su me.rhs}
+
+let apply_partial_solution_rhs  f me = 
+  let su = apply_partial_solution_reft f in
+  {me with rhs     = su me.rhs}
 
 let preds_of_envt f env =
   SM.fold
