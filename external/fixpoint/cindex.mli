@@ -35,6 +35,7 @@ val to_list      : t -> FixConstraint.t list
 val create       : Ast.Symbol.t list -> FixConstraint.dep list -> FixConstraint.t list -> t 
 val deps         : t -> FixConstraint.t -> FixConstraint.t list
 val slice        : t -> t 
+val keep         : FixConstraint.id list -> t -> t 
 val slice_wf     : t -> FixConstraint.wf list -> FixConstraint.wf list
 
 (** worklist manipulation *)
@@ -44,6 +45,7 @@ val winit        : t -> wkl
 
 
 val wapply_psoln : FixConstraint.psoln -> t -> t
+val wapply_psoln_rhs : FixConstraint.psoln -> t -> t
 (** printing *)
 val print        : Format.formatter -> t -> unit 
 

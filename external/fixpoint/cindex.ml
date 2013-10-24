@@ -277,6 +277,8 @@ let create kuts ds cs =
   let dm, real_deps = make_deps cm in
   create_raw kuts ds cm dm real_deps 
 
+
+
 (* API *)
 let slice me = 
   let lives = make_lives me.cnst me.rdeps in
@@ -312,6 +314,12 @@ let deps me c =
 (* API *)
 let to_list me = IM.range me.cnst
 
+(* API *)
+let keep ids me = 
+  let cs = to_list me
+    |> List.filter (fun c -> List.mem (C.id_of_t c) ids) in 
+  create me.kuts me.ds cs
+
 (* 
 (* API *)
 let to_live_list me =
@@ -343,6 +351,9 @@ let wstring w =
   WH.fold (fun (_,r) acc -> r.id :: acc) w [] 
   |> List.sort compare
   |> Misc.map_to_string string_of_int
+
+let wapply_psoln_rhs su me = 
+    {me with cnst = IM.map (C.apply_partial_solution_rhs su) me.cnst }
 
 let wapply_psoln su me = 
     {me with cnst = IM.map (C.apply_partial_solution su) me.cnst }
