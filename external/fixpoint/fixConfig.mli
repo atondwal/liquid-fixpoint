@@ -12,6 +12,7 @@ type deft = Srt of Ast.Sort.t
           | Sol of solbind
           | Qul of Qualifier.t
           | Dep of FixConstraint.dep
+          | Deps of (int * int)
           | Kut of Ast.Symbol.t
           | Neg of Ast.Symbol.t
           | IBind of int * Ast.Symbol.t * FixConstraint.reft  
@@ -25,6 +26,7 @@ type 'bind cfg = {
  ; ds    : FixConstraint.dep list            (* Constraint Dependencies              *)
  ; qs    : Qualifier.t list                  (* Qualifiers                           *)
  ; kuts  : Ast.Symbol.t list                 (* "Cut"-Kvars, which break cycles      *)
+ ; deps  : (int*int) list                 (* "Cut"-Kvars, which break cycles      *)
  ; negs  : Ast.Symbol.t list                 (* Negative k variables                 *)
  ; bm    : 'bind Ast.Symbol.SMap.t           (* Initial Sol Bindings                 *)
  ; uops  : Ast.Sort.t Ast.Symbol.SMap.t      (* Globals: measures + distinct consts) *)

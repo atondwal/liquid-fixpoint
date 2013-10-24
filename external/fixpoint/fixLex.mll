@@ -126,6 +126,7 @@ rule token = parse
   | "solution"          { SOL }
   | "qualif"            { QUL }
   | "cut"               { KUT }
+  | "dep"               { DEP }
   | "bind"              { BIND }
   | "add_dep"           { ADP }
   | "del_dep"           { DDP }

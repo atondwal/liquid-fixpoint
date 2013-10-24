@@ -46,6 +46,7 @@ type deft = Srt of Ast.Sort.t
           (* | Sol of Ast.Symbol.t * (Ast.pred * (Ast.Symbol.t * Ast.Subst.t)) list *)
           | Qul of Q.t
           | Dep of FixConstraint.dep
+          | Deps of (int*int)
           | Kut of Ast.Symbol.t
           | Neg of Ast.Symbol.t
           | IBind of int * Ast.Symbol.t * FixConstraint.reft  
@@ -59,6 +60,7 @@ type 'bind cfg = {
  ; ds     : FixConstraint.dep list            (* Constraint Dependencies              *)
  ; qs     : Q.t list                          (* Qualifiers                           *)
  ; kuts   : Ast.Symbol.t list                 (* "Cut"-Kvars, which break cycles      *)
+ ; deps   : (int*int) list                 (* "Cut"-Kvars, which break cycles      *)
  ; negs   : Ast.Symbol.t list                 (* Negative k variables                 *)
  ; bm     : 'bind SM.t                        (* Initial Sol Bindings                 *)
  ; uops   : Ast.Sort.t Ast.Symbol.SMap.t      (* Globals: measures + distinct consts) *)
@@ -85,6 +87,7 @@ let extend f cfg = function
   | Wfc w         -> {cfg with ws   = w     :: cfg.ws   }
   | Dep d         -> {cfg with ds   = d     :: cfg.ds   }
   | Kut k         -> {cfg with kuts = k     :: cfg.kuts }
+  | Deps d        -> {cfg with deps = d     :: cfg.deps }
   | Neg n         -> {cfg with negs = n     :: cfg.negs }
   | Qul q         -> {cfg with qs   = q     :: cfg.qs   }
   | Sol (k, fess) -> {cfg with bm   = SM.add k (List.map f fess) cfg.bm  }
@@ -101,6 +104,7 @@ let empty =
   ; ws     = []
   ; ds     = []
   ; qs     = []
+  ; deps   = []
   ; kuts   = []
   ; negs   = []
   ; bm     = SM.empty
