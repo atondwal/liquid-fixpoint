@@ -99,15 +99,35 @@ let save_solns (s,_,_) =
   let fname = String.concat "." [!Co.out_file; string_of_int !n] in 
   save_raw fname [] s
 
-let save_soln [(s,_,_)] = 
-  save_raw !Co.out_file [] s
+let save_soln [(s,u,_)] = 
+  save_raw !Co.out_file u s
 
   
-let esolve ac  = 
+let esolve ac  =
+  let deps      = EPA.create_deps ac None in 
+
+
   let _         = Co.bprintflush mydebug "Fixpoint: Creating  CI\n" in
-  let ctx, s    = BS.time "create" EPA.create ac None in
+
+  let rec loop  [(s,ss,u,l)] = function 
+    | [] -> [(ss,u,l)]
+    | (d::ds) ->
+  let ctxs    = BS.time "create" EPA.create ac s d in
   let _         = Co.bprintflush mydebug "Fixpoint: Solving \n" in
-  let ss        = BS.time "solve" (EPA.solve ctx) s in
+  let [(nss,uu,ll)]        = BS.time "solve" (EPA.solve) ctxs in
+
+  let curss = PA.take_sln nss in
+  let newss = match ss with 
+  | None -> nss 
+  | Some ss -> PA.add ss curss in 
+ 
+  let _ = SM.mapi begin function k -> function  _ -> F.printf "\t%s\t" (Ast.Symbol.to_string
+  k) end curss in 
+
+
+  loop [(Some (PA.pread newss), Some newss, uu, ll)] ds in 
+  let [(Some x, y, z)] = loop [(None, None, [],[])] deps in
+  let ss = [(x,y,z)] in
   let ns        = List.length ss in
   
   let _         = Co.bprintflush mydebug "Fixpoint: Saving Result \n" in
@@ -120,8 +140,10 @@ let edump_solve ac =
     let sols = esolve { ac with Cg.bm = SM.map PA.mkbind ac.Cg.bm } in
     let ns  = List.length sols in  
     let _   = if Co.ck_olev 1 then BNstats.print stdout "Fixpoint Solver Time\n" in
-    if ns == 1 then 
+    if ns == 1 && ((fun (_,x,_) -> x)  (List.hd sols) = []) then 
       (F.printf "\n1 SOLUTION\n"; exit 1)
+      else if ns == 1 then 
+      (F.printf "\n1 UNSAFE \n"; exit 1)
     else if ns > 0 then 
       (F.printf "\n%d SOLUTIONS\n" (List.length sols); exit 2)
     else (F.printf "\nNO SOLUTIONS \n"; exit 0)

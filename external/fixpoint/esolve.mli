@@ -49,8 +49,9 @@ val next_element : elem possoln -> elem possoln option
 module type SOLVER = sig
   type soln
   type bind
-  val create    : bind FixConfig.cfg -> FixConstraint.soln option -> (t * soln) 
-  val solve     : t -> soln -> (soln * (FixConstraint.t list) *
+  val create    : bind FixConfig.cfg -> FixConstraint.psoln option -> (int * (int list))-> (int * t * soln)
+  val create_deps : bind FixConfig.cfg -> FixConstraint.soln option -> (int * (int list) ) list
+  val solve     : (int * t *soln) -> (soln * (FixConstraint.t list) *
   Counterexample.cex list) list 
   val save      : string -> t -> soln -> unit 
   val read      : soln -> FixConstraint.soln
