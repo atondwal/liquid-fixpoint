@@ -100,7 +100,7 @@ let esolve ac  =
     | (d::ds) ->
      let ctxs    = BS.time "create" EPA.create ac s d in
      let _       = Co.bprintflush mydebug "Fixpoint: Solving \n" in
-     let [(nss,uu,ll)] = BS.time "solve" (EPA.solve) ctxs in
+     let (nss,uu,ll) = BS.time "solve" (EPA.solve) ctxs in
 
      let curss = PA.take_sln nss in
      let newss = match ss with 
