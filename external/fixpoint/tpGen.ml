@@ -200,7 +200,7 @@ let rec z3Rel me env (e1, r, e2) =
   let ok = A.sortcheck_pred Theories.is_interp (Misc.flip SM.maybe_find env) p   in 
   (* let _  = F.printf "z3Rel: e = %a, res = %b \n" P.print p ok in
      let _  = F.print_flush ()                                   in *)
-  if ok then 
+  if !Co.varpoly || ok then 
     SMT.mkRel me.c r (z3Exp me env e1) (z3Exp me env e2)
   else begin 
     SM.iter (fun s t -> F.printf "@[%a :: %a@]@." Sy.print s So.print t) env;
