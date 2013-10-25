@@ -37,8 +37,10 @@ module C  = FixConstraint
 module Ci = Cindex
 module PP = Prepass
 module Cg = FixConfig
+module IMap = Map.Make(struct type t = int let compare = compare end)
 (* module TP   = TpNull.Prover *)
 module Misc = FixMisc open Misc.Ops
+
 
 
 let mydebug = true 
@@ -126,7 +128,7 @@ let hashtbl_print_frequency t =
   |> List.map (fun ((n,b), xs) -> (n, b, List.map (fst <+> fst) xs))
   |> List.sort compare
   |> List.iter begin fun (n, b, xs) -> 
-       Co.bprintf mydebug "ITERFREQ: %d times (ch = %b) %d constraints %s \n"
+       Co.bprintf vmydebug "ITERFREQ: %d times (ch = %b) %d constraints %s \n"
          n b (List.length xs) (Misc.map_to_string string_of_int xs) 
      end
 
@@ -197,7 +199,7 @@ let make_lattice_one k sm s qs =
   let a = Array.of_list qs in
   let nq = List.length qs in
   let rec go n acc now = 
-    match go_up a now with 
+    match go_up a now with
       | [] -> acc
       | [(qss,[])] -> acc @ [qss]
       | [_] -> (F.printf "make_lattice" ; assert (false); [])
@@ -461,9 +463,86 @@ let print_p p
    end p;
    F.printf "\nEND P\n" 
 
+let nq = ref 0    
+
+let create_q template pred = 
+    let qname = incr nq; Sy.of_string 
+    (String.concat "" ["DummyQ";(string_of_int !nq)]) in
+    let qvar  = Q.vv_of_t template in 
+    let qsort = Q.sort_of_t template in 
+    Q.create qname qvar qsort [] pred 
 
 
-let rec loop s acc me pm sinit =
+let group lss = 
+    let rec go acc = function
+      | [] -> acc
+      | (([])::lss) -> go acc lss
+      | (((x,y)::ls)::lss) -> 
+        if List.mem_assoc x acc
+        then let ys = List.assoc x acc in 
+             let _acc = List.remove_assoc x acc in
+             go ((x,(y::ys))::_acc) (ls::lss)
+        else go ((x,[y])::acc) (ls :: lss)
+    in go [] lss 
+
+let mapSnd f (x, y) = (x, f y)
+
+let union_one dss =  
+     match List.concat (List.map fst dss) with 
+      | [] -> []
+      | (d::_) -> (
+        let f (ds,epds) =
+        let pds = List.map Q.pred_of_t ds in pds@epds
+      in           
+        let pd =  dss |> List.map (f <+> Ast.pAnd)
+              |> Ast.pOr in  
+        let qq = create_q d pd 
+        in [qq]
+      )
+
+ 
+                      
+let punion me sups = 
+  let g p = 
+    SM.mapi begin fun k ds -> 
+      let w = match List.filter begin fun w -> 
+        List.mem k (List.map snd (C.kvars_of_reft (C.reft_of_wf w)))
+         end me.ws with 
+       |[w] -> w
+       | _ -> assert false
+      in
+      let suu k = if SM.mem k p
+            then SM.find k p |>: Q.pred_of_t |> fun x -> x
+            else [] in
+
+      let env  = C.env_of_wf w in
+      let epds = SM.mapi begin fun i (v,s,rs) ->
+            let _rs = List.filter begin fun r -> 
+            match r with 
+            | C.Kvar _ -> true
+            | C.Conc _ -> false
+      end rs in
+            let pds = C.preds_of_reft suu (v,s,_rs) in 
+             List.map begin fun p -> 
+               Ast.Predicate.subst p v (Ast.eVar i) end  pds
+         end env
+      in 
+      let epds = 
+           epds |> SM.bindings |> List.map snd |> List.concat in
+      (ds, epds) end p 
+  in 
+  
+  
+  
+  sups |> List.map snd
+          |> List.map g
+          |> List.map SM.bindings
+          |> group 
+          |> List.map (mapSnd union_one) 
+         |> SM.of_list
+
+
+let rec loop i s acc me pm sinit =
 
     let p = soln_to_map pm in
 
@@ -578,7 +657,9 @@ let rec loop s acc me pm sinit =
        List.exists (fun s -> List.for_all (is_implied_wf p (snd s)) negws) acc  then 
     match next_element pm with
                 | None -> acc
-                | Some pm' -> loop s acc me pm' sinit
+                | Some pm' -> 
+                  (loop (i+1) s acc me pm'
+                sinit)
 
       else (  
 
@@ -624,15 +705,456 @@ let rec loop s acc me pm sinit =
               else (unsafe (); acc) in
     match next_element pm with
                 | None -> acc
-                | Some pm' -> loop s acc me pm' sinit
+                | Some pm' ->  loop (i+1) s acc me pm' sinit
 
       )
 
+let rec range i j = 
+    if (j == i) then [j] 
+    else if j < i then []
+    else (i:: range (i+1) j)
+
+let make_bare_lattice_one n = 
+  let ns = range 0 (n-1) in 
+  let core = List.map begin fun i -> 
+    ([i], List.filter begin fun j -> j > i end ns) end ns in 
+  let expand (xs, ys) = 
+    match ys with 
+     | [] -> []
+     | ws -> List.map begin fun i -> 
+         (i::xs, List.filter begin fun w -> w > i end ws)
+         end ws
+  in 
+  let rec loop current =
+    match current with 
+     | [] -> []
+     | current -> 
+    List.map fst current  @ (loop (List.concat (List.map expand current)))
+  in 
+  ([]::loop core) |> Array.of_list
+
+let make_bare_lattice ns = List.map make_bare_lattice_one ns
+
+ 
+let print_bare_lattice a = 
+  F.printf "BEGIN: Print lattice\n";
+  Array.mapi begin fun i ls -> 
+    F.printf "\n%d :{%a}" i (Misc.pprint_many false " , " 
+    (fun ppf -> F.fprintf ppf "%d")) ls  
+  end a;
+  F.printf "\nEND: Print lattice"
+
+type lattice_state =  Active | Inactive | Solution
+
+let print_state ppf = function
+  | Active -> F.fprintf ppf "Active"
+  | Inactive -> F.fprintf ppf "Inactive"
+  | Solution -> F.fprintf ppf "Solution"
+
+let print_lattice_state a = 
+  (*
+  F.printf "BEGIN: Print lattice\n";
+  IMap.mapi begin fun i s -> 
+    F.printf "%d, " i 
+  end a;
+  F.printf "\nEND: Print lattice";
+*)
+  F.printf "\nSIZE = %d\n" (IMap.cardinal a)
+
+
+
+let initialize_state n = 
+  (F.printf "\ninitialize state with n = %d\n" n; assert false; range 0 (n-1)) 
+  |> List.map begin fun i -> (i, Active) end
+  |> List.fold_left begin fun m (k,a) -> IMap.add k a m end IMap.empty 
+
+let ichoise = ref (-1)
+
+let choose l s =
+  incr ichoise ; 
+  match (!ichoise mod 5)  with 
+  | 0 -> IMap.min_binding s |> fst 
+  | 1 -> IMap.max_binding s |> fst 
+  | 2 -> let mini = IMap.min_binding s |> fst in 
+         let maxi = IMap.max_binding s |> fst in 
+         let ii =  (mini + ( (maxi - mini)/ 2)) in
+         let _ = F.printf "\nii = %d\n" ii in  
+         let (_,_,t) = IMap.split ii s in 
+           IMap.min_binding t |> fst
+  | _ -> let mini = IMap.min_binding s |> fst in 
+         let maxi = IMap.max_binding s |> fst in 
+         let ii =  (mini + ( (maxi - mini)/ 2)) in 
+         let _ = F.printf "\nii = %d\n" ii in  
+         let (t,_,_) = IMap.split ii s in 
+           IMap.max_binding t |> fst
+
+
+let update l s is_solution i = 
+  let is = Array.get l i in 
+
+  let less_general j _ = 
+    let js = Array.get l j in 
+      List.exists begin fun ii -> 
+        List.for_all begin fun jj -> ii != jj end js 
+            end is in
+  let more_general j _ = 
+    let js = Array.get l j in 
+      List.exists begin fun jj -> 
+        List.for_all begin fun ii -> ii != jj end is 
+            end js in
+
+
+  if is_solution then (
+    IMap.filter less_general s
+  )
+  else (
+    IMap.filter more_general s
+  )
+ 
+let make_solution bare_lattice i aas  =
+    Array.get bare_lattice i |> 
+           List.map (Array.get aas) 
+           
+ 
+let make_solutions bare_lattices is ks aas  =
+  let rec zip xs ys = 
+    match (xs, ys) with 
+    |((x::xs),(y::ys)) -> (x,y) :: zip xs ys
+    | _ -> [] in 
+
+  let rec zip3 xs ys ws = 
+    match (xs, ys, ws) with 
+    |((x::xs),(y::ys),(w::ws)) -> (x,y,w) :: zip3 xs ys ws
+    | _ -> [] in 
+
+  let dss = List.map begin fun (bare_lattice, i , a) -> 
+    Array.get bare_lattice i |> 
+           List.map (Array.get a) 
+           end (zip3 bare_lattices is aas) in
+  SM.of_list (zip ks dss) 
+
+let is_solution p s me =
+
+    let _ = F.printf "\nBEGIN: CURRENT = " in 
+    let _ = print_p p in 
+    let _ = F.printf "\nEND: CURRENT = " in 
+
+
+    let su k = if SM.mem k p
+               then SM.find k p |>: Q.pred_of_t |> fun x -> Some x
+               else None in
+    let _me    = {me with sri = Ci.wapply_psoln su me.sri} in
+
+    let _  = Co.bprintflush mydebug "\nBEGIN: Fixpoint: Initialize Worklist \n" in
+    let w  = BS.time "Cindex.winit" Ci.winit _me.sri in 
+    let _  = Co.bprintflush mydebug "\nDONE: Fixpoint: Initialize Worklist \n" in
+ 
+    let _  = Co.bprintflush vmydebug "\nBEGIN: Fixpoint Refinement Loop \n" in
+    let si  = BS.time "Solve.acsolve"  (acsolve _me w) s in
+    let _  = Co.bprintflush vmydebug "\nDONE: Fixpoint Refinement Loop \n" in
+  (* let _ = F.printf "create: SOLUTION2 \n %a \n" Dom.print s in *)
+    let _  = Co.bprintflush vmydebug "\nBEGIN: Simplify Solution \n" in
+    let s  = if !Co.minquals then simplify_solution _me si else si in
+    let _  = Co.bprintflush vmydebug "\nDONE: Simplify Solution \n" in
+    let _  = if vmydebug then BS.time "Solve.dump" (dump _me) s else ()  in
+    let _  = Co.bprintflush mydebug "Fixpoint: Testing Solution \n" in
+    let u  = BS.time "Solve.unsatcs" (unsat_constraints _me) si in
+    let _ = F.printf "UNSAT CoN = %a" (Misc.pprint_many false "\n\n" (C.print_t
+    None)) u in
+    (u == [], s)
+
+let is_contra_wf s solution w =
+
+      
+    let suu k = if SM.mem k solution
+              then SM.find k solution |>: Q.pred_of_t |> fun x -> x
+               else [] in
+
+  
+      let env  = C.env_of_wf w in
+      let (wv,ws,wr)  = C.reft_of_wf w in
+      let refts = SM.mapi 
+      (fun i (v,s,rs) -> let pds = C.preds_of_reft suu (v,s,rs) in 
+                         List.map (fun p -> Ast.Predicate.subst p v (Ast.eVar i)) pds
+      ) 
+      env 
+      |> SM.to_list |> List.map snd
+      in
+      let syms = SM.add wv ws (SM.map (fun (_,s,_) -> s) env)  in
+      let pds = (C.preds_of_reft suu (C.reft_of_wf w)) @ 
+            List.concat refts in 
+      Dom.is_contra_pred syms s pds
+
+let is_implied_wf s new_solution old_solution w =
+
+    let pnew = new_solution in
+    let suu k = if SM.mem k pnew
+              then SM.find k pnew |>: Q.pred_of_t |> fun x -> x
+               else [] in
+
+    
+    let pold = old_solution in 
+    let suuold k = if SM.mem k pold
+                   then SM.find k pold |>: Q.pred_of_t |> fun x -> x
+                   else [] in 
+   
+      let env = C.env_of_wf w in 
+      let (wv,ws,wr)  = C.reft_of_wf w in
+      let _ = F.printf "\nStart is implied for %s\n" 
+        (String.concat " , " 
+        (List.map (snd <+>Sy.to_string) (C.kvars_of_reft (wv,ws,wr))))
+      in
+      let refts = SM.mapi 
+      (fun i (v,s,rs) -> let pds = C.preds_of_reft suuold (v,s,rs) in 
+                         List.map (fun p -> Ast.Predicate.subst p v (Ast.eVar i)) pds
+      ) 
+      env 
+      |> SM.to_list |> List.map snd
+      in
+      let syms = SM.add wv ws (SM.map (fun (_,s,_) -> s) env)  in
+      let pnew = (C.preds_of_reft suu (C.reft_of_wf w)) @ 
+            List.concat refts |> Ast.pAnd in
+      let pold = (C.preds_of_reft suuold (C.reft_of_wf w)) @ 
+            List.concat refts |> Ast.pAnd in
+      Dom.is_contra_pred syms s [(Ast.pNot (Ast.pImp(pnew, pold)))]
+      >> (fun b -> F.printf "\nEnd is implied = %s for %a \n\n" (if b then
+        "true" else "false")  Ast.Predicate.print 
+        (Ast.pNot (Ast.pImp (pnew, pold)) ) ; b)
+
+
+let rec _loop kdss acc bare_lattice search_lattice i k ads s mee me =  
+  let si = s in 
+  let mei = me in 
+  let _ = F.printf "CHOOSE %d \n\n" i in
+
+  let kds = make_solution bare_lattice i ads  in 
+  let p = SM.of_list ((k, kds) :: kdss) in 
+
+  let (is_sol,sol) = is_solution p s mee in 
+  let _ = F.printf "\n\nIS SOL =  %s \n\n" 
+            (if is_sol then "true" else "false") in
+
+  let _acc = if is_sol then (sol, i)::acc else acc in 
+
+  let sl = update bare_lattice search_lattice is_sol i in
+  let _ = print_lattice_state sl in 
+  if IMap.is_empty sl then _acc else
+    let j = choose bare_lattice sl in 
+    _loop kdss _acc bare_lattice sl j k ads si mee mei
+
+
+let _loop0 kdds acc [bare_lattice] [(k,ads)] s mee me =  
+  let _ = F.printf "\nSOLUTIONS0 \n" in  
+  let search_lattice = initialize_state (Array.length bare_lattice) in 
+  let _ = F.printf "\nSOLUTIONS1\n" in  
+  let _ = print_lattice_state search_lattice in 
+  let _ = F.printf "\nSOLUTIONS2\n" in  
+  let i = choose bare_lattice search_lattice in
+  let sl = _loop kdds acc bare_lattice search_lattice i k ads s mee me
+ in 
+  let _ = F.printf "\nSOLUTIONS = %d\n" (List.length sl) in  
+  
+  (*HEREE*) 
+  let simplify ls = 
+     let ls = List.sort (fun xs ys -> 
+       compare (List.length (snd xs)) 
+               (List.length (snd ys))) ls in  
+     let rec go = function 
+       | [] -> []
+       | ((sx,x)::xs) -> let xs = List.filter begin fun (_,ys) -> 
+                      List.exists begin fun i -> 
+                         List.for_all begin fun j -> i != j end ys end x
+                   end xs 
+                   in (sx,x)::go xs 
+     in go ls 
+  in 
+  let sl = List.map begin fun (si,i) -> (si,Array.get bare_lattice i) end sl in 
+  let sl = simplify sl in
+
+  let sl = List.map begin fun (si, is) -> 
+             let ds = List.map begin fun i -> Array.get ads i end is in (si,
+             SM.of_list ((k,ds)::kdds)) 
+     
+     end sl in 
+  
+  let _ = F.printf "\nSOLUTIONS = %d\n" (List.length sl) in  
+  let negws = 
+    List.filter 
+    (fun w -> List.exists (fun k -> List.mem k me.negs) 
+       (List.map snd (C.kvars_of_reft (C.reft_of_wf w)))
+    ) 
+    me.ws in
+
+    let sl = List.filter (fun (s,_) -> 
+          (List.for_all 
+          (fun w -> not (is_contra_wf s (Dom.take_sln s) w))
+          negws)
+    ) sl in  F.printf "leaving_loopmy \n\n"; 
+
+  sl
+
+
+let rec _loopmy sols acc bare_lattice kads s mee me =
+  F.printf "entering _loopmy %d - %d \n\n" 
+  (List.length kads) 
+  (List.length bare_lattice) ; 
+  match (bare_lattice, kads) with
+   | ([],[]) -> F.printf "leaving_loopmy \n\n" ; [(s, SM.empty)]
+   | ([],_) -> assert false
+   | (_,[]) -> assert false
+   | ([(bl,_)],[(k,ad)]) ->
+  F.printf "to call loop0 %d \n\n" (List.length kads) ; 
+       _loop0 acc [] [bl] [(k,ad)] s mee me
+   | ([x],_) -> assert false
+   | (_, [x]) -> assert false
+   | ((bl,None)::bls, _) -> 
+       let sl = initialize_state (Array.length bl) in 
+       let bar = _loopmy sols acc ((bl,Some sl) :: bls) kads s mee me
+      in  F.printf "leaving_loopmy \n\n"; bar 
+   | ((bl,Some sl)::bls, (k,ad)::kads) -> 
+       if IMap.is_empty sl then sols else
+       let i = choose bl sl in 
+       let _bls = List.map (fun (x,_) -> (x,None)) bls in 
+       let ds = make_solution bl i ad in 
+       let foo = _loopmy [] ((k,ds)::acc) _bls kads s mee me in 
+       let is_sol = match foo with | [] -> false | _ -> true in
+       let _ = F.printf "IS SOL = %s fior %s" 
+       (if is_sol then "true" else "false") (Sy.to_string k) in 
+
+       let sl = update bl sl is_sol i in
+       let bar = _loopmy (foo@sols) acc ((bl,Some sl) :: _bls) ((k,ad)::kads) s
+       mee me in
+       F.printf "leaving_loopmy \n\n";  bar 
+
+  (* CHOOSE FIRST *)
+
+  (* IS SOLUTION? *)
+
+  (* SIMPLIFY *)
+
+  (*COLLECT SOLUTION *)
+
+  (* LOOP *)
 
 
 
 
 
+
+
+(*attemp to keep the hole lattice and simplify latter, 
+ * the lattice may be huge....*)
+let solve_one_no me s =
+  let sinit = s in 
+  let me_init = me in
+  let _  = Co.bprintflush mydebug "Fixpoint: Validating Initial Solution \n" in
+  (* let _ = F.printf "create: SOLUTION \n %a \n" Dom.print s in *)
+  let _  = BS.time "Prepass.profile" PP.profile me.sri in
+  let _  = Co.bprintflush mydebug "\nBEGIN: Fixpoint: Trueing Unconstrained Variables \n" in
+  let s  = s |> (!Co.true_unconstrained <?> BS.time "Prepass.true_unconstr" (true_unconstrained me.sri)) in
+  let _  = Co.bprintflush mydebug "\nDONE: Fixpoint: Trueing Unconstrained Variables \n" in
+
+
+
+  let (p0, s_init) = Dom.drop s me.negs in
+
+ 
+  let puks = neg_true_unconstrained me.sri in
+  let p = SM.filter (fun k _ -> not (Sy.SSet.mem k puks) ) p0 in
+  
+  let kdss = SM.to_list p0 |> List.rev in  
+  let dss = 
+    List.map begin fun ds -> 
+    List.filter begin fun q -> 
+    (not ((Q.pred_of_t <+> P.is_contra) q)) end ds 
+     end (List.map snd kdss) in 
+  let adss = List.map Array.of_list dss in
+  let _ = F.printf "\nPrinting mapping\n\n" in 
+  let _ = List.map begin fun ads ->  
+    F.printf "\nBEGIN PRINT MAPPING\n" ; 
+    Array.mapi begin fun i d -> 
+      F.printf "%d := %a\n" i Q.print d end ads;
+    F.printf "\nEND PRINT MAPPING \n"
+      end adss in
+
+  
+  let _ = F.printf "\nEND Printing mapping\n\n" in 
+  let bare_lattice = make_bare_lattice (List.map List.length dss) in 
+(*  let _ = print_bare_lattice bare_lattice in *)
+
+  let sut k = if List.mem k me.negs
+              then Some []
+              else None in
+
+  let rec zip xs ys =
+    match (xs,ys) with
+    | ([],_) -> []
+    | (_,[]) -> []
+    | (x::xs, y::ys) -> (x,y):: zip xs ys in
+ 
+  let kads = zip (List.map fst kdss) adss in
+  let _ = assert ((List.length bare_lattice) == (List.length kads)) in
+  let mee    = {me with sri = Ci.wapply_psoln_rhs sut me.sri} in
+  let sl = _loopmy [] [] (List.map (fun x -> (x,None)) bare_lattice) kads s_init mee me_init in
+
+  
+  
+  
+  (* SIMPLIFY SOLUTION*)
+
+
+  let negws = 
+    List.filter 
+    (fun w -> List.exists (fun k -> List.mem k me.negs) 
+       (List.map snd (C.kvars_of_reft (C.reft_of_wf w)))
+    ) 
+    me.ws in
+
+  let _ = F.printf "BEGIN : Simplify solution " in 
+  let sls = List.map begin fun (sln, kds) -> (Dom.add sln kds, kds) end sl in 
+
+  let rec simplify_implied = function
+    | [] -> []
+    | (sln, dsi)::xs -> 
+        let xss = List.filter (fun (x,_) -> 
+          not (List.for_all 
+          (is_implied_wf sinit (Dom.take_sln x) (Dom.take_sln sln)) 
+          negws)
+        ) xs in 
+        (sln, dsi) :: simplify_implied xss
+  in 
+  let sls = simplify_implied sls |> List.rev |> simplify_implied in 
+  let _ = F.printf "END : Simplify solution " in 
+
+
+
+  let sups = 
+    sls |> List.map begin fun (ss,_) -> (ss, fst (Dom.drop ss me.negs)) end  
+         |> punion me_init  in 
+   
+    let p = sups in 
+    let su k = if SM.mem k p
+               then SM.find k p |>: Q.pred_of_t |> fun x -> Some x
+               else None in
+    let _me    = {me with sri = Ci.wapply_psoln su me.sri} in
+
+    let _  = Co.bprintflush mydebug "\nBEGIN: Fixpoint: Initialize Worklist \n" in
+    let w  = BS.time "Cindex.winit" Ci.winit _me.sri in 
+    let _  = Co.bprintflush mydebug "\nDONE: Fixpoint: Initialize Worklist \n" in
+ 
+    let _  = Co.bprintflush vmydebug "\nBEGIN: Fixpoint Refinement Loop \n" in
+    let si  = BS.time "Solve.acsolve"  (acsolve _me w) sinit in
+    let _  = Co.bprintflush vmydebug "\nDONE: Fixpoint Refinement Loop \n" in
+  (* let _ = F.printf "create: SOLUTION2 \n %a \n" Dom.print s in *)
+    let _  = Co.bprintflush vmydebug "\nBEGIN: Simplify Solution \n" in
+    let s  = if !Co.minquals then simplify_solution _me si else si in
+    let _  = Co.bprintflush vmydebug "\nDONE: Simplify Solution \n" in
+    let _  = if vmydebug then BS.time "Solve.dump" (dump _me) s else ()  in
+    let _  = Co.bprintflush mydebug "Fixpoint: Testing Solution \n" in
+    let u  = BS.time "Solve.unsatcs" (unsat_constraints _me) si in
+
+(* END : SOLVE WITH UNION *)
+  [(Dom.add s p, u, []) ]
 
 
 
@@ -765,7 +1287,7 @@ let solve_one me s =
 
   let _  = Co.bprintflush mydebug "\nDONE: Exhaustive: Call init_soln \n" in
 
-  let sups = loop s [] me pm sinit in
+  let sups = loop 0 s [] me pm sinit in
 
   (* update p *)
 (* LOOP ENDS*)  
@@ -864,6 +1386,7 @@ let solve_one me s =
     (Misc.pprint_many false "\n" Q.print) ds
   end punion
     
+
     in
 
 
