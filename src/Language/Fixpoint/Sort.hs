@@ -104,6 +104,8 @@ checkExpr f (EIte p e1 e2) = checkIte f p e1 e2
 checkExpr f (ECst e t)     = checkCst f t e
 checkExpr f (EApp g es)    = checkApp f Nothing g es
 checkExpr f (ELit _ t)     = return t
+checkExpr f (ESym s)       = return strSort
+checkExpr f e              = throwError $ printf "Type Error: %s" (show e)
 
 -- | Helper for checking symbol occurrences
 

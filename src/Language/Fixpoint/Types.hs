@@ -25,7 +25,7 @@ module Language.Fixpoint.Types (
   , Sort (..), FTycon, TCEmb
   , intFTyCon
   , boolFTyCon
-  , strFTyCon
+  , strFTyCon, strSort
   , propFTyCon
   -- , appFTyCon
   , fTyconString
