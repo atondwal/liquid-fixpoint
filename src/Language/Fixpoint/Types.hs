@@ -570,6 +570,7 @@ instance Fixpoint Pred where
   toFix (PImp p1 p2)     = parens $ (toFix p1) <+> text "=>" <+> (toFix p2)
   toFix (PIff p1 p2)     = parens $ (toFix p1) <+> text "<=>" <+> (toFix p2)
   toFix (PAnd ps)        = text "&&" <+> toFix ps
+  toFix (POr [])         = text "0 = 1"
   toFix (POr  ps)        = text "||" <+> toFix ps
   toFix (PAtom r e1 e2)  = parens $ toFix e1 <+> toFix r <+> toFix e2
   toFix (PAll xts p)     = text "forall" <+> (toFix xts) <+> text "." <+> (toFix p)
