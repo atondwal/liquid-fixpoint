@@ -12,7 +12,7 @@ module Language.Fixpoint.Files (
   -- * Hardwired file extension names
     Ext (..)
   , tmpExtFileName
-  -- , extFileName
+  , extFileName
   , extModuleName
   , withExt
   , isExtFile
@@ -85,7 +85,7 @@ extMap e = go e
     go Out    = ".fqout"
     go Fq     = ".fq"
     go Html   = ".html"
-    go Cst    = ".cst"
+    go Cst    = ".cst.html"
     go Annot  = ".annot"
     go Hs     = ".hs"
     go LHs    = ".lhs"
