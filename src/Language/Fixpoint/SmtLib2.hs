@@ -58,7 +58,7 @@ runFile f
 runString str
   = runCommands $ rr str
 
-runCommands cmds 
+runCommands cmds
   = do me   <- makeContext Z3
        mapM_ (T.putStrLn . smt2) cmds
        zs   <- mapM (command me) cmds
@@ -181,8 +181,12 @@ makeContext s
 
 makeProcess s
   = do (hOut, hIn, _ ,pid) <- runInteractiveCommand $ smtCmd s
+       smtFile             <- tmpExtFileName Smt2 smtFile 
        hLog                <- openFile smtFile WriteMode
        return $ Ctx pid hIn hOut hLog False
+
+smtFile :: FilePath
+smtFile = "out"
 
 --------------------------------------------------------------------------
 cleanupContext :: Context -> IO ExitCode
@@ -207,8 +211,7 @@ smtCmd Cvc4    = "cvc4 --incremental -L smtlib2"
 smtPreamble Z3 = z3Preamble
 smtPreamble _  = smtlibPreamble
 
-smtFile :: FilePath
-smtFile = extFileName Smt2 "out"
+
 
 -----------------------------------------------------------------------------
 -- | SMT Commands -----------------------------------------------------------
