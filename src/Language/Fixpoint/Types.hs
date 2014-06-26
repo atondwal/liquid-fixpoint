@@ -358,10 +358,10 @@ toFix_sort FReal        = text "real"
 toFix_sort (FObj x)     = toFix x
 toFix_sort FNum         = text "num"
 toFix_sort (FFunc n ts) = text "func" <> parens ((toFix n) <> (text ", ") <> (toFix ts))
-toFix_sort (FApp c [t])
-  | isListTC c          = brackets $ toFix_sort t
+-- toFix_sort (FApp c [t])
+--   | isListTC c          = brackets $ toFix_sort t
 toFix_sort (FApp c ts)
-  | isTupTC  c          = parens $ intersperse comma $ toFix_sort <$> ts
+--   | isTupTC  c          = parens $ intersperse comma $ toFix_sort <$> ts
   | otherwise           = toFix c <+> intersperse space (fp <$> ts)
                           where fp s@(FApp _ (_:_)) = parens $ toFix_sort s
                                 fp s                = toFix_sort s
