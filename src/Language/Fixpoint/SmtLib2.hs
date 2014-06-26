@@ -96,7 +96,7 @@ data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, String)]
+                  | Values [(Symbol, Raw)]
                   | Error Raw
                   deriving (Eq, Show)
 
@@ -157,14 +157,14 @@ responseP =  try (string "(error")  *> errorP
 valuesP :: Parser Response
 valuesP = Values <$> many1 (spaces *> valueP)
 
-valueP :: Parser (Symbol, String)
+valueP :: Parser (Symbol, Raw)
 valueP
   = do (x,v) <- parens $ do
          x <- symbol <$> many1 (alphaNum <|> oneOf "_.-#%")
          spaces
          v <-  parens (many1 (satisfy (/=')')) >>= \s -> return $ "("<>s<>")")
            <|> many1 alphaNum
-         return (x,v)
+         return (x, T.pack v)
        -- get next line
        try (char ')' >> return ()) <|> getNextLine
        return (x,v)
