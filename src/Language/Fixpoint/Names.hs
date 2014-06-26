@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module contains Haskell variables representing globally visible names.
@@ -22,6 +23,8 @@ module Language.Fixpoint.Names (
   , takeModuleNames
 ) where
 
+import FastString
+
 import Data.List                (intercalate)
 import Language.Fixpoint.Misc   (errorstar, safeLast, stripParens)
 
@@ -29,15 +32,15 @@ import Language.Fixpoint.Misc   (errorstar, safeLast, stripParens)
 --------------- Global Name Definitions ------------------------------------
 ----------------------------------------------------------------------------
 
-preludeName  = "Prelude"
-dummyName    = "_LIQUID_dummy"
-boolConName  = "Bool"
-funConName   = "->"
-listConName  = "[]" -- "List"
-tupConName   = "()" -- "Tuple"
-propConName  = "Prop"
-strConName   = "Str"
-vvName       = "VV"
+preludeName  = fsLit "Prelude"
+dummyName    = fsLit "_LIQUID_dummy"
+boolConName  = fsLit "Bool"
+funConName   = fsLit "->"
+listConName  = fsLit "[]" -- "List"
+tupConName   = fsLit "()" -- "Tuple"
+propConName  = fsLit "Prop"
+strConName   = fsLit "Str"
+vvName       = fsLit "VV"
 symSepName   = '#'
 
 -- dropModuleNames []  = []
@@ -55,11 +58,12 @@ takeModuleNames          = mungeModuleNames safeInit "takeModuleNames: "
 safeInit _ xs@(_:_)      = intercalate "." $ init xs
 safeInit msg _           = errorstar $ "safeInit with empty list " ++ msg
 
-mungeModuleNames _ _ []  = []
-mungeModuleNames f msg s  
-  | s == tupConName      = tupConName 
-  | otherwise            = f (msg ++ s) $ words $ dotWhite `fmap` stripParens s
+mungeModuleNames :: (String -> [String] -> String) -> String -> FastString -> FastString
+mungeModuleNames f msg fs
+  | nullFS fs            = nilFS
+  | fs == tupConName     = tupConName
+  | otherwise            = fsLit $ f (msg ++ s) $ words $ dotWhite `fmap` stripParens s
   where 
     dotWhite '.'         = ' '
     dotWhite c           = c
-
+    s = show fs

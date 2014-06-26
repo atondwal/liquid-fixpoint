@@ -52,7 +52,8 @@ import System.Process
 import System.IO            (openFile, IOMode (..), Handle, hFlush, hClose)
 import Control.Applicative  ((<$>), (<|>), (*>), (<*))
 
-import Encoding (zEncodeString, zDecodeString)
+-- import Encoding (zEncodeString, zDecodeString)
+import FastString
 
 import Text.Parsec.Text.Lazy ()
 import Text.Parsec.Char
@@ -339,7 +340,7 @@ instance SMTLIB2 Sort where
   smt2 _           = "Int"
 
 instance SMTLIB2 Symbol where
-  smt2 s = T.pack . zEncodeString . takeWhile (/='#') . symbolString $ s
+  smt2 (S s) = T.pack . unpackFS $ zEncodeFS s
 
 instance SMTLIB2 SymConst where
   smt2 (SL s) = T.pack s

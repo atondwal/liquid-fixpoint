@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DeriveDataTypeable        #-}
@@ -147,6 +148,10 @@ module Language.Fixpoint.Types (
   , LocSymbol, LocString
   , dummyLoc, dummyPos, dummyName, isDummy
   ) where
+
+-- import Prelude hiding (String)
+import FastString
+import Data.String
 
 import GHC.Generics         (Generic)
 import Debug.Trace          (trace)
@@ -306,8 +311,8 @@ fTyconString (TC s) = symbolString <$> s
 
 stringFTycon :: LocString -> FTycon
 stringFTycon c
-  | val c == listConName = TC $ fmap (S . const listConName) c
-  | otherwise            = TC $ fmap stringSymbol c
+  | fsLit (val c) == listConName = TC $ fmap (S . const listConName) c
+  | otherwise                    = TC $ fmap stringSymbol c
 
 -- stringSort   :: String -> Sort
 -- stringSort s = FApp (stringFTycon s) []
@@ -384,13 +389,16 @@ symChars
   ++ ['0' .. '9']
   ++ ['_', '%', '.', '#']
 
-data Symbol = S !String deriving (Eq, Ord, Data, Typeable, Generic)
+data Symbol = S !FastString deriving (Eq, Ord, Data, Typeable, Generic)
+
+instance IsString FastString where
+  fromString = fsLit
 
 instance Fixpoint Symbol where
-  toFix (S x) = text x
+  toFix (S x) = text $ unpackFS $ zEncodeFS x
 
 instance Show Symbol where
-  show (S x) = x
+  show (S x) = unpackFS x
 
 instance Show Subst where
   show = showFix
@@ -406,24 +414,26 @@ instance Fixpoint Subst where
 ---------------------------------------------------------------------------
 
 stringSymbolRaw :: String -> Symbol
-stringSymbolRaw = S
+stringSymbolRaw = S . fsLit
 
 stringSymbol :: String -> Symbol
-stringSymbol s
-  | isFixKey  s = encodeSym s
-  | isFixSym' s = S s
-  | otherwise   = encodeSym s -- S $ fixSymPrefix ++ concatMap encodeChar s
+stringSymbol = S .fsLit
+-- stringSymbol s
+--   | isFixKey  s = encodeSym s
+--   | isFixSym' s = S s
+--   | otherwise   = encodeSym s -- S $ fixSymPrefix ++ concatMap encodeChar s
 
-encodeSym s     = S $ fixSymPrefix ++ concatMap encodeChar s
+-- encodeSym s     = S $ fixSymPrefix ++ concatMap encodeChar s
 
 symbolString :: Symbol -> String
-symbolString (S str)
-  = case chopPrefix fixSymPrefix str of
-      Just s  -> concat $ zipWith tx indices $ chunks s
-      Nothing -> str
-    where
-      chunks = unIntersperse symSepName
-      tx i s = if even i then s else [decodeStr s]
+symbolString = show
+-- symbolString (S str)
+--   = case chopPrefix fixSymPrefix str of
+--       Just s  -> concat $ zipWith tx indices $ chunks s
+--       Nothing -> str
+--     where
+--       chunks = unIntersperse symSepName
+--       tx i s = if even i then s else [decodeStr s]
 
 indices :: [Integer]
 indices = [0..]
@@ -466,19 +476,19 @@ isParened xs          = xs /= stripParens xs
 ---------------------------------------------------------------------
 
 vv                  :: Maybe Integer -> Symbol
-vv (Just i)         = S (vvName ++ [symSepName] ++ show i)
+vv (Just i)         = S (vvName `appendFS` (fsLit $ symSepName:show i))
 vv Nothing          = S vvName
 
-vvCon               = S (vvName ++ [symSepName] ++ "F")
+vvCon               = S (vvName `appendFS` (fsLit $ symSepName:"F"))
 
 isNontrivialVV      = not . (vv_ ==)
 
 
 dummySymbol         = S dummyName
-intSymbol x i       = S $ x ++ show i
+intSymbol x i       = S $ x `appendFS` fsLit (show i)
 
-tempSymbol          ::  String -> Integer -> Symbol
-tempSymbol prefix n = intSymbol (tempPrefix ++ prefix) n
+tempSymbol          :: FastString -> Integer -> Symbol
+tempSymbol prefix n = intSymbol (tempPrefix `appendFS` prefix) n
 
 tempPrefix          = "lq_tmp_"
 anfPrefix           = "lq_anf_"
@@ -865,10 +875,11 @@ instance Fixpoint BindEnv where
 toFix_bind (i, (x, r)) = text "bind" <+> toFix i <+> toFix x <+> text ":" <+> toFix r
 
 insertFEnv   = insertSEnv . lower
-  where lower x@(S (c:chs))
-          | isUpper c = S $ toLower c : chs
-          | otherwise = x
-        lower z       = z
+  where lower x@(S s)
+          | not (nullFS s) && isUpper (headFS s)
+          = S $ toLower (headFS s) `consFS` tailFS s
+          | otherwise
+          = x
 
 instance (Fixpoint a) => Fixpoint (SEnv a) where
   toFix (SE e) = vcat $ map pprxt $ hashMapToAscList e
@@ -1206,7 +1217,7 @@ conjuncts p | isTautoPred p  = []
 ----------------------------------------------------------------
 
 instance NFData Symbol where
-  rnf (S x) = rnf x
+  rnf (S x) = () -- rnf x
 
 instance NFData FTycon where
   rnf (TC c)       = rnf c
@@ -1289,7 +1300,7 @@ instance (NFData a) => NFData (WfC a) where
 ---------------------------------------------------------------------------
 
 instance Hashable Symbol where
-  hashWithSalt i (S s) = hashWithSalt i s
+  hashWithSalt i (S s) = hashWithSalt i $ uniq s -- hashWithSalt i s
 
 instance Hashable FTycon where
   hashWithSalt i (TC s) = hashWithSalt i s
@@ -1331,7 +1342,7 @@ addIds = zipWith (\i c -> (i, shiftId i $ c {sid = Just i})) [1..]
     shiftId i c = c { slhs = shiftSR i $ slhs c }
                     { srhs = shiftSR i $ srhs c }
     shiftSR i sr = sr { sr_reft = shiftR i $ sr_reft sr }
-    shiftR i r@(Reft (S v, _)) = shiftVV r (S (v ++ show i))
+    shiftR i r@(Reft (S v, _)) = shiftVV r (S (v `appendFS` fsLit (show i)))
 
 
 -- subC γ p r1 r2 x y z   = (vvsu, SubC γ p r1' r2' x y z)
@@ -1630,7 +1641,7 @@ dummyPos :: SourcePos
 dummyPos = newPos "?" 0 0
 
 isDummy :: (Show a) => a -> Bool
-isDummy a = show a == dummyName
+isDummy a = fsLit (show a) == dummyName
 
 instance Fixpoint SourcePos where
   toFix = text . show
