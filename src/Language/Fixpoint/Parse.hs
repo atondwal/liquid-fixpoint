@@ -153,11 +153,11 @@ condIdP chars f
        blanks
        if f (c:cs) then return (c:cs) else parserZero
 
-upperIdP :: Parser String
-upperIdP = condIdP symChars (not . isLower . head)
+upperIdP :: Parser Symbol
+upperIdP = symbol <$> condIdP symChars (not . isLower . head)
 
-lowerIdP :: Parser String
-lowerIdP = condIdP symChars (isLower . head)
+lowerIdP :: Parser Symbol
+lowerIdP = symbol <$> condIdP symChars (isLower . head)
 
 locLowerIdP = locParserP lowerIdP 
 locUpperIdP = locParserP upperIdP
@@ -180,7 +180,7 @@ lexprP
  <|> try (parens exprCastP)
  <|> try (parens $ condP EIte exprP)
  <|> try exprFunP
- <|> try (liftM (EVar . stringSymbol) upperIdP)
+ <|> try (liftM EVar upperIdP)
  <|> liftM expr symbolP 
  <|> liftM ECon constantP
  <|> liftM ESym symconstP
@@ -220,7 +220,7 @@ sortP
   =   try (string "Integer" >>  return FInt)
   <|> try (string "Int"     >>  return FInt)
   <|> try (string "int"     >>  return FInt)
-  <|> try (FObj . stringSymbol <$> lowerIdP)
+  <|> try (FObj <$> lowerIdP)
   <|> (fApp <$> (Left <$> fTyConP) <*> many sortP)
 
 symCharsP  = (condIdP symChars (\_ -> True))
@@ -299,7 +299,7 @@ fTyConP
   =   (reserved "int"  >> return intFTyCon)
   <|> (reserved "bool" >> return boolFTyCon)
   <|> (reserved "real" >> return realFTyCon)
-  <|> (stringFTycon   <$> locUpperIdP)
+  <|> (symbolFTycon . fmap symbol <$> locUpperIdP)
 
 refasP :: Parser [Refa]
 refasP  =  (try (brackets $ sepBy (RConc <$> predP) semi)) 
@@ -314,7 +314,7 @@ refBindP bp rp kindP
       ras <- rp
       return $ t (Reft (vv, ras))
 
-bindP       = liftM stringSymbol (lowerIdP <* colon)
+bindP       = (lowerIdP <* colon)
 optBindP vv = try bindP <|> return vv
 
 refP       = refBindP bindP refasP

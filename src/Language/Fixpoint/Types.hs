@@ -33,8 +33,8 @@ module Language.Fixpoint.Types (
   , strFTyCon
   , propFTyCon
   -- , appFTyCon
-  , fTyconString
-  , stringFTycon
+  , fTyconSymbol
+  , symbolFTycon
   , fApp
   , fObj
 
@@ -307,12 +307,12 @@ appFTyCon  = TC $ dummyLoc (S "FAppTy")
 isListTC (TC (Loc _ (S c))) = c == listConName
 isTupTC  (TC (Loc _ (S c))) = c == tupConName
 
-fTyconString (TC s) = symbolString <$> s
+fTyconSymbol (TC s) = s
 
-stringFTycon :: LocString -> FTycon
-stringFTycon c
-  | fsLit (val c) == listConName = TC $ fmap (S . const listConName) c
-  | otherwise                    = TC $ fmap stringSymbol c
+symbolFTycon :: LocSymbol -> FTycon
+symbolFTycon c
+  | (val c) == S listConName = TC $ fmap (S . const listConName) c
+  | otherwise                = TC $ c
 
 -- stringSort   :: String -> Sort
 -- stringSort s = FApp (stringFTycon s) []
@@ -390,6 +390,9 @@ symChars
   ++ ['_', '%', '.', '#']
 
 data Symbol = S !FastString deriving (Eq, Ord, Data, Typeable, Generic)
+
+instance IsString Symbol where
+  fromString = S . fromString
 
 instance IsString FastString where
   fromString = fsLit
@@ -1299,8 +1302,11 @@ instance (NFData a) => NFData (WfC a) where
 -------------- Hashable Instances -----------------------------------------
 ---------------------------------------------------------------------------
 
+instance Hashable FastString where
+  hashWithSalt i s = hashWithSalt i $ uniq s
+
 instance Hashable Symbol where
-  hashWithSalt i (S s) = hashWithSalt i $ uniq s -- hashWithSalt i s
+  hashWithSalt i (S s) = hashWithSalt i s -- hashWithSalt i s
 
 instance Hashable FTycon where
   hashWithSalt i (TC s) = hashWithSalt i s
@@ -1372,7 +1378,7 @@ addIds = zipWith (\i c -> (i, shiftId i $ c {sid = Just i})) [1..]
 ------------------------------------------------------------------------
 
 
-data Qualifier = Q { q_name   :: String           -- ^ Name
+data Qualifier = Q { q_name   :: Symbol           -- ^ Name
                    , q_params :: [(Symbol, Sort)] -- ^ Parameters
                    , q_body   :: Pred             -- ^ Predicate
                    }
@@ -1384,7 +1390,7 @@ instance Fixpoint Qualifier where
 instance NFData Qualifier where
   rnf (Q x1 x2 x3) = rnf x1 `seq` rnf x2 `seq` rnf x3
 
-pprQual (Q n xts p) = text "qualif" <+> text n <> parens args  <> colon <+> toFix p
+pprQual (Q n xts p) = text "qualif" <+> text (show n) <> parens args  <> colon <+> toFix p
   where args = intersperse comma (toFix <$> xts)
 
 data FInfo a = FI { cm    :: M.HashMap Integer (SubC a)

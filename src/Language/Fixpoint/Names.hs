@@ -58,12 +58,12 @@ takeModuleNames          = mungeModuleNames safeInit "takeModuleNames: "
 safeInit _ xs@(_:_)      = intercalate "." $ init xs
 safeInit msg _           = errorstar $ "safeInit with empty list " ++ msg
 
-mungeModuleNames :: (String -> [String] -> String) -> String -> FastString -> FastString
-mungeModuleNames f msg fs
-  | nullFS fs            = nilFS
-  | fs == tupConName     = tupConName
-  | otherwise            = fsLit $ f (msg ++ s) $ words $ dotWhite `fmap` stripParens s
-  where 
-    dotWhite '.'         = ' '
-    dotWhite c           = c
-    s = show fs
+mungeModuleNames _ _  [] = ""
+mungeModuleNames f msg s
+  | s == unpackFS tupConName
+  = unpackFS tupConName
+  | otherwise
+  = f (msg ++ s) $ words $ dotWhite `fmap` stripParens s
+  where
+    dotWhite '.' = ' '
+    dotWhite c   = c
