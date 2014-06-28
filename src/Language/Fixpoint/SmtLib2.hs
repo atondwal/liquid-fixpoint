@@ -33,16 +33,20 @@ module Language.Fixpoint.SmtLib2 (
     -- * Execute Queries
     , command
     , smtWrite
+
+    , smt_set_funs
     ) where
 
 import Language.Fixpoint.Config (SMTSolver (..))
 import Language.Fixpoint.Files
 import Language.Fixpoint.Types
+import Language.Fixpoint.Misc (traceShow)
 
 import Control.Arrow
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.List as L
+import qualified Data.HashMap.Strict as M
 import Data.Monoid
 import Data.Text.Format
 import qualified Data.Text.Lazy     as T
@@ -279,6 +283,11 @@ dif = "smt_set_dif"
 sub = "smt_set_sub"
 com = "smt_set_com"
 
+smt_set_funs :: M.HashMap Symbol Raw
+smt_set_funs = M.fromList [("Set_emp",emp),("Set_add",add),("Set_cup",cup)
+                          ,("Set_cap",cap),("Set_mem",mem),("Set_dif",dif)
+                          ,("Set_sub",sub),("Set_com",com)]
+
 z3Preamble
   = [ format "(define-sort {} () Int)"
         (Only elt)
@@ -335,11 +344,14 @@ class SMTLIB2 a where
 instance SMTLIB2 Sort where
   smt2 FInt        = "Int"
   smt2 (FApp t []) | t == propFTyCon = "Bool"
+  smt2 (FApp _ [(FApp t _), _]) | val (fTyconSymbol t) == "Data.Set.Base.Set" = "Set"
   smt2 (FObj s)    = smt2 s
   smt2 (FFunc _ _) = error "smt2 FFunc"
   smt2 _           = "Int"
 
 instance SMTLIB2 Symbol where
+  smt2 s | Just t <- M.lookup s smt_set_funs
+         = t
   smt2 (S s) = T.pack . unpackFS $ zEncodeFS s
 
 instance SMTLIB2 SymConst where
@@ -373,6 +385,10 @@ instance SMTLIB2 Expr where
   smt2 (EVar x)         = smt2 x
   smt2 (ELit x _)       = smt2 x
   smt2 (EApp f [])      = smt2 f
+  smt2 (EApp f [e])     | val f == "Set_emp"
+                        = format "(= {} {})"      (emp, smt2 e)
+  smt2 (EApp f [e])     | val f == "Set_sng"
+                        = format "({} {} {})"     (add, emp, smt2 e)
   smt2 (EApp f es)      = format "({} {})"        (smt2 f, smt2s es)
   smt2 (EBin o e1 e2)   = format "({} {} {})"     (smt2 o, smt2 e1, smt2 e2)
   smt2 (EIte e1 e2 e3)  = format "(ite {} {} {})" (smt2 e1, smt2 e2, smt2 e3)
