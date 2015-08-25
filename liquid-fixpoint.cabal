@@ -198,6 +198,7 @@ Library
                , unordered-containers
                , text-format
                , comonad
+               , pretty-show
 
 test-suite test
   default-language: Haskell98
