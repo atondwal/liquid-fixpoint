@@ -26,7 +26,7 @@ instance SMTLIB2 Sort where
   smt2 (FApp t [FApp ts _,_]) | t == appFTyCon  && fTyconSymbol ts == "Set_Set" = "Set"
   -- smt2 (FObj s)    = smt2 s
   smt2 s@(FFunc _ _) = error $ "smt2 FFunc: " ++ show s
-  smt2 _           = "Int"
+  smt2 _             = "Int"
 
 instance SMTLIB2 Symbol where
   smt2 s | Just t <- smt2Theory s --  M.lookup s smt_set_funs
@@ -138,4 +138,3 @@ smt2s = LT.intercalate " " . fmap smt2
 (check-sat)
 (pop 1)
 -}
-
