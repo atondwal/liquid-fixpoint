@@ -1,0 +1,10 @@
+bind 1 GHC.Base..#r1Km : {VV : func(3, [func(0, [@(0); @(1)]);
+                                         func(0, [@(2); @(0)]);
+                                         @(2);
+                                         @(1)]) | []}
+constraint:
+  env [ 1 ]
+  grd true 
+  lhs {v : int | v = a}
+  rhs {v : int | 10 <= v}
+  id 1 
