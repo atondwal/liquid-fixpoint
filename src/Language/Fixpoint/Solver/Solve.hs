@@ -116,7 +116,7 @@ rhsPred :: S.Solution -> F.SubC a -> F.Pred
 rhsPred s c = S.apply s $ F.rhsCs c
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> F.FInfo a -> [(F.Symbol,F.SortedReft)] -> F.Pred -> F.Pred -> IO F.Pred
+interpolation :: Config -> F.FInfo a -> F.Pred -> F.Pred -> IO F.Pred
 ---------------------------------------------------------------------------
-interpolation cfg fi env p q = runSolverM cfg fi' $ interpolationSolver fi' env p q
+interpolation cfg fi p q = runSolverM cfg fi' $ interpolationSolver fi' p q
   where Right fi' = validate cfg fi

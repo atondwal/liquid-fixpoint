@@ -74,6 +74,7 @@ import           Data.Text.Format
 import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.IO        as LTIO
+import qualified Data.HashMap.Strict      as M
 import           System.Directory
 import           System.Exit              hiding (die)
 import           System.FilePath
@@ -343,9 +344,10 @@ smtBracket me a   = do smtPush me
                        smtPop me
                        return r
 
-smtDoInterpolate :: Context -> FInfo a -> [(Symbol, SortedReft)] -> Pred -> Pred -> IO Pred
-smtDoInterpolate me fi env p q = smtLoadEnv me env >>
+smtDoInterpolate :: Context -> FInfo a -> Pred -> Pred -> IO Pred
+smtDoInterpolate me fi p q = smtLoadEnv me env >>
                                   respInterp <$> command me (Interpolate fi p q)
+  where env = M.elems $ beBinds $ bs fi
 
 smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
 smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env

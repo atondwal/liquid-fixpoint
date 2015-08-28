@@ -1,4 +1,3 @@
-{-# LANGUAGE PartialTypeSignatures #-}
 
 module Language.Fixpoint.Solver.Unroll (unroll) where
 
@@ -64,7 +63,7 @@ unroll fi start = fi -- {cm = M.fromList $ extras ++ map reid cons'}
                                                 [(\(k,i) -> (k,renameKv k i)) <$> t]
 
         -- Builds our new constraint graph, now knowing the substitutions.
-        prime :: Node (Integer, Int) [(KVar, KVar)] -> Node (Integer, SubC _) [(KVar, KVar)]
+        -- prime :: Node (Integer, Int) [(KVar, KVar)] -> Node (Integer, SubC _) [(KVar, KVar)]
         prime (Node subs vs) = Node subs [Node (num v i, substKV subs $ mlookup v) (prime <$> ns) | Node (v,i) ns <- vs]
 
         -- renumber constraint #a

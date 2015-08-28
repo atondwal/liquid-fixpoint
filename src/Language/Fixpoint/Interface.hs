@@ -126,7 +126,7 @@ interp cfg fi
   | otherwise     = return fi
 
 buildQual :: Config -> FInfo a -> SubC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> S.interpolation cfg fi env p q
+buildQual cfg fi c = qualify <$> S.interpolation cfg fi p q
   where env  = envCs (bs fi) $ senv c
         qenv = map (second sr_sort) $ predSorts env p
         p = prop $ slhs c
