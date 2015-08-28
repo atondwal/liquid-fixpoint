@@ -9,7 +9,7 @@ import           Control.Monad
 import           Control.Comonad
 import qualified Control.Arrow as A
 import           Language.Fixpoint.Names (renameSymbol)
-import           Language.Fixpoint.Visitor (lhsKVars, rhsKVars)
+import qualified Language.Fixpoint.Visitor as V
 import           GHC.Exts (groupWith)
 
 import           Language.Fixpoint.Config
@@ -28,7 +28,7 @@ gmap :: (b -> c) -> Node b a -> Node c a
 gmap = flip bimap id
 
 instance Comonad (Node b) where
-  extract (Node a _) = a 
+  extract (Node a _) = a
   duplicate t@(Node _ bs) = Node t [Node b (duplicate <$> as) | Node b as <- bs]
 
 unroll :: FInfo a -> Integer -> FInfo a
@@ -40,8 +40,8 @@ unroll fi start = fi -- {cm = M.fromList $ extras ++ map reid cons'}
         klookup k = M.lookupDefault (error $"kids for "++show k++" not found") k kidsm
 
         rhs, lhs :: SubC a -> [KVar]
-        rhs = rhsKVars
-        lhs = lhsKVars (bs fi)
+        rhs = V.rhsKVars
+        lhs = V.lhsKVars (bs fi)
 
         cons' = hylo (prime . (kvarSubs <<=) . prune . index M.empty) =<< lhs (mlookup start)
         extras = M.toList $ M.filter ((==[]).lhs) m
@@ -74,8 +74,22 @@ renameKv :: Integral i => KVar -> i -> KVar
 -- "k" -> n -> "k_n"
 renameKv a i = KV $ renameSymbol (kv a) $ fromIntegral i
 
-substKV :: [(KVar, KVar)] -> SubC a -> SubC a
-substKV = undefined -- obviously, @TODO
+class SubstKV a where
+  substKV :: [(KVar,KVar)] -> a -> a
+
+instance SubstKV (SubC a) where
+  substKV su cons = undefined
+
+instance SubstKV SortedReft where
+  substKV su = V.trans (V.defaultVisitor {V.txPred = tx}) () ()
+    where
+      tx _ (PKVar k z) = PKVar (substKV su k) z
+      tx _ p             = p
+
+instance SubstKV KVar where
+  substKV su kv = case lookup kv su of
+                    Just kv' -> if (kv' /= kv) then substKV su kv' else kv
+                    Nothing -> kv
 
 cantor :: Integer -> Int -> Int -> Integer
 -- ^The Cantor pairing function when `i/=0`, offset by `s`. Otherwise, just `v`
