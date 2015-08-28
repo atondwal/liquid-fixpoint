@@ -125,7 +125,7 @@ filterBindEnv f be = (F.bindEnvFromList keep, discard')
     discard' = map Misc.fst3 discard
 
 isFirstOrder :: F.Sort -> Bool
-isFirstOrder t        = {- F.traceFix ("isFO: " ++ F.showFix t) -} (foldSort f 0 t <= 1)
+isFirstOrder t        = F.traceFix ("isFO: " ++ F.showFix t) (foldSort f 0 t <= 1)
   where
     f n (F.FFunc _ _) = n + 1
     f n _             = n
