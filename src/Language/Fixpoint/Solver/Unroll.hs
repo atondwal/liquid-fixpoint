@@ -58,6 +58,7 @@ unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons'}
              else [Node v (fmap prune ns) | Node v ns <- l]
 
         -- Lists all the subsitutions that are to made
+        -- inefficent
         kvarSubs :: Node b (KVar, Int) -> [(KVar,KVar)]
         kvarSubs t@(Node (k,i) _) = cata $ Node (error "Unroll.cata: :/")
                                                 [(\(k,i) -> (k,renameKv k i)) <$> t]
@@ -77,7 +78,10 @@ class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> a
 
 instance SubstKV (SubC a) where
-  substKV su cons = undefined
+  substKV su cons = cons { slhs = substKV [head su] (slhs cons)
+                         , srhs = substKV (tail su) (srhs cons)
+                         --, env = substKV
+                         }
 
 instance SubstKV SortedReft where
   substKV su = V.trans (V.defaultVisitor {V.txPred = tx}) () ()
