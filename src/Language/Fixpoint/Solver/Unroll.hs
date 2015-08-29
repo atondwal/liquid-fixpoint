@@ -30,11 +30,18 @@ instance Comonad (Node b) where
   extract (Node a _) = a
   duplicate t@(Node _ bs) = Node t [Node b (duplicate <$> as) | Node b as <- bs]
 
+headError _ (x:xs) = x
+headError s _  = error s
+headSafe (x:xs) = [x]
+headSafe [] = []
+tailSafe (x:xs) = xs
+tailSafe [] = []
+
 unroll :: FInfo a -> Integer -> FInfo a
 unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons'}
   where m = cm fi
         mlookup v = M.lookupDefault (error $"cons # "++show v++" not found") v m
-        kidsm = M.fromList $ (fst.head A.&&& (snd <$>)) <$> groupWith fst pairs
+        kidsm = M.fromList $ (fst.(headError "groupWith broken") A.&&& (snd <$>)) <$> groupWith fst pairs
           where pairs = [(k,i)|(i,ks) <- A.second rhs <$> M.toList m, k<-ks]
         klookup k = M.lookupDefault (error $"kids for "++show k++" not found") k kidsm
 
@@ -78,8 +85,8 @@ class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> a
 
 instance SubstKV (SubC a) where
-  substKV su cons = cons { slhs = substKV [head su] (slhs cons)
-                         , srhs = substKV (tail su) (srhs cons)
+  substKV su cons = cons { slhs = substKV (headSafe su) (slhs cons)
+                         , srhs = substKV (tailSafe su) (srhs cons)
                          --, env = substKV
                          }
 
