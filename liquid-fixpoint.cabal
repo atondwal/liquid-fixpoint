@@ -168,6 +168,7 @@ Library
                    Language.Fixpoint.Solver.Uniqify,
                    Language.Fixpoint.Solver.Eliminate,
                    Language.Fixpoint.Solver.Validate,
+                   Language.Fixpoint.Solver.Unroll,
                    Language.Fixpoint.Partition,
                    Language.Fixpoint.Statistics,
                    Language.Fixpoint.Solver.Solve
