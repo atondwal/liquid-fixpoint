@@ -15,6 +15,10 @@ module Language.Fixpoint.Visitor (
   -- * Accumulators
   , fold
 
+  -- * @TODO work without this?
+  , execVisitM
+  , visit
+
   -- * Clients
   , kvars
   , envKVars
