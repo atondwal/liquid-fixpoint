@@ -80,7 +80,7 @@ prune :: Node a (b,Int) -> Node a (b,Int)
 prune (Node (a,i) l) = Node (a,i) $
   if i>depth
      then []
-     else [Node v (fmap prune ns) | Node v ns <- l]
+     else [Node v (prune <$> ns) | Node v ns <- l]
 
 class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> a
@@ -102,13 +102,14 @@ instance SubstKV KVar where
                     Just kv' -> if (kv' /= kv) then substKV su kv' else kv
                     Nothing -> kv
 
-cantor :: Integer -> Int -> Int -> Integer
+cantor :: (Integral i,Integral j,Integral k,Integral l) => i -> j -> k -> l
 -- ^The Cantor pairing function when `i/=0`, offset by `s`. Otherwise, just `v`
-cantor v i' s' = if i==0
+cantor v' i' s' = if i==0
                   then v
                   else s + i + quot ((v+i)*(v+i+1)) 2
   where s = fromIntegral s'
         i = fromIntegral i'
+        v = fromIntegral v'
 
 index :: (Eq a, Hashable a) => M.HashMap a Int -> Node b a -> Node (b,Int) (a,Int)
 -- |Number each node by the number of ancestors it has that hae the same label
