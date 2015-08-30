@@ -58,12 +58,6 @@ unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons'}
         ana k = Node k [Node v $ ana <$> rhs (mlookup v) | v <- klookup k]
         cata (Node _ bs) = join $ join [[b]:(cata<$>ns) | Node b ns <- bs]
 
-        -- Removes all nodes numbered higher than `depth`
-        prune (Node (a,i) l) = Node (a,i) $
-          if i>depth
-             then []
-             else [Node v (fmap prune ns) | Node v ns <- l]
-
         -- Lists all the subsitutions that are to made
         -- inefficent
         kvarSubs :: Node b (KVar, Int) -> [(KVar,KVar)]
@@ -80,6 +74,13 @@ unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons'}
 renameKv :: Integral i => KVar -> i -> KVar
 -- "k" -> n -> "k_n"
 renameKv a i = KV $ renameSymbol (kv a) $ fromIntegral i
+
+-- Removes all nodes numbered higher than `depth`
+prune :: Node a (b,Int) -> Node a (b,Int)
+prune (Node (a,i) l) = Node (a,i) $
+  if i>depth
+     then []
+     else [Node v (fmap prune ns) | Node v ns <- l]
 
 class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> a
