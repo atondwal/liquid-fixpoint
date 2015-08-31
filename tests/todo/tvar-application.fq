@@ -1,0 +1,2 @@
+
+constant len : (func(2, [(@(0)  @(1)); int]))
