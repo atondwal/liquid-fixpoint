@@ -1,4 +1,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE TupleSections#-}
+
 module Language.Fixpoint.Solver.Unroll (unroll) where
 
 import           Data.Maybe
@@ -15,8 +17,9 @@ import           GHC.Exts (groupWith)
 import           Language.Fixpoint.Config
 import           Language.Fixpoint.Types
 import qualified Data.HashMap.Strict              as M
+import Debug.Trace
 
-data Node b a = Node { me :: a, kids :: [Node a b] }
+data Node b a = Node { me :: a, kids :: [Node a b] } deriving Show
 
 instance Bifunctor Node where
   bimap f g (Node a bs) = Node (g a) [Node (f b) (bimap f g <$> as) | Node b as <- bs]
@@ -39,23 +42,26 @@ tailSafe (x:xs) = xs
 tailSafe [] = []
 
 unroll :: FInfo a -> Integer -> FInfo a
-unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons', bs = be}
+unroll fi start = traceShow (head $ reverse $ lhs $ mlookup start) $ fi {cm = M.fromList $ extras ++ map reid cons', bs = be, ws = we ++ ws fi}
   where m = cm fi
-        mlookup v = M.lookupDefault (error $"cons # "++show v++" not found") v m
+        emptycons = cons1 { senv = emptyIBindEnv, srhs = makeBlankReft (srhs cons1), slhs = makeBlankReft (slhs cons1) }
+          where cons1 = M.lookupDefault (error "no cons #1") 1 m
+        mlookup v = M.lookupDefault (error $"cons # "++show v++" not found") v $ M.insert 0 emptycons m
         kidsm = M.fromList $ (fst.(headError "groupWith broken") A.&&& (snd <$>)) <$> groupWith fst pairs
           where pairs = [(k,i)|(i,ks) <- A.second rhs <$> M.toList m, k<-ks]
-        klookup k = M.lookupDefault (error $"kids for "++show k++" not found") k kidsm
+        klookup k = M.lookupDefault [0] k kidsm
+        -- this might be a bad design decision, but *shrug*
 
         rhs, lhs :: SubC a -> [KVar]
         rhs = V.rhsKVars
         lhs = V.lhsKVars (bs fi)
 
-        (cons', be) = flip runState (bs fi) . (cata <$>) . prime . (kvarSubs <<=) . prune . index M.empty . ana $ head $ lhs (mlookup start)
-        extras = M.toList $ M.filter ((==[]).lhs) m
+        (cons', be) = flip runState (bs fi) $ (cata <$>) $ prime $ (kvarSubs <<=) $ prune $ index M.empty $ ana $ headError "No KVar in given constraint" $ reverse $ lhs (mlookup start)
+        extras = M.toList $ M.filter ((==[]).rhs) m
         reid :: (Integer, SubC a) -> (Integer, SubC a)
         reid (b,a) = (b, a { sid = Just b })
 
-        ana k = Node k [Node v $ ana <$> rhs (mlookup v) | v <- klookup k]
+        ana k = traceShow (k, klookup k) $ Node k [Node v $ ana <$> lhs (mlookup v) | v <- klookup k]
         cata (Node _ bs) = join $ join [[b]:(cata<$>ns) | Node b ns <- bs]
 
         -- Lists all the subsitutions that are to made
@@ -73,6 +79,11 @@ unroll fi start = fi {cm = M.fromList $ extras ++ map reid cons', bs = be}
         -- renumber constraint #a
         num a i = cantor a i $ M.size m
 
+        (we,_) = flip runState (bs fi) $ mapM renameWfC $ concatMap (\i -> map (,i) $ ws fi) [1..(depth+1)]
+        renameWfC (wfc,i) = if i == 0 then return wfc else substKV [(kv, renameKv kv i)] wfc
+          where kv = headError "no KVar in WFC" $ V.kvars $ sr_reft $ wrft wfc
+
+
 renameKv :: Integral i => KVar -> i -> KVar
 -- "k" -> n -> "k_n"
 renameKv a i = KV $ renameSymbol (kv a) $ fromIntegral i
@@ -86,6 +97,10 @@ prune (Node (a,i) l) = Node (a,i) $
 
 class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> State BindEnv a
+
+instance SubstKV (WfC a) where
+  substKV su wfc = do e <- substKV su (wrft wfc)
+                      return $ wfc { wrft = e }
 
 instance SubstKV (SubC a) where
   substKV su cons = do l <- substKV (headSafe su) (slhs cons)
@@ -133,6 +148,9 @@ index :: (Eq a, Hashable a) => M.HashMap a Int -> Node b a -> Node (b,Int) (a,In
 index m (Node a bs) = Node (a,i) [Node (b,i) (index m' <$> ns) | Node b ns <- bs]
   where i = M.lookupDefault 0 a m
         m' = M.insertWith (+) a 1 m
+
+makeBlankReft :: SortedReft -> SortedReft
+makeBlankReft (RR sort (Reft (sym, Refa pred))) = RR sort (Reft (sym, Refa PTrue))
 
 depth :: Int
 -- |Equals 4 @TODO justify me

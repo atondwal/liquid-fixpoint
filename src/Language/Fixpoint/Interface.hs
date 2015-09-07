@@ -52,6 +52,7 @@ import           Language.Fixpoint.Errors (exit)
 import           Language.Fixpoint.PrettyPrint (showpp)
 import           System.Console.CmdArgs.Verbosity hiding (Loud)
 import           Text.PrettyPrint.HughesPJ
+import Debug.Trace as DT
 
 ---------------------------------------------------------------------------
 -- | Solve .fq File -------------------------------------------------------
@@ -121,6 +122,9 @@ interp cfg fi
                          let fi'' = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
+                         DT.traceShow (M.keys $ cm fi) (return ())
+                         DT.traceShow (M.keys $ cm fi') (return ())
+                         DT.traceShow (M.keys $ cm fi'') (return ())
                          q <- buildQual cfg fi'' $ mlookup (cm fi'') (failCons cfg)
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
