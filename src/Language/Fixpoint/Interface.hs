@@ -35,7 +35,7 @@ import           System.Exit
 import           System.IO                        (IOMode (..), hPutStr, withFile)
 import           Text.Printf
 
-import           Language.Fixpoint.Solver.Eliminate (eliminateAll)
+import           Language.Fixpoint.Solver.Eliminate (eliminateAll, substBinds)
 import           Language.Fixpoint.Solver.Uniqify   (renameAll)
 import           Language.Fixpoint.Solver.Unroll (unroll)
 import           Language.Fixpoint.Solver.Deps
@@ -132,9 +132,9 @@ interp cfg fi
 buildQual :: Config -> FInfo a -> SubC a -> IO Qualifier
 buildQual cfg fi c = qualify <$> DT.traceShow (p,q) (S.interpolation cfg fi p q)
   where env  = envCs (bs fi) $ senv c
-        qenv = map (second sr_sort) $ predSorts env lhs
+        (qenv,ps) = substBinds env
         lhs = prop $ slhs c
-        p = PAnd $ lhs : map (prop.snd) env
+        p = PAnd $ lhs : DT.traceShow env ps
         q = PNot $ prop $ srhs c
         qualify p = Q interpSym qenv p (dummyPos "interp")
 
