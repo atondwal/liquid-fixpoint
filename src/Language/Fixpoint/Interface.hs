@@ -132,14 +132,19 @@ interp cfg fi
 buildQual :: Config -> FInfo a -> SubC a -> IO Qualifier
 buildQual cfg fi c = qualify <$> S.interpolation cfg fi p q
   where env  = envCs (bs fi) $ senv c
-        qenv = map (second sr_sort) $ predSorts env p
-        p = prop $ slhs c
+        qenv = map (second sr_sort) $ predSorts env lhs
+        lhs = prop $ slhs c
+        p = PAnd $ lhs : map (thereft.snd) env
         q = PNot $ prop $ srhs c
         qualify p = Q interpSym qenv p (dummyPos "interp")
 
 predSorts :: [(Symbol,SortedReft)] -> Pred -> [(Symbol,SortedReft)]
 predSorts env p = filter ((`elem` ss).fst) env
   where ss = predSymbols p
+
+thereft :: SortedReft -> Pred
+thereft t = raPred refta
+  where Reft (_,refta) = sr_reft t
 
 ---------------------------------------------------------------------------
 -- | External Ocaml Solver
