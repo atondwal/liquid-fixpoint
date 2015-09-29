@@ -42,7 +42,7 @@ tailSafe (x:xs) = xs
 tailSafe [] = []
 
 unroll :: FInfo a -> Integer -> FInfo a
-unroll fi start = traceShow (head $ reverse $ lhs $ mlookup start) $ fi {cm = M.fromList $ extras ++ map reid cons', bs = be, ws = we ++ ws fi}
+unroll fi start = traceShow (map (\k -> (k, (lhs A.&&& rhs) $ mlookup k)) $ M.keys m) $ fi {cm = M.fromList $ extras ++ map reid cons', bs = be, ws = we ++ ws fi}
   where m = cm fi
         emptycons = cons1 { senv = emptyIBindEnv, srhs = makeBlankReft (srhs cons1), slhs = makeBlankReft (slhs cons1) }
           where cons1 = M.lookupDefault (error "no cons #1") 1 m
@@ -50,13 +50,12 @@ unroll fi start = traceShow (head $ reverse $ lhs $ mlookup start) $ fi {cm = M.
         kidsm = M.fromList $ (fst.(headError "groupWith broken") A.&&& (snd <$>)) <$> groupWith fst pairs
           where pairs = [(k,i)|(i,ks) <- A.second rhs <$> M.toList m, k<-ks]
         klookup k = M.lookupDefault [0] k kidsm
-        -- this might be a bad design decision, but *shrug*
 
         rhs, lhs :: SubC a -> [KVar]
         rhs = V.rhsKVars
         lhs = V.lhsKVars (bs fi)
 
-        (cons', be) = flip runState (bs fi) $ (cata <$>) $ prime $ (kvarSubs <<=) $ prune $ index M.empty $ ana $ headError "No KVar in given constraint" $ reverse $ lhs (mlookup start)
+        (cons', be) = flip runState (bs fi) $ (cata <$>) $ prime $ (kvarSubs <<=) $ traceShowId $ prune $ index M.empty $ ana $ headError "No KVar in given constraint" $ reverse $ lhs (mlookup start)
         extras = M.toList $ M.filter ((==[]).rhs) m
         reid :: (Integer, SubC a) -> (Integer, SubC a)
         reid (b,a) = (b, a { sid = Just b })
@@ -67,8 +66,7 @@ unroll fi start = traceShow (head $ reverse $ lhs $ mlookup start) $ fi {cm = M.
         -- Lists all the subsitutions that are to made
         -- inefficent
         kvarSubs :: Node b (KVar, Int) -> [(KVar,KVar)]
-        kvarSubs t@(Node (k,i) _) = cata $ Node (error "Unroll.cata: :/")
-                                                [(\(k,i) -> (k,renameKv k i)) <$> t]
+        kvarSubs = cata . Node (error "Unroll.cata: :/") . return . fmap (\(k,i) -> (k,renameKv k i))
 
         -- Builds our new constraint graph, now knowing the substitutions.
         prime :: Node (Integer, Int) [(KVar, KVar)] -> State BindEnv (Node (Integer, SubC _) [(KVar, KVar)])
@@ -126,7 +124,8 @@ instance SubstKV SortedReft where
                      put s'
                      return v
     where
-      tx s (PKVar k z)   = flip runState s $ flip PKVar z <$> substKV su k
+      tx s (PKVar k z)   = flip runState s $ do kv' <- substKV su k
+                                                return $ if k == kv' then PTrue else PKVar kv' z
       tx s p             = (p, s)
 
 instance SubstKV KVar where

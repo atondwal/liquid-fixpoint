@@ -125,6 +125,10 @@ interp cfg fi
                          DT.traceShow (M.keys $ cm fi) (return ())
                          DT.traceShow (M.keys $ cm fi') (return ())
                          DT.traceShow (M.keys $ cm fi'') (return ())
+                         let c = mlookup (cm fi) (failCons cfg)
+                         -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                          q <- buildQual cfg fi'' $ mlookup (cm fi'') (failCons cfg)
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
@@ -134,7 +138,7 @@ buildQual cfg fi c = qualify <$> DT.traceShow (p,q) (S.interpolation cfg fi p q)
   where env  = envCs (bs fi) $ senv c
         (qenv,ps) = substBinds env
         lhs = prop $ slhs c
-        p = PAnd $ lhs : DT.traceShow env ps
+        p = PAnd $ lhs : {- DT.traceShow env -} ps
         q = PNot $ prop $ srhs c
         qualify p = Q interpSym qenv p (dummyPos "interp")
 
