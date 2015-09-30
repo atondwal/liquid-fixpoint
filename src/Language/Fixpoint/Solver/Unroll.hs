@@ -21,18 +21,26 @@ import Debug.Trace
 
 data Node b a = Node { me :: a, kids :: [Node a b] } deriving Show
 
+data NodeR a b = Rev (Node b a) deriving Show
+
 instance Bifunctor Node where
   bimap f g (Node a bs) = Node (g a) [Node (f b) (bimap f g <$> as) | Node b as <- bs]
 
 instance Functor (Node b) where
   fmap = bimap id
 
-gmap :: (b -> c) -> Node b a -> Node c a
-gmap = flip bimap id
+instance Functor (NodeR b) where
+  fmap f (Rev t) = Rev $ bimap f id t
 
 instance Comonad (Node b) where
   extract (Node a _) = a
   duplicate t@(Node _ bs) = Node t [Node b (duplicate <$> as) | Node b as <- bs]
+
+instance Foldable (Node b) where
+  foldMap f (Node a bs) = foldr mappend (f a) [foldr mappend mempty (foldMap f <$> as) | Node b as <- bs]
+
+instance Foldable (NodeR b) where
+  foldMap f (Rev (Node a bs)) = foldr mappend mempty [foldr mappend (f b) $ foldMap f . Rev <$> as | Node b as <- bs]
 
 headError _ (x:xs) = x
 headError s _  = error s
@@ -42,7 +50,7 @@ tailSafe (x:xs) = xs
 tailSafe [] = []
 
 unroll :: FInfo a -> Integer -> FInfo a
-unroll fi start = traceShow (map (\k -> (k, (lhs A.&&& rhs) $ mlookup k)) $ M.keys m) $ fi {cm = M.fromList $ extras ++ map reid cons', bs = be, ws = we ++ ws fi}
+unroll fi start = traceShow (map fst cons') $ fi {cm = M.fromList $ extras ++ map reid cons', bs = be, ws = we ++ ws fi}
   where m = cm fi
         emptycons = cons1 { senv = emptyIBindEnv, srhs = makeBlankReft (srhs cons1), slhs = makeBlankReft (slhs cons1) }
           where cons1 = M.lookupDefault (error "no cons #1") 1 m
@@ -55,24 +63,27 @@ unroll fi start = traceShow (map (\k -> (k, (lhs A.&&& rhs) $ mlookup k)) $ M.ke
         rhs = V.rhsKVars
         lhs = V.lhsKVars (bs fi)
 
-        (cons', be) = flip runState (bs fi) $ (cata <$>) $ prime $ (kvarSubs <<=) $ traceShowId $ prune $ index M.empty $ ana $ headError "No KVar in given constraint" $ reverse $ lhs (mlookup start)
+        tree = traceShowId $ Node (start,0) (prune . index M.empty . ana <$> lhs (mlookup start))
+        tree' :: State BindEnv (Node (Integer, SubC _) [(KVar,KVar)])
+        tree' = prime $ kvarSubs <<= tree
+        (cons', be) = flip runState (bs fi) $ (foldr (:) [] . Rev <$>) $ do tp <- tree'
+                                                                            return $ traceShow (fst<$>Rev tp) tp
         extras = M.toList $ M.filter ((==[]).rhs) m
         reid :: (Integer, SubC a) -> (Integer, SubC a)
         reid (b,a) = (b, a { sid = Just b })
 
         ana k = traceShow (k, klookup k) $ Node k [Node v $ ana <$> lhs (mlookup v) | v <- klookup k]
-        cata (Node _ bs) = join $ join [[b]:(cata<$>ns) | Node b ns <- bs]
 
         -- Lists all the subsitutions that are to made
         -- inefficent
-        kvarSubs :: Node b (KVar, Int) -> [(KVar,KVar)]
-        kvarSubs = cata . Node (error "Unroll.cata: :/") . return . fmap (\(k,i) -> (k,renameKv k i))
+        kvarSubs :: Node (KVar, Int) a -> (a,[(KVar,KVar)])
+        kvarSubs t = (,) (me t) $ foldr (:) [] $ (\(k,i) -> (k,renameKv k i)) <$> Rev t
 
         -- Builds our new constraint graph, now knowing the substitutions.
-        prime :: Node (Integer, Int) [(KVar, KVar)] -> State BindEnv (Node (Integer, SubC _) [(KVar, KVar)])
-        prime (Node subs vs) = Node subs <$> forM vs (\(Node (v,i) ns) -> do subd <- substKV subs $ mlookup v
-                                                                             grandkids <- mapM prime ns
-                                                                             return $ Node (num v i, subd) grandkids)
+        prime :: Node a ((Integer, Int),[(KVar, KVar)]) -> State BindEnv (Node (Integer, SubC _) [(KVar, KVar)])
+        prime (Node ((v,i),subs) vs) = Node subs <$> forM vs (\(Node _ ns) -> do subd <- substKV subs $ mlookup v
+                                                                                 grandkids <- mapM prime ns
+                                                                                 return $ Node (num v i, subd) grandkids)
 
         -- renumber constraint #a
         num a i = cantor a i $ M.size m
