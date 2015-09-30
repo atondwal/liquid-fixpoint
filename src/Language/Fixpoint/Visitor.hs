@@ -15,6 +15,10 @@ module Language.Fixpoint.Visitor (
   -- * Accumulators
   , fold
 
+  -- * @TODO work without this?
+  , execVisitM
+  , visit
+
   -- * Clients
   , kvars
   , envKVars
@@ -35,7 +39,6 @@ import           Control.Monad.Trans.State (State, modify, runState)
 import           Language.Fixpoint.Types
 import qualified Data.HashSet as S
 import qualified Data.List    as L
-import Debug.Trace
 
 data Visitor acc ctx = Visitor {
  -- | Context @ctx@ is built in a "top-down" fashion; not "across" siblings
@@ -197,10 +200,10 @@ foldSort :: Show a => (a -> Sort -> a) -> a -> Sort -> a
 ---------------------------------------------------------------------------------
 foldSort f = step
   where
-    step b t          = trace (show t) $ go (f b t) t
-    go b (FFunc _ ts) = trace (show b) $ L.foldl' step b ts
-    go b (FApp _ ts)  = trace (show b) $ L.foldl' step b ts
-    go b _            = trace (show b) $ b
+    step b t          = go (f b t) t
+    go b (FFunc _ ts) = L.foldl' step b ts
+    go b (FApp _ ts)  = L.foldl' step b ts
+    go b _            = b
 
 
 ---------------------------------------------------------------------------------

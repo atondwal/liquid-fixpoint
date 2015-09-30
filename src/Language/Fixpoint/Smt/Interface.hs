@@ -81,7 +81,6 @@ import           System.FilePath
 import           System.IO                (IOMode (..), hClose, hFlush, openFile)
 import           System.Process
 import qualified Data.Attoparsec.Text     as A
-import Debug.Trace
 import Text.Show.Pretty
 
 {- Usage:
@@ -105,13 +104,13 @@ runCommands cmds
 --------------------------------------------------------------------------
 command              :: Context -> Command -> IO Response
 --------------------------------------------------------------------------
-command me !cmd      = {-# SCC "command" #-} say me (trace (ppShow cmd) cmd) >> hear me cmd
+command me !cmd      = {-# SCC "command" #-} say me cmd >> hear me cmd
   where
     say me               = smtWrite me . smt2
     hear me CheckSat     = smtRead me
     hear me (GetValue _) = smtRead me
-    hear me (Interpolate fi p q) = smtRead me >>= \case
-      Unsat -> trace (show p ++ " and " ++ show q ++ " gives ") (smtPred fi me)
+    hear me (Interpolate fi p q) = trace (show p ++ " and " ++ show q ++ " gives ") $ smtRead me >>= \case
+      Unsat -> smtPred fi me
       _ -> error "Not UNSAT. No interpolation needed. Why did you call upon me?"
     hear me _            = return Ok
 

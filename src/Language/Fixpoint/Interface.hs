@@ -35,7 +35,7 @@ import           System.Exit
 import           System.IO                        (IOMode (..), hPutStr, withFile)
 import           Text.Printf
 
-import           Language.Fixpoint.Solver.Eliminate (eliminateAll)
+import           Language.Fixpoint.Solver.Eliminate (eliminateAll, substBinds)
 import           Language.Fixpoint.Solver.Uniqify   (renameAll)
 import           Language.Fixpoint.Solver.Unroll (unroll)
 import           Language.Fixpoint.Solver.Deps
@@ -52,6 +52,7 @@ import           Language.Fixpoint.Errors (exit)
 import           Language.Fixpoint.PrettyPrint (showpp)
 import           System.Console.CmdArgs.Verbosity hiding (Loud)
 import           Text.PrettyPrint.HughesPJ
+import Debug.Trace as DT
 
 ---------------------------------------------------------------------------
 -- | Solve .fq File -------------------------------------------------------
@@ -121,15 +122,23 @@ interp cfg fi
                          let fi'' = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
+                         DT.traceShow (M.keys $ cm fi) (return ())
+                         DT.traceShow (M.keys $ cm fi') (return ())
+                         DT.traceShow (M.keys $ cm fi'') (return ())
+                         let c = mlookup (cm fi) (failCons cfg)
+                         -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                          q <- buildQual cfg fi'' $ mlookup (cm fi'') (failCons cfg)
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
 buildQual :: Config -> FInfo a -> SubC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> S.interpolation cfg fi p q
+buildQual cfg fi c = qualify <$> DT.traceShow (p,q) (S.interpolation cfg fi p q)
   where env  = envCs (bs fi) $ senv c
-        qenv = map (second sr_sort) $ predSorts env p
-        p = prop $ slhs c
+        (qenv,ps) = substBinds env
+        lhs = prop $ slhs c
+        p = PAnd $ lhs : {- DT.traceShow env -} ps
         q = PNot $ prop $ srhs c
         qualify p = Q interpSym qenv p (dummyPos "interp")
 
