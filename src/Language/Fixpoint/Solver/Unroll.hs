@@ -42,6 +42,10 @@ instance Foldable (Node b) where
 instance Foldable (NodeR b) where
   foldMap f (Rev (Node a bs)) = foldr mappend mempty [foldr mappend (f b) $ foldMap f . Rev <$> as | Node b as <- bs]
 
+instance Monoid Int where
+  mempty = 0
+  mappend = (+)
+
 headError _ (x:xs) = x
 headError s _  = error s
 headSafe (x:xs) = [x]
@@ -64,10 +68,10 @@ unroll fi start = traceShow (map fst cons') $ fi {cm = M.fromList $ extras ++ ma
         lhs = V.lhsKVars (bs fi)
 
         tree = traceShowId $ Node (start,0) (prune . index M.empty . ana <$> lhs (mlookup start))
-        tree' :: State BindEnv (Node (Integer, SubC _) [(KVar,KVar)])
+        tree' :: State (BindEnv, Int) (Node (Integer, SubC _) [(KVar,KVar)])
         tree' = prime $ kvarSubs <<= tree
-        (cons', be) = flip runState (bs fi) $ (foldr (:) [] . Rev <$>) $ do tp <- tree'
-                                                                            return $ traceShow (fst<$>Rev tp) tp
+        (cons', (be,_)) = flip runState (bs fi, M.size m) $ (foldr (:) [] . Rev <$>) $ do tp <- tree'
+                                                                                          return $ traceShow (bimap fst void tp) tp
         extras = M.toList $ M.filter ((==[]).rhs) m
         reid :: (Integer, SubC a) -> (Integer, SubC a)
         reid (b,a) = (b, a { sid = Just b })
@@ -80,15 +84,14 @@ unroll fi start = traceShow (map fst cons') $ fi {cm = M.fromList $ extras ++ ma
         kvarSubs t = (,) (me t) $ foldr (:) [] $ (\(k,i) -> (k,renameKv k i)) <$> Rev t
 
         -- Builds our new constraint graph, now knowing the substitutions.
-        prime :: Node a ((Integer, Int),[(KVar, KVar)]) -> State BindEnv (Node (Integer, SubC _) [(KVar, KVar)])
+        prime :: Node a ((Integer, Int),[(KVar, KVar)]) -> State (BindEnv, Int) (Node (Integer, SubC _) [(KVar, KVar)])
         prime (Node ((v,i),subs) vs) = Node subs <$> forM vs (\(Node _ ns) -> do subd <- substKV subs $ mlookup v
                                                                                  grandkids <- mapM prime ns
-                                                                                 return $ Node (num v i, subd) grandkids)
+                                                                                 (s,n) <- get
+                                                                                 put (s,n+1)
+                                                                                 return $ Node (fromIntegral n, subd) grandkids)
 
-        -- renumber constraint #a
-        num a i = cantor a i $ M.size m
-
-        (we,_) = flip runState (bs fi) $ mapM renameWfC $ concatMap (\i -> map (,i) $ ws fi) [1..(depth+1)]
+        (we,_) = flip runState (bs fi, M.size m) $ mapM renameWfC $ concatMap (\i -> map (,i) $ ws fi) [1..(depth+1)]
         renameWfC (wfc,i) = if i == 0 then return wfc else substKV [(kv, renameKv kv i)] wfc
           where kv = headError "no KVar in WFC" $ V.kvars $ sr_reft $ wrft wfc
 
@@ -105,7 +108,7 @@ prune (Node (a,i) l) = Node (a,i) $
      else [Node v (prune <$> ns) | Node v ns <- l]
 
 class SubstKV a where
-  substKV :: [(KVar,KVar)] -> a -> State BindEnv a
+  substKV :: [(KVar,KVar)] -> a -> State (BindEnv,Int) a
 
 instance SubstKV (WfC a) where
   substKV su wfc = do e <- substKV su (wrft wfc)
@@ -118,11 +121,12 @@ instance SubstKV (SubC a) where
                        return $ cons {slhs = l, srhs = r, senv = e}
 
 instance SubstKV Int where
-  substKV su i = do be <- get
+  substKV su i = do (be,_) <- get
                     let (sym,sr) = lookupBindEnv i be
                     sr' <- substKV su sr
                     let (id,be') = insertBindEnv sym sr' be
-                    put be'
+                    (_,n) <- get
+                    put (be',n)
                     return id
 
 instance SubstKV IBindEnv where
@@ -143,15 +147,6 @@ instance SubstKV KVar where
   substKV su kv = case lookup kv su of
                     Just kv' -> if kv' /= kv then substKV su kv' else return kv
                     Nothing -> return kv
-
-cantor :: (Integral i,Integral j,Integral k,Integral l) => i -> j -> k -> l
--- ^The Cantor pairing function when `i/=0`, offset by `s`. Otherwise, just `v`
-cantor v' i' s' = if i==0
-                  then v
-                  else s + i + quot ((v+i)*(v+i+1)) 2
-  where s = fromIntegral s'
-        i = fromIntegral i'
-        v = fromIntegral v'
 
 index :: (Eq a, Hashable a) => M.HashMap a Int -> Node b a -> Node (b,Int) (a,Int)
 -- |Number each node by the number of ancestors it has that hae the same label
