@@ -52,6 +52,7 @@ import           Language.Fixpoint.Errors (exit)
 import           Language.Fixpoint.PrettyPrint (showpp)
 import           System.Console.CmdArgs.Verbosity hiding (Loud)
 import           Text.PrettyPrint.HughesPJ
+import qualified Language.Fixpoint.Visitor as V
 import Debug.Trace as DT
 
 ---------------------------------------------------------------------------
@@ -125,11 +126,15 @@ interp cfg fi
                          DT.traceShow (M.keys $ cm fi) (return ())
                          DT.traceShow (M.keys $ cm fi') (return ())
                          DT.traceShow (M.keys $ cm fi'') (return ())
+                         let m = cm fi''
                          let c = mlookup (cm fi) (failCons cfg)
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems m) (return ())
+                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$>  M.elems m) (return ())
                          -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
                          -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
                          -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
-                         q <- buildQual cfg fi'' $ mlookup (cm fi'') (failCons cfg)
+                             -- @FIXME is eliminate always guaranteed to return 1 constraint?
+                         q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
