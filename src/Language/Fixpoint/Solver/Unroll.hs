@@ -115,8 +115,8 @@ instance SubstKV (WfC a) where
                       return $ wfc { wrft = e }
 
 instance SubstKV (SubC a) where
-  substKV su cons = do l <- substKV (headSafe su) (slhs cons)
-                       r <- substKV (tailSafe su) (srhs cons)
+  substKV su cons = do l <- substKV (tailSafe su) (slhs cons)
+                       r <- substKV (headSafe su) (srhs cons)
                        e <- substKV (tailSafe su) (senv cons)
                        return $ cons {slhs = l, srhs = r, senv = e}
 

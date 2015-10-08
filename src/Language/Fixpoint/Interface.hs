@@ -118,7 +118,7 @@ interpSym = symbol "InterpolatedQu"
 interp :: (Fixpoint a) => Config -> FInfo a -> IO (FInfo a)
 interp cfg fi
   | interpolate cfg = do let fc = failCons cfg
-                         let fi' = unroll fi fc
+                         let fi' = fi -- unroll fi fc
                          whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
                          let fi'' = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
@@ -126,20 +126,22 @@ interp cfg fi
                          DT.traceShow (M.keys $ cm fi) (return ())
                          DT.traceShow (M.keys $ cm fi') (return ())
                          DT.traceShow (M.keys $ cm fi'') (return ())
-                         let m = cm fi''
                          let c = mlookup (cm fi) (failCons cfg)
-                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems m) (return ())
-                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$>  M.elems m) (return ())
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
+                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$> M.elems m) (return ())
                          -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
                          -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
                          -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                              -- @FIXME is eliminate always guaranteed to return 1 constraint?
                          q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
+                         DT.traceShow q (return ())
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
 buildQual :: Config -> FInfo a -> SubC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> DT.traceShow (p,q) (S.interpolation cfg fi p q)
+buildQual cfg fi c = qualify <$> (S.interpolation cfg fi p q)
   where env  = envCs (bs fi) $ senv c
         (qenv,ps) = substBinds env
         lhs = prop $ slhs c

@@ -109,15 +109,16 @@ command me !cmd      = {-# SCC "command" #-} say me cmd >> hear me cmd
     say me               = smtWrite me . smt2
     hear me CheckSat     = smtRead me
     hear me (GetValue _) = smtRead me
-    hear me (Interpolate fi p q) = trace (show p ++ " and " ++ show q ++ " gives ") $ smtRead me >>= \case
+    hear me (Interpolate fi p q) = smtRead me >>= \case
       Unsat -> smtPred fi me
-      _ -> error "Not UNSAT. No interpolation needed. Why did you call upon me?"
+      Sat -> error "Not UNSAT. No interpolation needed. Why did you call upon me?"
+      e -> error $ show e
     hear me _            = return Ok
 
 
 
 smtWrite :: Context -> LT.Text -> IO ()
-smtWrite me !s = smtWriteRaw me s
+smtWrite me !s = smtWriteRaw me $ traceShowId s
 
 smtRes :: Context -> A.IResult T.Text Response -> IO Response
 smtRes me res = case A.eitherResult res of
@@ -128,7 +129,7 @@ smtRes me res = case A.eitherResult res of
       LTIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
     return r
 
-smtParse me parserP = smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+smtParse me parserP = smtReadRaw me >>= return . traceShowId >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
 
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
@@ -136,7 +137,7 @@ smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
 smtPred :: FInfo a -> Context -> IO Response
 smtPred fi me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' fi <$> predP)
 
-predP = {-# SCC "predP" #-} Lisp <$> (A.char '(' *> listP <* A.char '(')
+predP = {-# SCC "predP" #-} (Lisp <$> (A.char '(' *> listP <* A.char ')')) <|> (Sym . symbol<$> (A.string "true" <|> A.string "false"))
 listP = A.many' $ (Sym <$> symbolP) <|> predP
 
 data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
@@ -344,7 +345,7 @@ smtBracket me a   = do smtPush me
                        return r
 
 smtDoInterpolate :: Context -> FInfo a -> Pred -> Pred -> IO Pred
-smtDoInterpolate me fi p q = smtLoadEnv me env >>
+smtDoInterpolate me fi p q = --smtLoadEnv me env >>
                                   respInterp <$> command me (Interpolate fi p q)
   where env = M.elems $ beBinds $ bs fi
 
