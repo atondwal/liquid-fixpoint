@@ -3,7 +3,7 @@
 
 -- | Solve a system of horn-clause constraints ----------------------------
 
-module Language.Fixpoint.Solver.Solve (solve) where
+module Language.Fixpoint.Solver.Solve (solve, interpolation) where
 
 import           Control.Monad (filterM)
 import           Control.Applicative ((<$>))
@@ -114,3 +114,9 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 rhsPred :: S.Solution -> F.SubC a -> F.Pred
 rhsPred s c = S.apply s $ F.rhsCs c
+
+---------------------------------------------------------------------------
+interpolation :: Config -> F.FInfo a -> F.Pred -> F.Pred -> IO F.Pred
+---------------------------------------------------------------------------
+interpolation cfg fi p q = runSolverM cfg fi' $ interpolationSolver fi' p q
+  where Right fi' = validate cfg fi

@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE LambdaCase                #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -40,6 +41,8 @@ module Language.Fixpoint.Smt.Interface (
     , smtCheckUnsat
     , smtBracket
     , smtDistinct
+    , smtDoInterpolate
+    , smtInterpolate
 
     -- * Theory Symbols
     -- , theorySymbols
@@ -59,14 +62,17 @@ import           Language.Fixpoint.Smt.Serialize()
 
 import           Control.Applicative      ((*>), (<$>), (<*), (<|>))
 import           Control.Monad
+import           Control.Arrow
 import           Data.Char
 import qualified Data.List                as L
 import           Data.Monoid
+import           Data.Maybe
 import qualified Data.Text                as T
 import           Data.Text.Format
 import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.IO        as LTIO
+import qualified Data.HashMap.Strict      as M
 import           System.Directory
 import           System.Exit              hiding (die)
 import           System.FilePath
@@ -100,6 +106,10 @@ command me !cmd      = {-# SCC "command" #-} say me cmd >> hear me cmd
     say me               = smtWrite me . smt2
     hear me CheckSat     = smtRead me
     hear me (GetValue _) = smtRead me
+    hear me (Interpolate fi p q) = smtRead me >>= \case
+      Unsat -> smtPred fi me
+      Sat -> error "Not UNSAT. No interpolation needed. Why did you call upon me?"
+      e -> error $ show e
     hear me _            = return Ok
 
 
@@ -107,17 +117,84 @@ command me !cmd      = {-# SCC "command" #-} say me cmd >> hear me cmd
 smtWrite :: Context -> LT.Text -> IO ()
 smtWrite me !s = smtWriteRaw me s
 
+smtRes :: Context -> A.IResult T.Text Response -> IO Response
+smtRes me res = case A.eitherResult res of
+  Left e  -> error e
+  Right r -> do
+    maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (cLog me)
+    when (verbose me) $
+      LTIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
+    return r
+
+smtParse me parserP = smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+
 smtRead :: Context -> IO Response
-smtRead me = {-# SCC "smtRead" #-}
-    do ln  <- smtReadRaw me
-       res <- A.parseWith (smtReadRaw me) responseP ln
-       case A.eitherResult res of
-         Left e  -> error e
-         Right r -> do
-           maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (cLog me)
-           when (verbose me) $
-             LTIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
-           return r
+smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
+
+smtPred :: FInfo a -> Context -> IO Response
+smtPred fi me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' fi <$> predP)
+
+predP = {-# SCC "predP" #-} (Lisp <$> (A.char '(' *> listP <* A.char ')')) <|> (Sym . symbol<$> (A.string "true" <|> A.string "false"))
+listP = A.many' $ (Sym <$> symbolP) <|> predP
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
+type PorE = Either Pred Expr
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+
+parseLisp' :: FInfo a -> Lisp -> Pred
+parseLisp' fi = toPred
+  where toPred :: Lisp -> Pred
+        toPred x = case parseLisp x of
+                     Left p -> p
+                     Right e -> error $ "expected Pred, got Expr: " ++ show e
+        toExpr :: Lisp -> Expr
+        toExpr x = case parseLisp x of
+                     Left p -> error $ "expected Expr, got Pred: " ++ show p
+                     Right e -> e
+        parseLisp :: Lisp -> PorE
+        parseLisp (Sym s)
+          | symbolText s == "true" = Left PTrue
+          | symbolText s == "false" = Left PFalse
+          | otherwise = Right $ EVar s
+        parseLisp (Lisp (Sym s:xs))
+          | symbolText s == "and" = Left $ PAnd $ L.map toPred xs
+          | symbolText s == "or" = Left $ POr $ L.map toPred xs
+        parseLisp (Lisp [Sym s,x])
+          | symbolText s == "not" = Left $ PNot $ toPred x
+          | symbolText s == "-" = Right $ ENeg $ toExpr x
+          | otherwise           = Right $ ELit (dummyLoc s) $ fromJust $ lookup s (lits fi)
+        parseLisp (Lisp [Sym s,x,y])
+          | symbolText s == "=>" = Left $ PImp (toPred x) (toPred y)
+          | symbolText s `elem` binOpStrings = Right $ EBin (strToOp $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s `elem` binRelStrings = Left $ PAtom (strToRel $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s == "=" = Left $ case (parseLisp x, parseLisp y) of
+                                    (Left p, Left q) -> PIff p q
+                                    (Right p, Right q) -> PAtom Eq p q
+                                    _ -> error $ "Can't compare `" ++ show x ++ "` with`" ++ show y ++ "`. Kind Error."
+        parseLisp (Lisp [Sym s, x, y, z])
+          | symbolText s == "ite" = Right $ EIte (toPred x) (toExpr y) (toExpr z)
+        parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
+        parseLisp x = error $ show x ++ "is Nonsense Lisp!"
+        -- PBexp? When do I know to read one of these in?
 
 responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
          <|> A.string "sat"     *> return Sat
@@ -263,6 +340,21 @@ smtBracket me a   = do smtPush me
                        r <- a
                        smtPop me
                        return r
+
+smtDoInterpolate :: Context -> FInfo a -> Pred -> Pred -> IO Pred
+smtDoInterpolate me fi p q = --smtLoadEnv me env >>
+                                  respInterp <$> command me (Interpolate fi p q)
+  where env = M.elems $ beBinds $ bs fi
+
+smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
+smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
+  where smtDecl' = uncurry $ smtDecl me
+
+smtInterpolate :: Context -> FInfo () -> Pred -> Pred -> IO Pred
+smtInterpolate me fi p q = respInterp <$> command me (Interpolate fi p q)
+
+respInterp (Interpolant p') = p'
+respInterp r = die $ err dummySpan $ "crash: SMTLIB2 respInterp = " ++ show r
 
 respSat Unsat   = True
 respSat Sat     = False

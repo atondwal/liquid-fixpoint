@@ -124,7 +124,7 @@ instance SMTLIB2 Pred where
   smt2 (PIff p q)       = format "(=  {} {})"  (smt2 p, smt2 q)
   smt2 (PBexp e)        = smt2 e
   smt2 (PAtom r e1 e2)  = mkRel r e1 e2
-  smt2 _                = error "smtlib2 Pred"
+  smt2 p                = error ("smtlib2 Pred: " ++ show p)
 
 
 mkRel Ne  e1 e2         = mkNe e1 e2
@@ -142,6 +142,7 @@ instance SMTLIB2 Command where
   smt2 (Pop)               = "(pop 1)"
   smt2 (CheckSat)          = "(check-sat)"
   smt2 (GetValue xs)       = LT.unwords $ ["(get-value ("] ++ fmap smt2 xs ++ ["))"]
+  smt2 (Interpolate fi p q)   = format "(compute-interpolant {} {})"  (smt2 p, smt2 q)
 
 smt2s    :: SMTLIB2 a => [a] -> LT.Text
 smt2s    = smt2many . fmap smt2

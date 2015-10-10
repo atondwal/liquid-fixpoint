@@ -153,7 +153,7 @@ mfromJust  :: String -> Maybe a -> a
 
 mlookup m k = case M.lookup k m of
                 Just v  -> v
-                Nothing -> errorstar $ "mlookup: unknown key " ++ show k
+                Nothing -> errorstar $ "mlookup: unknown key " ++ show k ++ show (M.keys m)
 
 safeLookup msg k m = fromMaybe (errorstar msg) (M.lookup k m)
 

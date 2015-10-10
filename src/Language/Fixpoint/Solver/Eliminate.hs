@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Language.Fixpoint.Solver.Eliminate
-       (eliminateAll, elimKVar, findWfC) where
+       (eliminateAll, elimKVar, findWfC, substBinds) where
 
 import           Language.Fixpoint.Types
 import           Language.Fixpoint.Solver.Deps (depNonCuts, deps)
