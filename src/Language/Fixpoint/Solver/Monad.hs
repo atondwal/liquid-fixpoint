@@ -16,6 +16,9 @@ module Language.Fixpoint.Solver.Monad
          -- * Debug
        , tickIter
 
+         -- * Interpolation
+       , interpolationSolver
+
        )
        where
 
@@ -117,3 +120,8 @@ declSymbols = fmap dropThy . symbolSorts
   where
     dropThy = filter (not . isThy . fst)
     isThy   = isJust . Thy.smt2Symbol -- (`M.member` theorySymbols)
+
+---------------------------------------------------------------------------
+interpolationSolver :: F.SInfo a -> F.Pred -> F.Pred -> SolveM F.Pred
+---------------------------------------------------------------------------
+interpolationSolver fi p q = withContext $ \me -> smtDoInterpolate me fi p q

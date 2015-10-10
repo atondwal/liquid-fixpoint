@@ -173,6 +173,7 @@ Library
                    Language.Fixpoint.Solver.Uniqify,
                    Language.Fixpoint.Solver.Eliminate,
                    Language.Fixpoint.Solver.Validate,
+                   Language.Fixpoint.Solver.Unroll,
                    Language.Fixpoint.Partition,
                    Language.Fixpoint.Statistics,
                    Language.Fixpoint.Solver.Solve
@@ -204,6 +205,7 @@ Library
                , hashable
                , unordered-containers
                , text-format
+               , comonad
   if impl(ghc >= 7.10.2)
     Build-Depends: located-base
 
