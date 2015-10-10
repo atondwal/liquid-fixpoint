@@ -16,6 +16,10 @@ module Language.Fixpoint.Visitor (
   -- * Accumulators
   , fold
 
+  -- * @TODO work without this?
+  , execVisitM
+  , visit
+
   -- * Clients
   , kvars
   , envKVars
@@ -214,7 +218,7 @@ rhsKVars = kvars . rhsCs
 ---------------------------------------------------------------------------------
 -- | Visitors over @Sort@
 ---------------------------------------------------------------------------------
-foldSort :: (a -> Sort -> a) -> a -> Sort -> a
+foldSort :: Show a => (a -> Sort -> a) -> a -> Sort -> a
 ---------------------------------------------------------------------------------
 foldSort f = step
   where

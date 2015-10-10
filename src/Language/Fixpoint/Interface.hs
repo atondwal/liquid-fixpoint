@@ -25,11 +25,13 @@ import           System.Console.CmdArgs.Verbosity   hiding (Loud)
 import           Text.PrettyPrint.HughesPJ          (render)
 import           Text.Printf                        (printf)
 import           Control.Monad                      (when, void)
+import           Control.Arrow
 
 import           Language.Fixpoint.Solver.Validate  (validate)
 import           Language.Fixpoint.Solver.Eliminate (eliminateAll)
 import           Language.Fixpoint.Solver.Deps      (deps, Deps (..))
 import           Language.Fixpoint.Solver.Uniqify   (renameAll)
+import           Language.Fixpoint.Solver.Unroll    (unroll)
 import qualified Language.Fixpoint.Solver.Solve     as S
 import           Language.Fixpoint.Solver.Solution  (Solution)
 import           Language.Fixpoint.Config           (Config (..), command, withTarget)
@@ -42,6 +44,7 @@ import           Language.Fixpoint.Types
 import           Language.Fixpoint.Errors           (exit)
 import           Language.Fixpoint.PrettyPrint      (showpp)
 import           Language.Fixpoint.Parallel         (inParallelUsing)
+import qualified Language.Fixpoint.Visitor as V
 import           Control.DeepSeq
 ---------------------------------------------------------------------------
 -- | Solve .fq File -------------------------------------------------------
@@ -166,6 +169,7 @@ solveNativeWithFInfo !cfg !fi = do
   writeLoud $ "fq file after uniqify: \n" ++ render (toFixpoint cfg si'')
   rnf si'' `seq` donePhase Loud "Uniqify"
   (s0, si''') <- {-# SCC "elim" #-} elim cfg $!! si''
+  _ <- interp cfg $!! si''
   Result stat soln <- {-# SCC "S.solve" #-} S.solve cfg s0 $!! si'''
   rnf soln `seq` donePhase Loud "Solve"
   let stat' = sid <$> stat
@@ -193,6 +197,41 @@ remakeQual :: Qualifier -> Qualifier
 remakeQual q = {- traceShow msg $ -} mkQual (q_name q) (q_params q) (q_body q) (q_pos q)
   where
     msg      = "REMAKEQUAL: " ++ show q
+
+
+interpSym = symbol "InterpolatedQu"
+
+interp :: (Fixpoint a) => Config -> SInfo a -> IO (SInfo a)
+interp cfg fi
+  | interpolate cfg = do let fc = failCons cfg
+                         let fi' = fi -- unroll fi fc
+                         whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
+                         let (_,fi'') = eliminateAll fi'
+                         whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
+                         donePhase Loud "Unroll"
+                         let c = mlookup (cm fi) (failCons cfg)
+                             -- @FIXME is eliminate always guaranteed to return 1 constraint?
+                         q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
+                         return fi'' { quals = q:quals fi'' }
+  | otherwise     = return fi
+
+buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
+buildQual cfg fi c = qualify <$> S.interpolation cfg fi p q
+  where env  = envCs (bs fi) $ _cenv c
+        (qenv,ps) = substBinds env
+        p = PAnd ps
+        q = PNot $ prop $ crhs c
+        qualify p = Q interpSym qenv p (dummyPos "interp")
+
+-- [ x:{v:int|v=10} , y:{v:int|v=20} ] -> [x:int, y:int], [(x=10), (y=20)]
+substBinds :: [(Symbol, SortedReft)] -> ([(Symbol,Sort)],[Pred])
+substBinds = unzip . map substBind
+
+substBind :: (Symbol, SortedReft) -> ((Symbol,Sort), Pred)
+substBind (sym, sr) = ((sym, sr_sort sr), subst1 (reftPred reft) sub)
+  where
+    reft = sr_reft sr
+    sub = (reftBind reft, eVar sym)
 
 ---------------------------------------------------------------------------
 -- | External Ocaml Solver
