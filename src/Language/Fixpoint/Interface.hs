@@ -56,6 +56,8 @@ import qualified Language.Fixpoint.Visitor as V
 import           Language.Fixpoint.Parallel
 
 
+import qualified Debug.Trace as DT
+
 ---------------------------------------------------------------------------
 -- | Solve .fq File -------------------------------------------------------
 ---------------------------------------------------------------------------
@@ -127,9 +129,20 @@ interp cfg fi
                          let fi'' = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
+                         DT.traceShow (M.keys $ cm fi) (return ())
+                         DT.traceShow (M.keys $ cm fi') (return ())
+                         DT.traceShow (M.keys $ cm fi'') (return ())
                          let c = mlookup (cm fi) (failCons cfg)
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
+                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$> M.elems m) (return ())
+                         -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                              -- @FIXME is eliminate always guaranteed to return 1 constraint?
                          q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
+                         DT.traceShow q (return ())
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
@@ -138,7 +151,7 @@ buildQual cfg fi c = qualify <$> (S.interpolation cfg fi p q)
   where env  = envCs (bs fi) $ senv c
         (qenv,ps) = substBinds env
         lhs = prop $ slhs c
-        p = PAnd $ lhs : ps
+        p = PAnd $ lhs : {- DT.traceShow env -} ps
         q = PNot $ prop $ srhs c
         qualify p = Q interpSym qenv p (dummyPos "interp")
 
