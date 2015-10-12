@@ -342,12 +342,10 @@ smtBracket me a   = do smtPush me
                        return r
 
 smtDoInterpolate :: Context -> FInfo a -> Pred -> Pred -> IO Pred
-smtDoInterpolate me fi p q = --smtLoadEnv me env >>
-                                  respInterp <$> command me (Interpolate fi p q)
-  where env = M.elems $ beBinds $ bs fi
+smtDoInterpolate me fi p q = respInterp <$> command me (Interpolate fi p q)
 
 smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
-smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
+smtLoadEnv me = mapM_ (smtDecl' . second sr_sort)
   where smtDecl' = uncurry $ smtDecl me
 
 smtInterpolate :: Context -> FInfo () -> Pred -> Pred -> IO Pred
