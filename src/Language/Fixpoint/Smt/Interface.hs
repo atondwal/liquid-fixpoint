@@ -50,6 +50,7 @@ module Language.Fixpoint.Smt.Interface (
 
     ) where
 
+import           Debug.Trace
 import           Language.Fixpoint.Config (SMTSolver (..))
 import           Language.Fixpoint.Errors
 import           Language.Fixpoint.Files
@@ -119,7 +120,7 @@ command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
 
 
 smtWrite :: Context -> T.Text -> IO ()
-smtWrite me !s = smtWriteRaw me s
+smtWrite me !s = smtWriteRaw me $ traceShowId s
 
 smtRes :: Context -> A.IResult T.Text Response -> IO Response
 smtRes me res = case A.eitherResult res of
@@ -130,7 +131,7 @@ smtRes me res = case A.eitherResult res of
       TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
     return r
 
-smtParse me parserP = smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+smtParse me parserP = smtReadRaw me >>= return . traceShowId >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
 
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP

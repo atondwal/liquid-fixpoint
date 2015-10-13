@@ -53,6 +53,10 @@ import           Language.Fixpoint.PrettyPrint      (showpp)
 import           Language.Fixpoint.Parallel         (inParallelUsing)
 import qualified Language.Fixpoint.Visitor as V
 import           Control.DeepSeq
+
+
+import qualified Debug.Trace as DT
+
 ---------------------------------------------------------------------------
 -- | Solve .fq File -------------------------------------------------------
 ---------------------------------------------------------------------------
@@ -216,9 +220,20 @@ interp cfg fi
                          let (_,fi'') = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
+                         DT.traceShow (M.keys $ cm fi) (return ())
+                         DT.traceShow (M.keys $ cm fi') (return ())
+                         DT.traceShow (M.keys $ cm fi'') (return ())
                          let c = mlookup (cm fi) (failCons cfg)
+                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
+                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
+                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
+                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$> M.elems m) (return ())
+                         -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
+                         -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                              -- @FIXME is eliminate always guaranteed to return 1 constraint?
                          q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
+                         DT.traceShow q (return ())
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
