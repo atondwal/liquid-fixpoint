@@ -425,7 +425,7 @@ constraint:
   lhs {VV#F1 : int | [(VV#F1 = a#aTx)]}
   rhs {VV#F1 : int | [(VV#F1 != 0)]}
   id 1 tag [2]
-  // META constraint id 1 : tests/interp/1u.hs:11:22
+  // META constraint id 1 : 1u.hs:11:22
 
 
 constraint:
@@ -486,7 +486,7 @@ constraint:
   lhs {VV#F2 : int | [(VV#F2 = n#aTv)]}
   rhs {VV#F2 : int | [$k__189[VV#188:=VV#F2][lq_tmp_x_257:=VV#F2][VV#286:=VV#F2][VV#F:=VV#F2]]}
   id 2 tag [2]
-  // META constraint id 2 : tests/interp/1u.hs:9:25
+  // META constraint id 2 : 1u.hs:9:25
 
 
 constraint:
@@ -543,7 +543,7 @@ constraint:
   lhs {VV#F3 : int | [(VV#F3 = n#aTv)]}
   rhs {VV#F3 : int | [$k__232[VV#231:=VV#F3][lq_tmp_x_228:=fix#GHC.Classes.#36#fOrdInt#35#rmM][lq_tmp_x_229:=lq_anf__dU7][lq_tmp_x_234:=VV#F3][VV#295:=VV#F3][VV#F:=VV#F3]]}
   id 3 tag [2]
-  // META constraint id 3 : tests/interp/1u.hs:7:24
+  // META constraint id 3 : 1u.hs:7:24
 
 
 constraint:
@@ -600,7 +600,7 @@ constraint:
   lhs {VV#F4 : int | [(VV#F4 = lq_anf__dU7)]}
   rhs {VV#F4 : int | [$k__232[VV#231:=VV#F4][lq_tmp_x_228:=fix#GHC.Classes.#36#fOrdInt#35#rmM][lq_tmp_x_234:=VV#F4][VV#298:=VV#F4][VV#F:=VV#F4]]}
   id 4 tag [2]
-  // META constraint id 4 : tests/interp/1u.hs:7:19
+  // META constraint id 4 : 1u.hs:7:19
 
 
 constraint:
@@ -656,7 +656,7 @@ constraint:
   lhs {VV#F5 : int | [(VV#F5 = (x#aTu + lq_anf__dU6))]}
   rhs {VV#F5 : int | [$k__193[VV#192:=VV#F5][VV#304:=VV#F5][VV#F:=VV#F5]]}
   id 5 tag [1]
-  // META constraint id 5 : tests/interp/1u.hs:4:1-13
+  // META constraint id 5 : 1u.hs:4:1-13
 
 
 
@@ -712,7 +712,7 @@ wf:
        47]
   reft {VV#231 : int | [$k__232]}
   
-  // META wf  : tests/interp/1u.hs:7:21-22
+  // META wf  : 1u.hs:7:21-22
 
 
 wf:
