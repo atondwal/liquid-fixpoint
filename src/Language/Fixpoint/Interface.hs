@@ -124,18 +124,18 @@ interpSym = symbol "InterpolatedQu"
 interp :: (Fixpoint a) => Config -> FInfo a -> IO (FInfo a)
 interp cfg fi
   | interpolate cfg = do let fc = failCons cfg
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
                          let fi' = unroll fi fc
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
                          whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
                          let fi'' = eliminateAll fi'
+                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
                          DT.traceShow (M.keys $ cm fi) (return ())
                          DT.traceShow (M.keys $ cm fi') (return ())
                          DT.traceShow (M.keys $ cm fi'') (return ())
                          let c = mlookup (cm fi) (failCons cfg)
-                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
-                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
-                         DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
                          -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$> M.elems m) (return ())
                          -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
                          -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())

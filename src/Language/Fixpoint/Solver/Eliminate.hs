@@ -67,7 +67,7 @@ findWfC kv ws = (w', ws')
   where
     (w, ws') = partition (elem kv . kvars . sr_reft . wrft) ws
     w' | [x] <- w  = x
-       | otherwise = errorstar $ show kv ++ " needs exactly one wf constraint"
+       | otherwise = errorstar $ show kv ++ " needs exactly one wf constraint, but has " ++ show (length w)
 
 extractPred :: WfC a -> BindEnv -> SubC a -> State Integer (Pred, [(Symbol, Sort)])
 extractPred wfc be subC =  exprsToPreds . unzip <$> mapM renameVar vars

@@ -92,12 +92,11 @@ unroll fi start = traceShow (map fst cons') $ fi {cm = M.fromList cons', bs = be
         kenv :: Integer -> [KVar]
         kenv = V.lhsKVars (bs fi) . mlookup
 
-
         tree :: Node (KVar, Int) (Integer, Int)
         tree = traceDrawId $ Node (start,0) (prune . index M.empty . ana klookup kenv <$> kenv start)
 
         treeofsubs :: Node (KVar, Int) ((Integer, Int), [(KVar,KVar)])
-        treeofsubs = traceDrawId $ kvarSubs <<= tree
+        treeofsubs = traceDrawId $ dup [] $ kvarSubs <<= tree
 
         treesubs :: Node (KVar, Int) (State (BindEnv, Int) (Integer, SubC _))
         treesubs = prime (\v s -> substKV s $ mlookup v) <$> treeofsubs
@@ -106,9 +105,11 @@ unroll fi start = traceShow (map fst cons') $ fi {cm = M.fromList cons', bs = be
         (tree', (be,_)) = flip runState (bs fi, M.size m) $ sequenceA treesubs
 
         cons' = (\(b,a) -> (b, a { sid = Just b })) <$> foldr (:) [] tree'
-        (we,_) = flip runState (bs fi, M.size m) $ mapM renameWfC $ concatMap (\i -> map (,i) $ ws fi) [1..(depth+1)]
-        renameWfC (wfc,i) = if i == 0 then return wfc else substKV [(kv, renameKv kv i)] wfc
+
+        renameWfC (wfc,i) = substKV [(kv, renameKv kv i)] wfc
           where kv = headError "no KVar in WFC" $ V.kvars $ sr_reft $ wrft wfc
+
+        (we,_) = flip runState (bs fi, M.size m) $ mapM renameWfC $ concatMap (\i -> map (,i) $ ws fi) [0..(depth+1)]
 
 
 renameKv :: Integral i => KVar -> i -> KVar
@@ -126,6 +127,10 @@ kvarSubs t = (,) (me t) $ foldr (:) [] $ (\(k,i) -> (k,renameKv k i)) <$> Rev t
 prime :: ( a -> s -> State (e, Int) b ) -> ((a, Int), s) -> State (e, Int) (Integer, b)
 -- |Builds our new constraint graph, now knowing the substitutions.
 prime sub ((v,i),su) = modify (A.second (+1)) >> ((,) <$> (fromIntegral <$> snd <$> get) <*> sub v su)
+
+dup :: [c] -> Node b (a,[c]) -> Node b (a,[c])
+dup c (Node (a,[]) bs) = Node (a,c) bs
+dup c (Node (a,cs) bs) = Node (a,c ++ cs) [Node b $ dup [head cs] <$> as | Node b as <- bs]
 
 class SubstKV a where
   substKV :: [(KVar,KVar)] -> a -> State (BindEnv,Int) a
@@ -160,6 +165,7 @@ instance SubstKV SortedReft where
                      return v
     where
       tx s (PKVar k z)   = flip runState s $ do kv' <- substKV su k
+                                                -- @TODO leave terminal kvars? or?
                                                 return $ if kv k == kv kv' then PTrue else PKVar kv' z
       tx s p             = (p, s)
 
