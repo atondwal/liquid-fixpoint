@@ -116,7 +116,7 @@ command me !cmd      = {-# SCC "command" #-} say me cmd >> hear me cmd
 
 
 smtWrite :: Context -> LT.Text -> IO ()
-smtWrite me !s = smtWriteRaw me $ traceShowId s
+smtWrite me !s = smtWriteRaw me s
 
 smtRes :: Context -> A.IResult T.Text Response -> IO Response
 smtRes me res = case A.eitherResult res of

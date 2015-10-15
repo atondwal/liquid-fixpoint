@@ -124,7 +124,7 @@ interpSym = symbol "InterpolatedQu"
 interp :: (Fixpoint a) => Config -> FInfo a -> IO (FInfo a)
 interp cfg fi
   | interpolate cfg = do let fc = failCons cfg
-                         let fi' = fi -- unroll fi fc
+                         let fi' = unroll fi fc
                          whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
                          let fi'' = eliminateAll fi'
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
@@ -142,7 +142,7 @@ interp cfg fi
                          -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
                              -- @FIXME is eliminate always guaranteed to return 1 constraint?
                          q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
-                         DT.traceShow q (return ())
+                         -- DT.traceShow q (return ())
                          return fi'' { quals = q:quals fi'' }
   | otherwise     = return fi
 
