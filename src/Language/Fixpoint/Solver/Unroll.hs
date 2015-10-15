@@ -166,7 +166,7 @@ instance SubstKV SortedReft where
     where
       tx s (PKVar k z)   = flip runState s $ do kv' <- substKV su k
                                                 -- @TODO leave terminal kvars? or?
-                                                return $ if kv k == kv kv' then PTrue else PKVar kv' z
+                                                return $ {-if kv k == kv kv' then PTrue else-} PKVar kv' z
       tx s p             = (p, s)
 
 instance SubstKV KVar where
