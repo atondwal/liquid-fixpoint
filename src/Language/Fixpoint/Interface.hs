@@ -40,7 +40,7 @@ import           Language.Fixpoint.Solver.Deps      (deps, Deps (..))
 import           Language.Fixpoint.Solver.Uniqify   (renameAll)
 import           Language.Fixpoint.Solver.Unroll    (unroll)
 import qualified Language.Fixpoint.Solver.Solve     as S
-import           Language.Fixpoint.Solver.Solution  (Solution)
+import           Language.Fixpoint.Solver.Solution  (Solution,apply)
 import           Language.Fixpoint.Config           (Config (..), command, withTarget)
 import           Language.Fixpoint.Files            hiding (Result)
 import           Language.Fixpoint.Misc
@@ -215,26 +215,25 @@ interpSym = symbol "InterpolatedQu"
 interp :: (Fixpoint a) => Config -> SInfo a -> IO (SInfo a)
 interp cfg fi
   | interpolate cfg = do let fc = failCons cfg
-                         let fi' = fi -- unroll fi fc
+                         let fi' = unroll fi fc
                          whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
-                         let (_,fi'') = eliminateAll fi'
+                         let (sol,fi'') = eliminateAll fi'
+                         let fi''' = V.mapKVars (Just . apply sol) fi''
                          whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                          donePhase Loud "Unroll"
+                         let c = mlookup (cm fi) (failCons cfg)
                          DT.traceShow (M.keys $ cm fi) (return ())
                          DT.traceShow (M.keys $ cm fi') (return ())
                          DT.traceShow (M.keys $ cm fi'') (return ())
-                         let c = mlookup (cm fi) (failCons cfg)
-                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
-                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
-                         --DT.traceShow ((V.rhsKVars &&& V.lhsKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
-                         -- DT.traceShow ((lhsCs &&& envCs (bs fi') . senv &&& rhsCs) <$> M.elems m) (return ())
-                         -- DT.traceShow (envCs (bs fi) $ senv $ mlookup (cm fi) $ failCons cfg) (return ())
-                         -- DT.traceShow (envCs (bs fi') $ senv $ mlookup (cm fi') $ failCons cfg) (return ())
-                         -- DT.traceShow (envCs (bs fi'') $ senv $ mlookup (cm fi'') $ failCons cfg) (return ())
-                             -- @FIXME is eliminate always guaranteed to return 1 constraint?
-                         q <- buildQual cfg fi'' $ head $ M.elems (cm fi'')
+                         DT.traceShow (M.keys $ cm fi''') (return ())
+                         DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
+                         DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
+                         DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
+                         DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi''')) <$>  M.elems (cm fi''')) (return ())
+                             -- @FIXME is the right constraint always the first WCC?
+                         q <- buildQual cfg fi''' $ head $ M.elems (cm fi''')
                          DT.traceShow q (return ())
-                         return fi'' { quals = q:quals fi'' }
+                         return fi''' { quals = q:quals fi''' }
   | otherwise     = return fi
 
 buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
