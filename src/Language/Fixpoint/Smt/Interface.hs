@@ -62,14 +62,14 @@ import           Language.Fixpoint.Smt.Serialize()
 
 
 
-import           Control.Applicative      ((*>), (<$>), (<*), (<|>))
+import           Control.Applicative      ((<|>))
 import           Control.Monad
 import           Control.Arrow
 import           Data.Char
-import qualified Data.List                as L
 import           Data.Monoid
 import           Data.Maybe
 import qualified Data.Text                as T
+import qualified Data.List                as L
 import           Data.Text.Format         hiding (format)
 import qualified Data.Text.IO             as TIO
 -- import qualified Data.Text.Lazy           as LT
