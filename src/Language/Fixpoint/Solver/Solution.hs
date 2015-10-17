@@ -1,6 +1,7 @@
 {-# LANGUAGE PatternGuards     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DeriveGeneric     #-}
 
 module Language.Fixpoint.Solver.Solution
         ( -- * Solutions and Results
@@ -23,6 +24,7 @@ module Language.Fixpoint.Solver.Solution
 where
 
 import           Control.Applicative            ((<$>))
+import           Control.Parallel.Strategies
 import qualified Data.HashMap.Strict            as M
 import qualified Data.List                      as L
 import           Data.Maybe                     (maybeToList, isNothing)
@@ -33,6 +35,7 @@ import qualified Language.Fixpoint.Sort         as So
 import           Language.Fixpoint.Misc
 import qualified Language.Fixpoint.Types        as F
 import           Prelude                        hiding (init, lookup)
+import           GHC.Generics
 
 ---------------------------------------------------------------------
 -- | Types ----------------------------------------------------------
@@ -59,7 +62,9 @@ data EQual = EQL { eqQual :: !F.Qualifier
                  , eqPred :: !F.Pred
                  , eqArgs :: ![F.Expr]
                  }
-             deriving (Eq, Show)
+             deriving (Eq, Show, Generic)
+
+instance NFData EQual
 
 instance PPrint EQual where
   pprint = pprint . eqPred
@@ -109,7 +114,7 @@ update1 s (k, qs) = (change, M.insert k qs s)
 --------------------------------------------------------------------
 init :: F.GInfo c a -> Solution
 --------------------------------------------------------------------
-init fi = {- tracepp "init solution" -} s
+init fi = {- tracepp "init solution" -} s `using` parTraversable rdeepseq
   where
     s     = L.foldl' (refine fi qs) s0 ws
     s0    = M.empty
