@@ -5,7 +5,7 @@
 -- | Solve a system of horn-clause constraints ---------------------------------
 --------------------------------------------------------------------------------
 
-module Language.Fixpoint.Solver.Solve (solve) where
+module Language.Fixpoint.Solver.Solve (solve, interpolation) where
 
 -- import           Control.Concurrent (threadDelay)
 import           Control.Monad (filterM)
@@ -19,6 +19,8 @@ import           Language.Fixpoint.Types.Config hiding (stats)
 import qualified Language.Fixpoint.Solver.Solution as S
 import qualified Language.Fixpoint.Solver.Worklist as W
 import           Language.Fixpoint.Solver.Monad
+import           Language.Fixpoint.Solver.Validate (sanitize)
+
 -- DEBUG
 import           Text.Printf
 import           System.Console.CmdArgs.Verbosity (whenLoud)
@@ -150,9 +152,13 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 rhsPred :: S.Solution -> F.SimpC a -> F.Expr
 rhsPred s c = S.apply s $ F.crhs c
 
+---------------------------------------------------------------------------
+interpolation :: Config -> F.SInfo a -> F.Expr -> F.Expr -> IO F.Expr
+---------------------------------------------------------------------------
+interpolation cfg fi p q = runSolverM cfg fi' 0 $ interpolationSolver fi' p q
+  where Right fi' = sanitize fi
 
 {-
----------------------------------------------------------------------------
 donePhase' :: String -> SolveM ()
 ---------------------------------------------------------------------------
 donePhase' msg = lift $ do

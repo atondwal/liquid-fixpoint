@@ -2,6 +2,7 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 -- | This module contains the types defining an SMTLIB2 interface.
 
@@ -45,15 +46,16 @@ import           System.Process
 type Raw          = T.Text
 
 -- | Commands issued to SMT engine
+
 data Command      = Push
                   | Pop
                   | CheckSat
                   | Declare   Symbol [Sort] Sort
                   | Define    Sort
                   | Assert    (Maybe Int) Expr
+                  | forall a. Interpolate (SInfo a) Expr Expr
                   | Distinct  [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue  [Symbol]
-                  deriving (Eq, Show)
 
 -- | Responses received from SMT engine
 data Response     = Ok
@@ -61,6 +63,7 @@ data Response     = Ok
                   | Unsat
                   | Unknown
                   | Values [(Symbol, Raw)]
+                  | Interpolant Expr
                   | Error Raw
                   deriving (Eq, Show)
 

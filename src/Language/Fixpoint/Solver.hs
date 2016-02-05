@@ -32,6 +32,7 @@ import           Text.PrettyPrint.HughesPJ          (render)
 import           Text.Printf                        (printf)
 import           Control.Monad                      (when, void, filterM, forM)
 import           Control.Exception                  (catch)
+import           Control.Arrow
 
 import           Language.Fixpoint.Solver.Graph     -- (slice)
 import           Language.Fixpoint.Solver.Validate  (sanitize)
@@ -40,7 +41,8 @@ import           Language.Fixpoint.Solver.Deps      (deps, Deps (..))
 import           Language.Fixpoint.Solver.UniqifyBinds (renameAll)
 import           Language.Fixpoint.Solver.UniqifyKVars (wfcUniqify)
 import qualified Language.Fixpoint.Solver.Solve     as Sol
-import           Language.Fixpoint.Solver.Solution  (Solution)
+import           Language.Fixpoint.Solver.Unroll    (unroll)
+import           Language.Fixpoint.Solver.Solution  (Solution, apply)
 import           Language.Fixpoint.Types.Config           (multicore, Config (..))
 import           Language.Fixpoint.Types.Errors
 import           Language.Fixpoint.Utils.Files            hiding (Result)
@@ -50,7 +52,10 @@ import           Language.Fixpoint.Utils.Statistics (statistics)
 import           Language.Fixpoint.Partition        (mcInfo, partition, partition')
 import           Language.Fixpoint.Parse            (rr', mkQual)
 import           Language.Fixpoint.Types
+import qualified Language.Fixpoint.Types.Visitor as V
 import           Control.DeepSeq
+
+import qualified Debug.Trace as DT
 
 ---------------------------------------------------------------------------
 -- | Top level Solvers ----------------------------------------------------
@@ -188,6 +193,7 @@ solveNative' !cfg !fi0 = do
   -- rnf si2 `seq` donePhase Loud "Uniqify"
   (s0, si4) <- {-# SCC "elim" #-} elim cfg $!! si3
   writeLoud $ "About to solve: \n" ++ render (toFixpoint cfg si4)
+  _ <- interp cfg $!! si4
   res <- {-# SCC "Sol.solve" #-} Sol.solve cfg s0 $!! si4
   -- rnf soln `seq` donePhase Loud "Solve2"
   --let stat = resStatus res
@@ -225,6 +231,51 @@ resultExit Safe        = ExitSuccess
 resultExit (Unsafe _)  = ExitFailure 1
 resultExit _           = ExitFailure 2
 
+
+
+interpSym = symbol "InterpolatedQu"
+
+interp :: (Fixpoint a) => Config -> SInfo a -> IO (SInfo a)
+interp cfg fi
+  | interpolate cfg > -1 = do let fc = failCons cfg
+                              let fi' = unroll (interpolate cfg) fi fc
+                              whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
+                              let (sol,fi'') = eliminateAll fi'
+                              let fi''' = V.mapKVars (Just . apply sol) fi''
+                              whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
+                              donePhase Loud "Unroll"
+                              let _ = mlookup (cm fi) (failCons cfg)
+                              DT.traceShow (M.keys $ cm fi) (return ())
+                              DT.traceShow (M.keys $ cm fi') (return ())
+                              DT.traceShow (M.keys $ cm fi'') (return ())
+                              DT.traceShow (M.keys $ cm fi''') (return ())
+                              DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi)) <$>  M.elems (cm fi)) (return ())
+                              DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi')) <$>  M.elems (cm fi')) (return ())
+                              DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi'')) <$>  M.elems (cm fi'')) (return ())
+                              DT.traceShow ((V.kvars . crhs &&& V.envKVars (bs fi''')) <$>  M.elems (cm fi''')) (return ())
+                                  -- @FIXME is the right constraint always the first WCC?
+                              q <- buildQual cfg fi''' $ head $ M.elems (cm fi''')
+                              DT.traceShow q (return ())
+                              return fi''' { quals = q:quals fi''' }
+  | otherwise     = return fi
+
+buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
+buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi p q
+  where env  = envCs (bs fi) $ _cenv c
+        (qenv,ps) = substBinds env
+        p = PAnd ps
+        q = PNot $ prop $ crhs c
+        qualify p = Q interpSym qenv p (dummyPos "interp")
+
+-- [ x:{v:int|v=10} , y:{v:int|v=20} ] -> [x:int, y:int], [(x=10), (y=20)]
+substBinds :: [(Symbol, SortedReft)] -> ([(Symbol,Sort)],[Expr])
+substBinds = unzip . map substBind
+
+substBind :: (Symbol, SortedReft) -> ((Symbol,Sort), Expr)
+substBind (sym, sr) = ((sym, sr_sort sr), subst1 (reftPred reft) sub)
+  where
+    reft = sr_reft sr
+    sub = (reftBind reft, eVar sym)
 
 ---------------------------------------------------------------------------
 -- | Parse External Qualifiers --------------------------------------------

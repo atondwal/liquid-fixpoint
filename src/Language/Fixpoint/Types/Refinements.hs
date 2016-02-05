@@ -512,6 +512,9 @@ instance Expression Integer where
 instance Expression Int where
   expr = expr . toInteger
 
+instance Predicate SortedReft where
+  prop = reftPred . sr_reft
+
 instance Predicate Symbol where
   prop = eProp
 

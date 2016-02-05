@@ -19,6 +19,10 @@ module Language.Fixpoint.Solver.Monad
          -- * Debug
        , Stats
        , tickIter
+
+         -- * Interpolation
+       , interpolationSolver
+
        , stats
        , numIter
        )
@@ -167,6 +171,11 @@ declSymbols = fmap dropThy . symbolSorts
   where
     dropThy = filter (not . isThy . fst)
     isThy   = isJust . Thy.smt2Symbol
+
+---------------------------------------------------------------------------
+interpolationSolver :: F.SInfo a -> F.Expr -> F.Expr -> SolveM F.Expr
+---------------------------------------------------------------------------
+interpolationSolver fi p q = withContext $ \me -> smtDoInterpolate me fi p q
 
 ---------------------------------------------------------------------------
 stats :: SolveM Stats

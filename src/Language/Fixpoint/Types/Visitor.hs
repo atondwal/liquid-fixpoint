@@ -18,6 +18,7 @@ module Language.Fixpoint.Types.Visitor (
 
   -- * Accumulators
   , fold
+  , accumulate
 
   -- * Clients
   , kvars
@@ -68,6 +69,9 @@ fold v c a t = snd $ execVisitM v c a visit t
 
 trans        :: (Visitable t, Monoid a) => Visitor a ctx -> ctx -> a -> t -> t
 trans v c _ z = fst $ execVisitM v c mempty visit z
+
+accumulate :: (Monoid c, Visitable t) => Visitor c c -> c -> t -> (t, c)
+accumulate visitor s = execVisitM visitor s s visit
 
 execVisitM :: Visitor a ctx -> ctx -> a -> (Visitor a ctx -> ctx -> t -> State a t) -> t -> (t, a)
 execVisitM v c a f x = runState (f v c x) a

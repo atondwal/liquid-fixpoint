@@ -87,6 +87,7 @@ Library
                    Language.Fixpoint.Solver.Eliminate,
                    Language.Fixpoint.Solver.Validate,
                    Language.Fixpoint.Utils.Statistics,
+                   Language.Fixpoint.Solver.Unroll,
                    Language.Fixpoint.Solver.Solve
 
   Build-Depends: base >= 4.7 && < 5
@@ -120,6 +121,7 @@ Library
                , unordered-containers
                , cereal
                , text-format
+               , comonad
   if impl(ghc >= 7.10.2)
     Build-Depends: located-base
 

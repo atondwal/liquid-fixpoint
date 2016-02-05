@@ -52,6 +52,8 @@ data Config
     , newcheck    :: Bool                -- ^ new fixpoint sort check
     , eliminate   :: Bool                -- ^ eliminate non-cut KVars
     , elimStats   :: Bool                -- ^ print eliminate stats
+    , interpolate :: Int                 -- ^ use interpolation and BMC to find qualifiers
+    , failCons    :: Integer             -- ^ the failing constraint to interpolate
     , metadata    :: Bool                -- ^ print meta-data associated with constraints
     , stats       :: Bool                -- ^ compute constraint statistics
     , parts       :: Bool                -- ^ partition FInfo into separate fq files
@@ -75,6 +77,8 @@ instance Default Config where
                , newcheck    = False
                , eliminate   = def
                , elimStats   = def
+               , failCons    = 1
+               , interpolate = -1
                , metadata    = def
                , stats       = def
                , parts       = def
@@ -145,6 +149,8 @@ config = Config {
   , real        = False &= help "(alpha) Theory of real numbers"
   , eliminate   = False &= help "(alpha) Eliminate non-cut KVars"
   , elimStats   = False &= help "(alpha) Print eliminate stats"
+  , failCons    = 1     &= help "Failing constriant to interpolate"
+  , interpolate = -1    &= help "(alpha) Perform interpolation to get qualifier"
   , save        = False &= help "Save Query as .fq and .bfq files"
   , metadata    = False &= help "Print meta-data associated with constraints"
   , stats       = False &= help "Compute constraint statistics"
