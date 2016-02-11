@@ -260,7 +260,7 @@ interp cfg fi
   | otherwise     = return fi
 
 buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi p q
+buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi (PAnd [p,Interp q])
   where env  = envCs (bs fi) $ _cenv c
         (qenv,ps) = substBinds env
         p = PAnd ps

@@ -151,7 +151,7 @@ command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
     say               = smtWrite me . smt2
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
-    hear (Interpolate fi _ _) = smtRead me >>= \case
+    hear (Interpolate fi _) = smtRead me >>= \case
       Unsat -> smtPred fi me
       Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
       e -> error $ show e
@@ -399,8 +399,8 @@ smtBracket me a   = do smtPush me
                        smtPop me
                        return r
 
-smtDoInterpolate :: Context -> SInfo a -> Expr -> Expr -> IO Expr
-smtDoInterpolate me fi p q = respInterp <$> command me (Interpolate fi p q)
+smtDoInterpolate :: Context -> SInfo a -> Expr -> IO Expr
+smtDoInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
 
 {-
 smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
@@ -408,8 +408,8 @@ smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
   where smtDecl' = uncurry $ smtDecl me
 -}
 
-smtInterpolate :: Context -> SInfo () -> Expr -> Expr -> IO Expr
-smtInterpolate me fi p q = respInterp <$> command me (Interpolate fi p q)
+smtInterpolate :: Context -> SInfo () -> Expr -> IO Expr
+smtInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
 
 respInterp (Interpolant p') = p'
 respInterp r = die $ err dummySpan $ "crash: SMTLIB2 respInterp = " ++ show r

@@ -214,6 +214,9 @@ data Expr = ESym !SymConst
           | PAll   ![(Symbol, Sort)] !Expr
           | PExist ![(Symbol, Sort)] !Expr
           | PTop
+
+--- To mark interpolation cuts
+          | Interp !Expr
           deriving (Eq, Show, Data, Typeable, Generic)
 
 {-@ PAnd :: ListNE Pred -> Pred @-}
@@ -295,6 +298,7 @@ instance Fixpoint Expr where
   toFix (PExist xts p)   = text "exists" <+> toFix xts <+> text "." <+> toFix p
   toFix (ETApp e s)      = text "tapp" <+> toFix e <+> toFix s
   toFix (ETAbs e s)      = text "tabs" <+> toFix e <+> toFix s
+  toFix (Interp e)         = parens $ text "interp" <+> toFix e
 
   simplify (PAnd [])     = PTrue
   simplify (POr  [])     = PFalse
@@ -463,6 +467,7 @@ instance PPrint Expr where
   pprintPrec _ p@(PKVar {})    = toFix p
   pprintPrec _ (ETApp e s)     = text "ETApp" <+> toFix e <+> toFix s
   pprintPrec _ (ETAbs e s)     = text "ETAbs" <+> toFix e <+> toFix s
+  pprintPrec _ (Interp e)     = parens $ text "interp" <+> toFix e
 
 trueD  = text "true"
 falseD = text "false"

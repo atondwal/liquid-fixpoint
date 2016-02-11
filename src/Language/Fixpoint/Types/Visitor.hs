@@ -130,6 +130,7 @@ visitExpr v = vE
     step _ e@(EVar _)      = return e
     step c (EApp f es)     = EApp f     <$> (vE c <$$> es)
     step c (ENeg e)        = ENeg       <$> vE c e
+    step c (Interp e)      = Interp     <$> vE c e
     step c (EBin o e1 e2)  = EBin o     <$> vE c e1 <*> vE c e2
     step c (EIte p e1 e2)  = EIte       <$> vE c p  <*> vE c e1 <*> vE c e2
     step c (ECst e t)      = (`ECst` t) <$> vE c e

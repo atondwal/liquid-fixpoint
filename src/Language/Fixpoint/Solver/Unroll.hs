@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections#-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Language.Fixpoint.Solver.Unroll (unroll) where
+module Language.Fixpoint.Solver.Unroll (unroll, unroll') where
 
 import           Data.Hashable
 import           Data.Bifunctor
@@ -75,6 +75,23 @@ draw (Node x ts0) = show x : drawSubTrees ts0
         "|" : shift "+--" "|  " (draw t) ++ drawSubTrees ts
 
     shift first other = zipWith (++) (first : repeat other)
+
+unroll' depth fi start = tree'
+  where m = cm fi
+        emptycons = cons1 { _cenv = emptyIBindEnv, _crhs = PTrue }
+          where cons1 = headError "no constraints" $ M.elems m
+        kidsm = M.fromList $ (fst. headError "groupWith broken" A.&&& (snd <$>)) <$> groupWith fst pairs
+          where pairs = [(k,i)|(i,ks) <- A.second rhsKVars <$> M.toList m, k<-ks]
+
+        -- mlookup :: Integer -> SimpC _
+        mlookup v = M.lookupDefault (error $"cons # "++show v++" not found") v $ M.insert 0 emptycons m
+        klookup k = M.lookupDefault [0] k kidsm
+        kenv = lhsKVars (bs fi) . mlookup
+
+        tree = traceDrawId $ Node (start,0) (prune depth . index M.empty . ana klookup kenv <$> kenv start)
+        treeofsubs = {- traceDrawId $ -} dup [(KV nonSymbol, KV nonSymbol)] $ {- traceDrawId $ -} kvarSubs <<= tree
+        treesubs = prime (\v s -> substKV s $ mlookup v) <$> treeofsubs
+        (tree',_) = flip runState (bs fi, M.size m) $ sequenceA treesubs
 
 unroll :: Int -> SInfo a -> Integer -> SInfo a
 unroll depth fi start = traceShow (map fst cons') $ fi {cm = M.fromList cons', bs = be, ws = M.fromList $ we ++ M.toList (ws fi)}

@@ -53,7 +53,7 @@ data Command      = Push
                   | Declare   Symbol [Sort] Sort
                   | Define    Sort
                   | Assert    (Maybe Int) Expr
-                  | forall a. Interpolate (SInfo a) Expr Expr
+                  | forall a. Interpolate (SInfo a) Expr
                   | Distinct  [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue  [Symbol]
 

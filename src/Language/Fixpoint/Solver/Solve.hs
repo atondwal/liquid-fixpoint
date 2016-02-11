@@ -153,9 +153,9 @@ rhsPred :: S.Solution -> F.SimpC a -> F.Expr
 rhsPred s c = S.apply s $ F.crhs c
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> F.SInfo a -> F.Expr -> F.Expr -> IO F.Expr
+interpolation :: Config -> F.SInfo a -> F.Expr -> IO F.Expr
 ---------------------------------------------------------------------------
-interpolation cfg fi p q = runSolverM cfg fi' 0 $ interpolationSolver fi' p q
+interpolation cfg fi p = runSolverM cfg fi' 0 $ interpolationSolver fi' p
   where Right fi' = sanitize fi
 
 {-
