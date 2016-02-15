@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE LambdaCase                #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -40,6 +41,8 @@ module Language.Fixpoint.Smt.Interface (
     , smtCheckUnsat
     , smtBracket
     , smtDistinct
+    , smtDoInterpolate
+    , smtInterpolate
 
     -- * Theory Symbols
     -- , theorySymbols
@@ -67,6 +70,7 @@ import           Control.Applicative      ((<|>))
 import           Control.Monad
 import           Data.Char
 import           Data.Monoid
+import           Data.List                as L
 import qualified Data.Text                as T
 import           Data.Text.Format         hiding (format)
 import qualified Data.Text.IO             as TIO
@@ -79,6 +83,7 @@ import           System.FilePath
 import           System.IO                (IOMode (..), hClose, hFlush, openFile)
 import           System.Process
 import qualified Data.Attoparsec.Text     as A
+import qualified Debug.Trace as DT
 
 {-
 runFile f
@@ -146,22 +151,98 @@ command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
     say               = smtWrite me . smt2
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
+    hear (Interpolate fi _) = smtRead me >>= \case
+      Unsat -> smtPred fi me
+      Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
+      e -> error $ show e
+ 
     hear _            = return Ok
 
 
 smtWrite :: Context -> T.Text -> IO ()
 smtWrite me !s = smtWriteRaw me s
 
+smtRes :: Context -> A.IResult T.Text Response -> IO Response
+smtRes me res = case A.eitherResult res of
+  Left e  -> error e
+  Right r -> do
+    maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (cLog me)
+    when (verbose me) $
+      TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
+    return r
+
+smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+
 smtRead :: Context -> IO Response
-smtRead me = {-# SCC "smtRead" #-}
-    do ln  <- smtReadRaw me
-       res <- A.parseWith (smtReadRaw me) responseP ln
-       case A.eitherResult res of
-         Left e  -> errorstar $ "SMTREAD:" ++ e
-         Right r -> do
-           maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (cLog me)
-           -- when (verbose me) $ TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
-           return r
+smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
+
+smtPred :: SInfo a -> Context -> IO Response
+smtPred fi me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' fi <$> predP)
+
+predP = {-# SCC "predP" #-}
+        (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipMany1 A.space) <* A.char ')'))
+    <|> (Sym <$> symbolP)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
+type PorE = Either Expr Expr
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+strToOp _ = error "Op not found"
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+strToRel _ = error "Rel not found"
+
+parseLisp' :: SInfo a -> Lisp -> Expr
+parseLisp' _ = toPred
+  where toPred :: Lisp -> Expr
+        toPred x = case parseLisp x of
+                     Left p -> p
+                     Right e -> error $ "expected Pred, got Expr: " ++ show e
+        toExpr :: Lisp -> Expr
+        toExpr x = case parseLisp x of
+                     Left p -> error $ "expected Expr, got Pred: " ++ show p
+                     Right e -> e
+        parseLisp :: Lisp -> PorE
+        parseLisp (Sym s)
+          | symbolText s == "true" = Left PTrue
+          | symbolText s == "false" = Left PFalse
+          | otherwise = Right $ EVar s
+        parseLisp (Lisp (Sym s:xs))
+          | symbolText s == "and" = Left $ PAnd $ L.map toPred xs
+          | symbolText s == "or" = Left $ POr $ L.map toPred xs
+        parseLisp (Lisp [Sym s,x])
+          | symbolText s == "not" = Left $ PNot $ toPred x
+          | symbolText s == "-" = Right $ ENeg $ toExpr x
+          | otherwise           = Right $ EVar s -- ELit (dummyLoc s) $ fromJust $ lookup s (lits fi)
+        parseLisp (Lisp [Sym s,x,y])
+          | symbolText s == "=>" = Left $ PImp (toPred x) (toPred y)
+          | symbolText s `elem` binOpStrings = Right $ EBin (strToOp $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s `elem` binRelStrings = Left $ PAtom (strToRel $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s == "=" = Left $ case (parseLisp x, parseLisp y) of
+                                    (Left p, Left q) -> PIff p q
+                                    (Right p, Right q) -> PAtom Eq p q
+                                    _ -> error $ "Can't compare `" ++ show x ++ "` with`" ++ show y ++ "`. Kind Error."
+        parseLisp (Lisp [Sym s, x, y, z])
+          | symbolText s == "ite" = Right $ EIte (toPred x) (toExpr y) (toExpr z)
+        parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
+        parseLisp x = error $ show x ++ "is Nonsense Lisp!"
+        -- PBexp? When do I know to read one of these in?
 
 responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
          <|> A.string "sat"     *> return Sat
@@ -184,7 +265,7 @@ pairP = {-# SCC "pairP" #-}
      A.char ')'
      return (x,v)
 
-symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (not . isSpace)
+symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x))
 
 valueP = {-# SCC "valueP" #-} negativeP
       <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
@@ -259,7 +340,7 @@ cleanupContext (Ctx {..})
 {- "z3 -smtc SOFT_TIMEOUT=1000 -in" -}
 {- "z3 -smtc -in MBQI=false"        -}
 
-smtCmd Z3      = "z3 -smt2 -in"
+smtCmd Z3      = "z3 pp.single-line=true -smt2 -in"
 smtCmd Mathsat = "mathsat -input=smt2"
 smtCmd Cvc4    = "cvc4 --incremental -L smtlib2"
 
@@ -317,6 +398,21 @@ smtBracket me a   = do smtPush me
                        r <- a
                        smtPop me
                        return r
+
+smtDoInterpolate :: Context -> SInfo a -> Expr -> IO Expr
+smtDoInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
+
+{-
+smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
+smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
+  where smtDecl' = uncurry $ smtDecl me
+-}
+
+smtInterpolate :: Context -> SInfo () -> Expr -> IO Expr
+smtInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
+
+respInterp (Interpolant p') = p'
+respInterp r = die $ err dummySpan $ "crash: SMTLIB2 respInterp = " ++ show r
 
 respSat Unsat   = True
 respSat Sat     = False
