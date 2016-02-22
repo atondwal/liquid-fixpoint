@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns         #-}
 
 module Language.Fixpoint.Solver.Eliminate
-       (eliminateAll) where
+       (eliminateAll, eliminateInterp) where
 
 import           Language.Fixpoint.Types
 import           Language.Fixpoint.Types.Visitor   (kvars)
@@ -17,21 +17,25 @@ import           Control.DeepSeq     (($!!))
 
 
 --------------------------------------------------------------
-eliminateAll :: SInfo a -> (Solution, SInfo a)
-eliminateAll !fi = {-# SCC "eliminateAll" #-} foldl' eliminate (M.empty, fi) nonCuts
-  where
-    nonCuts = depNonCuts $ deps fi
+eliminateAll, eliminateInterp :: SInfo a -> (Solution, SInfo a)
+eliminateAll = eliminateFold id
+eliminateInterp = eliminateFold Interp
 --------------------------------------------------------------
 
-eliminate :: (Solution, SInfo a) -> KVar -> (Solution, SInfo a)
-eliminate (!s, !fi) k = (M.insert k (mkJVar orPred) s, fi { cm = remainingCs , ws = M.delete k $ ws fi })
+eliminateFold :: (Expr -> Expr) -> SInfo a -> (Solution, SInfo a)
+eliminateFold tx !fi = {-# SCC "eliminateAll" #-} foldl' (eliminate tx) (M.empty, fi) nonCuts
+  where
+    nonCuts = depNonCuts $ deps fi
+
+eliminate :: (Expr -> Expr) -> (Solution, SInfo a) -> KVar -> (Solution, SInfo a)
+eliminate tx (!s, !fi) k = (M.insert k (mkJVar orPred) s, fi { cm = remainingCs , ws = M.delete k $ ws fi })
   where
     relevantCs  = M.filter (   elem k . kvars . crhs) (cm fi)
     remainingCs = M.filter (notElem k . kvars . crhs) (cm fi)
     kvWfC = ws fi M.! k
     be = bs fi
     kDom = domain be kvWfC
-    orPred = {-# SCC "orPred" #-} POr $!! extractPred kDom be <$> M.elems relevantCs
+    orPred = {-# SCC "orPred" #-} tx $ POr $!! extractPred kDom be <$> M.elems relevantCs
 
 extractPred :: [Symbol] -> BindEnv -> SimpC a -> Expr
 extractPred kDom be sc = renameQuantified (subcId sc) kSol

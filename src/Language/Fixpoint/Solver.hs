@@ -36,7 +36,7 @@ import           Control.Arrow
 
 import           Language.Fixpoint.Solver.Graph     -- (slice)
 import           Language.Fixpoint.Solver.Validate  (sanitize)
-import           Language.Fixpoint.Solver.Eliminate (eliminateAll)
+import           Language.Fixpoint.Solver.Eliminate (eliminateAll, eliminateInterp)
 import           Language.Fixpoint.Solver.Deps      (deps, Deps (..))
 import           Language.Fixpoint.Solver.UniqifyBinds (renameAll)
 import           Language.Fixpoint.Solver.UniqifyKVars (wfcUniqify)
@@ -240,7 +240,8 @@ interp cfg fi
   | interpolate cfg > -1 = do let fc = failCons cfg
                               let fi' = unroll (interpolate cfg) fi fc
                               whenLoud $ putStrLn $ "fq file after unrolling: \n" ++ render (toFixpoint cfg fi')
-                              let (sol,fi'') = eliminateAll fi'
+                              let (sol,fi'') = eliminateInterp fi'
+                              DT.traceShow sol (return ())
                               let fi''' = V.mapKVars (Just . apply sol) fi''
                               whenLoud $ putStrLn $ "fq file after unrolled elimination: \n" ++ render (toFixpoint cfg fi'')
                               donePhase Loud "Unroll"
@@ -260,7 +261,7 @@ interp cfg fi
   | otherwise     = return fi
 
 buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi (PAnd [p,Interp q])
+buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi (DT.traceShowId (PAnd [p, q]))
   where env  = envCs (bs fi) $ _cenv c
         (qenv,ps) = substBinds env
         p = PAnd ps
