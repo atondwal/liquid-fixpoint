@@ -93,6 +93,8 @@ module Language.Fixpoint.Types.Names (
   , mulFuncName
   , divFuncName
 
+  , textSymbol
+
 ) where
 
 import           Control.DeepSeq             (NFData (..))

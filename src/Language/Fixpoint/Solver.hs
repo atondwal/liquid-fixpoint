@@ -20,7 +20,7 @@ module Language.Fixpoint.Solver (
 
 
 import           Control.Concurrent
-import           Data.Binary
+import           Data.Binary hiding (get)
 import           Data.Maybe                         (fromMaybe)
 import qualified Data.HashMap.Strict                as M
 import qualified Data.HashSet                       as S
@@ -30,7 +30,7 @@ import           System.Exit                        (ExitCode (..))
 import           System.Console.CmdArgs.Verbosity   hiding (Loud)
 import           Text.PrettyPrint.HughesPJ          (render)
 import           Text.Printf                        (printf)
-import           Control.Monad                      (when, void, filterM, forM)
+-- import           Control.Monad                      (when, void, filterM, forM)
 import           Control.Exception                  (catch)
 import           Control.Arrow
 
@@ -56,6 +56,50 @@ import qualified Language.Fixpoint.Types.Visitor as V
 import           Control.DeepSeq
 
 import qualified Debug.Trace as DT
+
+import Control.Monad.State
+import Control.Monad.Writer
+import qualified Data.Text as T
+
+newvar :: Int -> Expr
+newvar = ESym . SL . T.pack . ("divar" ++) . show
+
+newsym :: Int -> Symbol
+newsym = litSymbol . textSymbol . T.pack . ("divar" ++) . show
+
+diquery :: Expr -> Expr
+diquery e = PExist (Prelude.zipWith go [1..] es) $ PAnd (e':Prelude.zipWith doit [1..] es)
+  where (e',es) = runWriter $ evalStateT (rep e) 0
+        doit i e = POr [e, PNot $ newvar i]
+        go i _ = (newsym i, boolSort)
+
+rep :: Expr -> StateT Int (Writer [Expr]) Expr
+rep (Interp x) = rep x >>= tell . pure >>
+                 modify (+1) >>
+                 newvar <$> get
+rep e@EBot          = return e
+rep e@(ESym _)      = return e
+rep e@(ECon _)      = return e
+rep e@(EVar _)      = return e
+rep (EApp f es)     = EApp f     <$> mapM rep es
+rep (ENeg e)        = ENeg       <$> rep e
+rep (EBin o e1 e2)  = EBin o     <$> rep e1 <*> rep e2
+rep (EIte p e1 e2)  = EIte       <$> rep p  <*> rep e1 <*> rep e2
+rep (ECst e t)      = (`ECst` t) <$> rep e
+rep (PAnd  ps)      = PAnd       <$> mapM rep ps
+rep (POr  ps)       = POr        <$> mapM rep ps
+rep (PNot p)        = PNot       <$> rep p
+rep (PImp p1 p2)    = PImp       <$> rep p1 <*> rep p2
+rep (PIff p1 p2)    = PIff       <$> rep p1 <*> rep p2
+rep (PAtom r e1 e2) = PAtom r    <$> rep e1 <*> rep e2
+rep (PAll xts p)    = PAll   xts <$> rep p
+rep (PExist xts p)  = PExist xts <$> rep p
+rep (ETApp e s)     = (`ETApp` s) <$> rep e
+rep (ETAbs e s)     = (`ETAbs` s) <$> rep e
+rep p@(PKVar _ _)   = return p -- PAtom r  <$> vE e1 <*> vE e2
+rep p@PTrue         = return p
+rep p@PFalse        = return p
+rep p@PTop          = return p
 
 ---------------------------------------------------------------------------
 -- | Top level Solvers ----------------------------------------------------
@@ -261,7 +305,7 @@ interp cfg fi
   | otherwise     = return fi
 
 buildQual :: Config -> SInfo a -> SimpC a -> IO Qualifier
-buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi (DT.traceShowId (PAnd [p, q]))
+buildQual cfg fi c = qualify <$> Sol.interpolation cfg fi (DT.traceShowId (diquery $ PAnd [p, q]))
   where env  = envCs (bs fi) $ _cenv c
         (qenv,ps) = substBinds env
         p = PAnd ps

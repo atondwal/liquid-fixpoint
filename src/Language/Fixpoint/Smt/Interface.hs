@@ -148,7 +148,7 @@ command              :: Context -> Command -> IO Response
 --------------------------------------------------------------------------
 command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
   where
-    say               = smtWrite me . smt2
+    say               = smtWrite me . DT.traceShowId . smt2
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
     hear (Interpolate fi _) = smtRead me >>= \case
