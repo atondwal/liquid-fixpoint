@@ -29,6 +29,7 @@ module Language.Fixpoint.Smt.Interface (
     , Context (..)
     , makeContext
     , makeContextNoLog
+    , makeContextWithSEnv
     , cleanupContext
 
     -- * Execute Queries
@@ -39,6 +40,7 @@ module Language.Fixpoint.Smt.Interface (
     , smtDecl
     , smtAssert
     , smtCheckUnsat
+    , smtCheckSat
     , smtBracket
     , smtDistinct
     , smtDoInterpolate
@@ -61,8 +63,8 @@ import           Language.Fixpoint.Types.Errors
 import           Language.Fixpoint.Utils.Files
 import           Language.Fixpoint.Types
 import           Language.Fixpoint.Smt.Types
-import           Language.Fixpoint.Smt.Theories (preamble)
-import           Language.Fixpoint.Smt.Serialize()
+import           Language.Fixpoint.Smt.Theories  (preamble)
+import           Language.Fixpoint.Smt.Serialize (initSMTEnv)
 
 
 
@@ -84,7 +86,7 @@ import           System.IO                (IOMode (..), hClose, hFlush, openFile
 import           System.Process
 import qualified Data.Attoparsec.Text     as A
 import qualified Debug.Trace as DT
-
+import           Text.PrettyPrint.HughesPJ (text)
 {-
 runFile f
   = readFile f >>= runString
@@ -103,7 +105,8 @@ runCommands cmds
 -- TODO take makeContext's Bool from caller instead of always using False?
 makeZ3Context :: FilePath -> [(Symbol, Sort)] -> IO Context
 makeZ3Context f xts
-  = do me <- makeContext False Z3 f
+  = do me <- makeContextWithSEnv False Z3 f $ fromListSEnv xts
+       smtDecls me (toListSEnv initSMTEnv)
        smtDecls me xts
        return me
 
@@ -148,11 +151,11 @@ command              :: Context -> Command -> IO Response
 --------------------------------------------------------------------------
 command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
   where
-    say               = smtWrite me . smt2
+    say               = smtWrite me . runSmt2 (smtenv me)
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
-    hear (Interpolate fi _) = smtRead me >>= \case
-      Unsat -> smtPred fi me
+    hear (Interpolate _) = smtRead me >>= \case
+      Unsat -> smtPred me
       Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
       e -> error $ show e
  
@@ -176,8 +179,8 @@ smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadR
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
 
-smtPred :: SInfo a -> Context -> IO Response
-smtPred fi me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' fi <$> predP)
+smtPred :: Context -> IO Response
+smtPred me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' <$> predP)
 
 predP = {-# SCC "predP" #-}
         (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipMany1 A.space) <* A.char ')'))
@@ -208,8 +211,8 @@ strToRel "<=" = Le
 -- Do I need Ne Une Ueq?
 strToRel _ = error "Rel not found"
 
-parseLisp' :: SInfo a -> Lisp -> Expr
-parseLisp' _ = toPred
+parseLisp' :: Lisp -> Expr
+parseLisp' = toPred
   where toPred :: Lisp -> Expr
         toPred x = case parseLisp x of
                      Left p -> p
@@ -240,7 +243,7 @@ parseLisp' _ = toPred
                                     _ -> error $ "Can't compare `" ++ show x ++ "` with`" ++ show y ++ "`. Kind Error."
         parseLisp (Lisp [Sym s, x, y, z])
           | symbolText s == "ite" = Right $ EIte (toPred x) (toExpr y) (toExpr z)
-        parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
+        -- parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
         parseLisp x = error $ show x ++ "is Nonsense Lisp!"
         -- PBexp? When do I know to read one of these in?
 
@@ -309,6 +312,10 @@ makeContext u s f
     where
        smtFile = extFileName Smt2 f
 
+makeContextWithSEnv :: Bool -> SMTSolver -> FilePath  -> SMTEnv -> IO Context
+makeContextWithSEnv u s f env
+  = (\cxt -> cxt {smtenv = env}) <$> makeContext u s f
+
 makeContextNoLog :: Bool -> SMTSolver -> IO Context
 makeContextNoLog u s
   = do me  <- makeProcess s
@@ -324,17 +331,18 @@ makeProcess s
                   , cIn     = hIn
                   , cOut    = hOut
                   , cLog    = Nothing
-                  , verbose = loud    }
+                  , verbose = loud
+                  , smtenv  = initSMTEnv
+                  }
 
 --------------------------------------------------------------------------
 cleanupContext :: Context -> IO ExitCode
 --------------------------------------------------------------------------
 cleanupContext (Ctx {..})
-  = do code <- waitForProcess pId
-       hClose cIn
+  = do hClose cIn
        hClose cOut
        maybe (return ()) hClose cLog
-       return code
+       waitForProcess pId
 
 {- "z3 -smt2 -in"                   -}
 {- "z3 -smtc SOFT_TIMEOUT=1000 -in" -}
@@ -384,6 +392,14 @@ deconSort t = case functionSort t of
                 Just (_, ins, out) -> (ins, out)
                 Nothing            -> ([] , t  )
 
+smtCheckSat :: Context -> Expr -> IO Bool
+smtCheckSat me p
+-- hack now this is used only for checking gradual condition.
+ = smtAssert me p >> (ans <$> command me CheckSat)
+ where
+   ans Sat = True
+   ans _   = False
+
 smtAssert :: Context -> Expr -> IO ()
 smtAssert me p    = interact' me (Assert Nothing p)
 
@@ -400,7 +416,7 @@ smtBracket me a   = do smtPush me
                        return r
 
 smtDoInterpolate :: Context -> SInfo a -> Expr -> IO Expr
-smtDoInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
+smtDoInterpolate me _ p = respInterp <$> command me (Interpolate p)
 
 {-
 smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
@@ -409,15 +425,15 @@ smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
 -}
 
 smtInterpolate :: Context -> SInfo () -> Expr -> IO Expr
-smtInterpolate me fi p = respInterp <$> command me (Interpolate fi p)
+smtInterpolate me _ p = respInterp <$> command me (Interpolate p)
 
 respInterp (Interpolant p') = p'
-respInterp r = die $ err dummySpan $ "crash: SMTLIB2 respInterp = " ++ show r
+respInterp r = die $ err dummySpan $ text ("crash: SMTLIB2 respInterp = " ++ show r)
 
 respSat Unsat   = True
 respSat Sat     = False
 respSat Unknown = False
-respSat r       = die $ err dummySpan $ "crash: SMTLIB2 respSat = " ++ show r
+respSat r       = die $ err dummySpan $ text ("crash: SMTLIB2 respSat = " ++ show r)
 
 interact' me cmd  = void $ command me cmd
 

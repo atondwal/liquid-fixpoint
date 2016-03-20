@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE ViewPatterns               #-}
 {-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE PatternGuards              #-}
 
 
 -- | This module contains Haskell variables representing globally visible names.
@@ -92,6 +93,10 @@ module Language.Fixpoint.Types.Names (
   , prims
   , mulFuncName
   , divFuncName
+
+  -- * Casting function names
+  , setToIntName, bitVecToIntName, mapToIntName, boolToIntName, realToIntName
+  , setApplyName, bitVecApplyName, mapApplyName, boolApplyName, realApplyName, intApplyName
 
 ) where
 
@@ -182,9 +187,6 @@ instance IsString Symbol where
 instance Show Symbol where
   show = show . symbolRaw
 
---instance Monoid Symbol where
--- mempty        = ""
-
 mappendSym :: Symbol -> Symbol -> Symbol
 mappendSym s1 s2 = textSymbol $ mappend s1' s2'
     where
@@ -192,13 +194,26 @@ mappendSym s1 s2 = textSymbol $ mappend s1' s2'
       s2'        = symbolText s2
 
 instance PPrint Symbol where
-  pprint = text . symbolString
+  pprintTidy _ = text . symbolString
 
 instance Fixpoint T.Text where
   toFix = text . T.unpack
 
+-- RJ: Use `symbolSafeText` if you want it to machine-readable,
+--     but `symbolText`     if you want it to be human-readable.
+
 instance Fixpoint Symbol where
-  toFix = toFix . symbolText
+  toFix = toFix . checkedText -- symbolSafeText
+
+checkedText :: Symbol -> T.Text
+checkedText x
+  | Just (c, t') <- T.uncons t
+  , okHd c && T.all okChr t'   = t
+  | otherwise                  = symbolSafeText x
+  where
+    t     = symbolText x
+    okHd  = (`S.member` alphaChars)
+    okChr = (`S.member` symChars)
 
 ---------------------------------------------------------------------------
 -- | Located Symbols -----------------------------------------------------
@@ -441,6 +456,23 @@ instance Symbolic Symbol where
 --------------- Global Name Definitions ------------------------------------
 ----------------------------------------------------------------------------
 
+setToIntName, bitVecToIntName, mapToIntName, boolToIntName , realToIntName:: Symbol
+setToIntName    = "set_to_int"
+bitVecToIntName = "bitvec_to_int"
+mapToIntName    = "map_to_int"
+boolToIntName   = "bool_to_int"
+realToIntName   = "real_to_int"
+
+
+setApplyName, bitVecApplyName, mapApplyName, boolApplyName, realApplyName, intApplyName :: Int -> Symbol
+setApplyName    = intSymbol "set_apply_"
+bitVecApplyName = intSymbol "bitvec_apply"
+mapApplyName    = intSymbol "map_apply_"
+boolApplyName   = intSymbol "bool_apply_"
+realApplyName   = intSymbol "real_apply_"
+intApplyName    = intSymbol "int_apply_"
+
+
 preludeName, dummyName, boolConName, funConName :: Symbol
 preludeName  = "Prelude"
 dummyName    = "LIQUID$dummy"
@@ -469,7 +501,7 @@ size32Name   = "Size32"
 size64Name   = "Size64"
 bitVecName   = "BitVec"
 bvOrName     = "bvor"
-bvAndName    = "bvAnd"
+bvAndName    = "bvand"
 
 mulFuncName, divFuncName :: Symbol
 mulFuncName  = "Z3_OP_MUL"

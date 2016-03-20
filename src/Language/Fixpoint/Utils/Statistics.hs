@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | This module implements functions that print out
 --   statistics about the constraints.
@@ -17,7 +18,7 @@ import qualified Data.HashMap.Strict            as M
 import           Data.List (sort,group)
 import           Text.PrettyPrint.HughesPJ
 
-statistics :: Config -> F.FInfo a -> IO (F.Result a)
+statistics :: Config -> F.FInfo a -> IO (F.Result (Integer, a))
 statistics _ fi = do
   let (_, fis) = partition' Nothing fi
   putStrLn $ render $ pprint $ partitionStats fis
@@ -46,11 +47,12 @@ data Stats = Stats { cSizes  :: [Float]
 instance NFData Stats
 
 instance PPrint Stats where
-  pprint s = vcat [ text "STAT: max/total = " <+> pprint (cMax   s) <+> text "/" <+> pprint (cTotal s)
-                  , text "STAT: freqs     = " <+> pprint (cFreq  s)
-                  , text "STAT: average   = " <+> pprint (cMean  s)
-                  , text "STAT: speed     = " <+> pprint (cSpeed s)
-                  ]
+  pprintTidy _ s =
+    vcat [ "STAT: max/total =" <+> pprint (cMax   s) <+> "/" <+> pprint (cTotal s)
+         , "STAT: freqs     =" <+> pprint (cFreq  s)
+         , "STAT: average   =" <+> pprint (cMean  s)
+         , "STAT: speed     =" <+> pprint (cSpeed s)
+         ]
 
 mkStats :: [Float] -> Stats
 mkStats ns  = Stats {
