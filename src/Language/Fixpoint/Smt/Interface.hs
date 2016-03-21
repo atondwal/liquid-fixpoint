@@ -152,7 +152,7 @@ command              :: Context -> Command -> IO Response
 --------------------------------------------------------------------------
 command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
   where
-    say               = smtWrite me . runSmt2 (smtenv me)
+    say cmd           = smtWrite me $ runSmt2 (smtenv me) cmd
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
     hear (Interpolate n _) = smtRead me >>= \case
@@ -187,9 +187,7 @@ smtPred n me = {-# SCC "smtPred" #-} do
   where parseInterp = smtParse me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
         getInterps (Interpolant e) = e
         getInterps _ = []
-  
-  -- old body
-  -- {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' <$> predP)
+-- smtPred n me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> (\x -> [x]) <$> parseLisp' <$> predP)
 
 predP = {-# SCC "predP" #-}
         (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipMany1 A.space) <* A.char ')'))
@@ -433,7 +431,8 @@ countInterp e = getSum $ execState (visit visitInterp () e) (Sum 0)
         visitInterp = (defaultVisitor :: Visitor (Sum Int) ()) { accExpr = incInterp } 
 
 smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
-smtDoInterpolate me _ p = respInterp <$> command me (Interpolate n p)
+smtDoInterpolate me _ p =
+  respInterp <$> command me (Interpolate n p)
   where n = countInterp p 
 
 {-
@@ -461,10 +460,16 @@ z3_432_options
   = [ "(set-option :auto-config false)"
     , "(set-option :model true)"
     , "(set-option :model.partial false)"
-    , "(set-option :smt.mbqi false)" ]
+    , "(set-option :smt.mbqi false)"
+    -- add these options so Z3 doesn't let-simplify interpolants
+    , "(set-option :pp.max-depth 1000)"
+    , "(set-option :pp.min-alias-size 1000)"]
 
 z3_options
   = [ "(set-option :auto-config false)"
     , "(set-option :model true)"
     , "(set-option :model-partial false)"
-    , "(set-option :mbqi false)" ]
+    , "(set-option :mbqi false)"
+    -- add these options so Z3 doesn't let-simplify interpolants
+    , "(set-option :pp.max-depth 1000)"
+    , "(set-option :pp.min-alias-size 1000)"]

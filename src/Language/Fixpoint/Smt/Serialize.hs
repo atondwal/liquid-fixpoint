@@ -164,6 +164,7 @@ instance SMTLIB2 Expr where
                                return $ PAll bs' p' 
   defunc (PAtom r e1 e2)  = PAtom r <$> defunc e1 <*> defunc e2 
   defunc PGrad            = return PGrad
+  defunc (Interp e)       = Interp <$> defunc e
   defunc  e               = errorstar ("smtlib2 Pred  " ++ show e)
 
 defuncBop o e1 e2
@@ -263,7 +264,7 @@ instance SMTLIB2 Command where
   defunc (GetValue xs)       = return $ GetValue xs 
   defunc (CMany cmds)        = CMany <$> mapM defunc cmds 
   -- treat compute-interpolant like assert
-  defunc (Interpolate _ e)   = defunc (Assert Nothing e)
+  defunc (Interpolate n e)   = Interpolate n <$> defunc e
 
 smt2s    :: SMTLIB2 a => [a] -> T.Text
 smt2s as = smt2many (smt2 <$> as)

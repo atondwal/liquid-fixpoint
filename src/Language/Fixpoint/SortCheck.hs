@@ -378,8 +378,7 @@ elab _ (ETApp _ _) =
   error "SortCheck.elab: TODO: implement ETApp"
 elab _ (ETAbs _ _) =
   error "SortCheck.elab: TODO: implement ETAbs"
-elab _ (Interp _ ) =
-  error "SortCheck.elab: TODO: implement Interp"
+elab f (Interp e) = elab f e
 
 elabAs :: Env -> Sort -> Expr -> CheckM Expr
 elabAs f t e@(EApp {}) = elabAppAs f t g es where (g, es) = splitEApp e
