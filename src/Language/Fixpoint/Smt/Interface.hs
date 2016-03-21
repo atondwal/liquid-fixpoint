@@ -62,14 +62,15 @@ import           Language.Fixpoint.Misc   (errorstar)
 import           Language.Fixpoint.Types.Errors
 import           Language.Fixpoint.Utils.Files
 import           Language.Fixpoint.Types
+import           Language.Fixpoint.Types.Visitor
 import           Language.Fixpoint.Smt.Types
 import           Language.Fixpoint.Smt.Theories  (preamble)
 import           Language.Fixpoint.Smt.Serialize (initSMTEnv)
 
 
-
 import           Control.Applicative      ((<|>))
 import           Control.Monad
+import           Control.Monad.State
 import           Data.Char
 import           Data.Monoid
 import           Data.List                as L
@@ -154,8 +155,8 @@ command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
     say               = smtWrite me . runSmt2 (smtenv me)
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
-    hear (Interpolate _) = smtRead me >>= \case
-      Unsat -> smtPred me
+    hear (Interpolate n _) = smtRead me >>= \case
+      Unsat -> smtPred n me
       Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
       e -> error $ show e
  
@@ -179,8 +180,16 @@ smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadR
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
 
-smtPred :: Context -> IO Response
-smtPred me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' <$> predP)
+smtPred :: Int -> Context -> IO Response
+smtPred n me = {-# SCC "smtPred" #-} do
+  responses <- forM [1..n] $ \_ -> parseInterp
+  return $ Interpolant $ concatMap getInterps responses
+  where parseInterp = smtParse me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
+        getInterps (Interpolant e) = e
+        getInterps _ = []
+  
+  -- old body
+  -- {-# SCC "smtPred" #-} smtParse me (Interpolant <$> parseLisp' <$> predP)
 
 predP = {-# SCC "predP" #-}
         (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipMany1 A.space) <* A.char ')'))
@@ -415,8 +424,17 @@ smtBracket me a   = do smtPush me
                        smtPop me
                        return r
 
-smtDoInterpolate :: Context -> SInfo a -> Expr -> IO Expr
-smtDoInterpolate me _ p = respInterp <$> command me (Interpolate p)
+-- the number of interpolants we expect from Z3
+countInterp :: Expr -> Int
+countInterp e = getSum $ execState (visit visitInterp () e) (Sum 0)
+  where incInterp _ (Interp _)  = Sum 1
+        incInterp _ _           = Sum 0
+        visitInterp :: Visitor (Sum Int) ()
+        visitInterp = (defaultVisitor :: Visitor (Sum Int) ()) { accExpr = incInterp } 
+
+smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
+smtDoInterpolate me _ p = respInterp <$> command me (Interpolate n p)
+  where n = countInterp p 
 
 {-
 smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
@@ -424,10 +442,11 @@ smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
   where smtDecl' = uncurry $ smtDecl me
 -}
 
-smtInterpolate :: Context -> SInfo () -> Expr -> IO Expr
-smtInterpolate me _ p = respInterp <$> command me (Interpolate p)
+smtInterpolate :: Context -> SInfo () -> Expr -> IO [Expr]
+smtInterpolate me _ p = respInterp <$> command me (Interpolate n p)
+  where n = countInterp p 
 
-respInterp (Interpolant p') = p'
+respInterp (Interpolant ps) = ps
 respInterp r = die $ err dummySpan $ text ("crash: SMTLIB2 respInterp = " ++ show r)
 
 respSat Unsat   = True

@@ -175,7 +175,7 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> F.SInfo a -> F.Expr -> IO F.Expr
+interpolation :: Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
 ---------------------------------------------------------------------------
 interpolation cfg fi p = runSolverM cfg fi' 0 $ interpolationSolver fi' p
   where Right fi' = sanitize fi

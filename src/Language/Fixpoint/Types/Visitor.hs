@@ -7,6 +7,9 @@ module Language.Fixpoint.Types.Visitor (
   -- * Visitor
      Visitor (..)
 
+  -- * Visitable typeclass
+  ,  Visitable, visit
+
   -- * Extracting Symbolic Constants (String Literals)
   ,  SymConsts (..)
 

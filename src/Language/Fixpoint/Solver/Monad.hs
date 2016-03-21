@@ -205,7 +205,7 @@ declSymbols = fmap dropThy . symbolSorts
     isThy   = isJust . Thy.smt2Symbol
 
 ---------------------------------------------------------------------------
-interpolationSolver :: F.SInfo a -> F.Expr -> SolveM F.Expr
+interpolationSolver :: F.SInfo a -> F.Expr -> SolveM [F.Expr]
 ---------------------------------------------------------------------------
 interpolationSolver fi p = withContext $ \me -> smtDoInterpolate me fi p
 

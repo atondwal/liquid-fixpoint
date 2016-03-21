@@ -223,7 +223,7 @@ instance SMTLIB2 Command where
   smt2 (Pop)               = "(pop 1)"
   smt2 (CheckSat)          = "(check-sat)"
   smt2 (GetValue xs)       = T.unwords $ ["(get-value ("] ++ fmap smt2 xs ++ ["))"]
-  smt2 (Interpolate p)     = format "(compute-interpolant {})"  (Only $ smt2 p)
+  smt2 (Interpolate _ p)   = format "(compute-interpolant {})"  (Only $ smt2 p)
   smt2 (CMany cmds)        = smt2many (smt2 <$> cmds)
 
 
@@ -263,7 +263,7 @@ instance SMTLIB2 Command where
   defunc (GetValue xs)       = return $ GetValue xs 
   defunc (CMany cmds)        = CMany <$> mapM defunc cmds 
   -- treat compute-interpolant like assert
-  defunc (Interpolate e)     = defunc (Assert Nothing e)
+  defunc (Interpolate _ e)   = defunc (Assert Nothing e)
 
 smt2s    :: SMTLIB2 a => [a] -> T.Text
 smt2s as = smt2many (smt2 <$> as)

@@ -58,7 +58,7 @@ data Command      = Push
                   | Declare   Symbol [Sort] Sort
                   | Define    Sort
                   | Assert    (Maybe Int) Expr
-                  | Interpolate Expr
+                  | Interpolate Int Expr
                   | Distinct  [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue  [Symbol]
                   | CMany [Command]
@@ -70,7 +70,7 @@ data Response     = Ok
                   | Unsat
                   | Unknown
                   | Values [(Symbol, Raw)]
-                  | Interpolant Expr
+                  | Interpolant [Expr]
                   | Error Raw
                   deriving (Eq, Show)
 
