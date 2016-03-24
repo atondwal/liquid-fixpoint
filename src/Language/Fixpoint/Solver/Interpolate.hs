@@ -4,7 +4,6 @@ import qualified Data.HashSet as S
 import Data.List (intercalate, nub)
 import Control.Monad
 import Control.Monad.State
-import Control.Monad.Reader
 
 import Language.Fixpoint.Smt.Types
 import Language.Fixpoint.Types hiding (renameSymbol)
@@ -69,15 +68,13 @@ type UnrollSubs = M.HashMap Symbol Symbol
 -- mapping from kvars to rec/nonrec-clauses with head as the kvar
 type KClauses = M.HashMap KVar ([Rule], [Rule])
 type RenameMap = M.HashMap Symbol Int
-
-type UnrollContext = KClauses
 type UnrollState = (RenameMap, UnrollSubs)
 type UnrollDepth = M.HashMap KVar Int
 -- we set KClauses in the reader since renamed clauses
 -- are local to a subtree
 -- however, renamings should be unique to the whole tree,
 -- hence rename map is in state
-type UnrollM a = ReaderT UnrollContext (State UnrollState) a
+type UnrollM a = State UnrollState a
 
 -- HELPER FUNCTIONS
 
@@ -87,8 +84,9 @@ bindSym id env = fst $ lookupBindEnv id env
 substToList :: Subst -> [(Symbol, Expr)]
 substToList (Su map) = M.toList map
 
-
--- PRELIMINARIES FOR UNROLLING
+--------------------------------
+-- | PRELIMINARIES FOR UNROLLING
+--------------------------------
 
 toRuleOrQuery :: (Expr -> b) -> BindEnv -> SimpC a -> ClauseInfo b
 toRuleOrQuery f be c =
@@ -146,7 +144,9 @@ infoToKClauses rules = foldr addRule M.empty rules
 initRenameMap :: KClauses -> RenameMap
 initRenameMap _ = M.empty -- FIXME: IMPLEMENT THIS
 
--- UNROLLING
+--------------
+-- | UNROLLING
+--------------
 
 -- rename a symbol while making sure it doesn't appear on a list of symbols
 -- the list of symbols is usually the list of bound syms in an expr
@@ -295,16 +295,25 @@ genInterpQuery n kcs (b, c, h) = do
   let initDepths = map (\k -> (k,n)) $ M.keys kcs
   let dmap = foldr (uncurry M.insert) M.empty $ initDepths
 
+  -- rename instances of VV in query, since it's treated specially
+  -- in unrolling
+  v <- renameSymbol vvName
+  let b' = renameExpr vvName v b 
+  let c' = map (renameClauseChild vvName v) c
+  let h' = renameExpr vvName v h
+
   -- generate child subtrees
-  cinfo <- forM c $ \(ck,csub,csym) -> do
+  cinfo <- forM c' $ \(ck,csub,csym) -> do
     (kcs', tmps) <- applySubst csub kcs
     child <- unroll dmap (ck,csym) kcs'
     return (child, tmps)
 
   let (children, ctmps) = unzip cinfo
-  return $ And Nothing (PAnd ([PNot h, b] ++ (concat ctmps))) children
+  return $ And Nothing (PAnd ([PNot h', b'] ++ (concat ctmps))) children
 
--- DISJUNCTIVE INTERPOLATION TO TREE INTERPOLATION
+----------------------------------------------------
+-- | DISJUNCTIVE INTERPOLATION TO TREE INTERPOLATION
+----------------------------------------------------
 
 -- remove OR nodes from AOTree by converting disjunctive interp query
 -- to a set of tree interp queries
@@ -327,7 +336,9 @@ genQueryFormula (And _ root children) =
   where genQueryFormula' c@(And _ _ _) = Interp $ genQueryFormula c
         genQueryFormula' c@(Or _ _) = genQueryFormula c
 
--- TREE INTERPOLANTS TO KVAR SOLUTIONS
+----------------------------------------
+-- | TREE INTERPOLANTS TO KVAR SOLUTIONS
+----------------------------------------
 
 popInterp :: State [Expr] Expr
 popInterp = do
@@ -433,5 +444,49 @@ imain = do
     putStrLn $ "Candidates for " ++ (show kvar) ++ ":"
     forM_ (nub cands) (putStrLn . show . smt2)
 
+-- test unrolling
+-- k <= 0 ^ v = 0 -> k(v)
+-- k > 0 ^ k(s)[k/k-1] ^ v = s + k -> k(v)
+imain2 = do
+  let ksym = symbol "k"
+  let ssym = symbol "s"
+  let vsym = symbol "v"
+  let vars = [(ksym,intSort),(vvName,intSort),(ssym,intSort),
+              (vsym,intSort),(symbol "VV##1",intSort),(symbol "VV##2",intSort),
+              (symbol "###SUB##1",intSort)]
+  -- SInfo, used for generating SMT context (var declarations, etc.)
+  let sinfo = FI {
+                cm = M.empty
+              , ws = M.empty
+              , bs = emptyBindEnv
+              , lits = fromListSEnv vars
+              , kuts = KS S.empty
+              , quals = []
+              , bindInfo = M.empty
+              , fileName = ""
+              , Language.Fixpoint.Types.allowHO = False
+              }
 
-    
+  let int i = ECon (I i)
+  let ksum = KV (symbol "sum")
+  let k = EVar ksym
+  let s = EVar ssym
+  let v = EVar vvName
+  let v' = EVar vsym
+  let nrec = [(PAnd [PAtom Le k (int 0),PAtom Eq v (int 0)], [], ksum)]
+  let childrec = [(ksum, Su $ M.fromList [(ksym,EBin Minus k (int 1))], ssym)]
+  let rec = [(PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childrec, ksum)]
+  let kcs = M.fromList [(ksum, (rec,nrec))]
+  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], PAtom Ge v k)
+  let ustate = (M.empty, M.empty)
+  let (diquery, (_,usubs)) = runState (genInterpQuery 1 kcs query) ustate
+  putStrLn $ show usubs
+  -- putStrLn $ show diquery
+  forM_ (expandTree diquery) (putStrLn . show . genQueryFormula)
+
+  -- get candidate solutions!
+  candSol <- computeCandSolutions sinfo usubs diquery
+
+  forM_ (M.toList $ candSol) $ \(kvar,cands) -> do
+    putStrLn $ "Candidates for " ++ (show kvar) ++ ":"
+    forM_ (nub cands) (putStrLn . show . smt2)
