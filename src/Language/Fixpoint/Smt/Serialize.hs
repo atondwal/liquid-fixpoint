@@ -164,7 +164,7 @@ instance SMTLIB2 Expr where
                                return $ PAll bs' p' 
   defunc (PAtom r e1 e2)  = PAtom r <$> defunc e1 <*> defunc e2 
   defunc PGrad            = return PGrad
-  defunc (Interp e)       = Interp <$> defunc e
+  defunc (Interp e)	  = Interp <$> defunc e
   defunc  e               = errorstar ("smtlib2 Pred  " ++ show e)
 
 defuncBop o e1 e2

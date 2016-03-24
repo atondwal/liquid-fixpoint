@@ -9,6 +9,7 @@ module Language.Fixpoint.Solver.Solution
           -- * Lookup Solution
         , lhsPred
         , noKvars
+        , bindExprs
 
           -- * Debug
         , solutionGraph
