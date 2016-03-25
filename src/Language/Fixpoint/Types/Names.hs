@@ -49,6 +49,7 @@ module Language.Fixpoint.Types.Names (
   , nonSymbol
   , vvCon
   , tidySymbol
+  , mappendSym
 
   -- * Widely used prefixes
   , anfPrefix

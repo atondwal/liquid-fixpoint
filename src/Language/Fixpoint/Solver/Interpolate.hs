@@ -2,8 +2,10 @@ import System.Console.CmdArgs
 import qualified Data.HashMap.Strict as M
 import qualified Data.HashSet as S
 import Data.List (intercalate, nub)
+import Text.Read (readMaybe)
 import Control.Monad
 import Control.Monad.State
+import Control.Monad.Reader
 
 import Language.Fixpoint.Smt.Types
 import Language.Fixpoint.Types hiding (renameSymbol)
@@ -40,8 +42,7 @@ type HeadInfo = (KVar, Symbol)
 type InterpQuery = AOTree (Maybe HeadInfo) Expr
 
 -- a tree interpolant
--- this should have the same structure as its corresponding
--- tree interp query
+-- this should have the same structure as its corresponding tree interp query
 type TreeInterp = AOTree (Maybe HeadInfo) Expr
 showTreeInterp :: TreeInterp -> String
 showTreeInterp (And b a children) =
@@ -67,14 +68,17 @@ type UnrollSubs = M.HashMap Symbol Symbol
 
 -- mapping from kvars to rec/nonrec-clauses with head as the kvar
 type KClauses = M.HashMap KVar ([Rule], [Rule])
+-- sorts of symbols; this is used for 
+type SymSorts = M.HashMap Symbol Sort
+type UnrollInfo = (KClauses, SymSorts)
+
+-- for generating renamed symbols
 type RenameMap = M.HashMap Symbol Int
-type UnrollState = (RenameMap, UnrollSubs)
+
+-- created symbols, rename map, unroll subs
+type UnrollState = (SymSorts, RenameMap, UnrollSubs)
 type UnrollDepth = M.HashMap KVar Int
--- we set KClauses in the reader since renamed clauses
--- are local to a subtree
--- however, renamings should be unique to the whole tree,
--- hence rename map is in state
-type UnrollM a = State UnrollState a
+type UnrollM a = ReaderT UnrollInfo (State UnrollState) a
 
 -- HELPER FUNCTIONS
 
@@ -83,6 +87,10 @@ bindSym id env = fst $ lookupBindEnv id env
 
 substToList :: Subst -> [(Symbol, Expr)]
 substToList (Su map) = M.toList map
+
+-- like intSymbol, but without the separator
+numSymbol :: (Show a) => Symbol -> a -> Symbol
+numSymbol x i = x `mappendSym` (symbol $ show i)
 
 --------------------------------
 -- | PRELIMINARIES FOR UNROLLING
@@ -138,12 +146,6 @@ infoToKClauses rules = foldr addRule M.empty rules
           let val = maybe (f r ([],[])) (f r) (M.lookup h kmap) in
           M.insert h val kmap
 
--- compute the initial rename map for a set of clauses
--- we have to do this smartly; if there is a variable v101, then
--- we have to map v |-> 102
-initRenameMap :: KClauses -> RenameMap
-initRenameMap _ = M.empty -- FIXME: IMPLEMENT THIS
-
 --------------
 -- | UNROLLING
 --------------
@@ -167,7 +169,7 @@ freeInExpr s e = not $ s `elem` (exprSyms e)
 
 renameSym :: Int -> Symbol -> Expr -> (Int, Symbol)
 renameSym n s e =
-  let s' = intSymbol s n in
+  let s' = numSymbol s n in
   let ss = exprSyms e in
   if s' `elem` ss then renameSym (n+1) s ss else (n, s')
 -}
@@ -196,31 +198,7 @@ renameExpr s s' e = V.trans renameVisitor () () e
         renameVisitor = dv { V.txExpr = rename }
         dv            = V.defaultVisitor :: V.Visitor () ()
 
-getSubCount :: Symbol -> UnrollM Int
-getSubCount s = do
-  (rm, _) <- get 
-  -- FIXME: CHECK IF s has number suffix
-  return $ maybe 1 id $ M.lookup s rm
 
-updateSubCount :: Symbol -> Int -> UnrollM ()
-updateSubCount s n = do
-  (rm, us) <- get
-  let rm' = M.insert s n rm
-  put (rm', us)
-
--- inherit the orig symbol that the variable was substituted for
-newSub :: Symbol -> Symbol -> UnrollM ()
-newSub s s' = do
-  (rm, usubs) <- get
-  let orig = maybe s id (M.lookup s usubs)
-  let usubs' = M.insert s' orig usubs
-  put (rm, usubs')
-
-renameSymbol :: Symbol -> UnrollM Symbol
-renameSymbol s = do
-  n <- getSubCount s
-  updateSubCount s (n+1)
-  return $ intSymbol s n
 
 renameClauseChild :: Symbol -> Symbol -> ClauseChild -> ClauseChild
 renameClauseChild s s' (ck,csub,csym) = (ck, newsub, newsym)
@@ -228,88 +206,195 @@ renameClauseChild s s' (ck,csub,csym) = (ck, newsub, newsym)
         newsym = if csym == s then s' else csym
 
 -- replace all instances of s in kcs with s'
-renameClauses :: Symbol -> Symbol -> KClauses -> KClauses
-renameClauses s s' kcs = M.fromList $ map renameK $ M.toList kcs
+renameClauses :: Symbol -> Symbol -> UnrollInfo -> UnrollInfo
+renameClauses s s' (kcs,ss) = (M.fromList $ map renameK $ M.toList kcs, ss)
   where renameK (k,(rec,nrec)) = (k, (map renameRule rec, map renameRule nrec))
         renameRule (b, cs, h) =
           let b'  = renameExpr s s' b in
           let cs' = map (renameClauseChild s s') cs in
           (b', cs', h)
 
-subSymbol = symbol "###SUB"
+lget :: UnrollM UnrollState
+lget = lift get
+
+lput :: UnrollState -> UnrollM ()
+lput = lift . put
+
+getKClauses :: UnrollM KClauses
+getKClauses = fst <$> ask
+
+setKClauses :: KClauses -> UnrollInfo -> UnrollInfo
+setKClauses kcs (_, ss) = (kcs, ss)
+
+getSymSorts :: UnrollM SymSorts
+getSymSorts = snd <$> ask
+
+-- get sort for a symbol (could be in uinfo or created symbols)
+getSymSort :: Symbol -> UnrollM (Maybe Sort)
+getSymSort s = do
+  ss <- getSymSorts
+  case M.lookup s ss of
+    Just sort -> return (Just sort)
+    Nothing -> do
+      cs <- getCreatedSymbols
+      return $ M.lookup s cs
+
+getRenameMap :: UnrollM RenameMap
+getRenameMap = do
+  (_, rm, _) <- get
+  return rm
+
+updateRenameMap :: RenameMap -> UnrollM ()
+updateRenameMap rm = do
+  (cs, _, us) <- lget
+  lput (cs, rm, us)
+
+getCreatedSymbols :: UnrollM SymSorts
+getCreatedSymbols = do
+  (cs, _, _) <- lget
+  return cs
+
+updateCreatedSymbols :: SymSorts -> UnrollM ()
+updateCreatedSymbols cs = do
+  (_, rm, us) <- lget
+  lput (cs, rm, us)
+
+getUnrollSubs :: UnrollM UnrollSubs
+getUnrollSubs = do
+  (_, _, us) <- lget
+  return us
+
+updateUnrollSubs :: UnrollSubs -> UnrollM ()
+updateUnrollSubs us = do
+  (cs, rm, _) <- lget
+  lput (cs, rm, us)
+
+getSubCount :: Symbol -> UnrollM Int
+getSubCount s = do
+  rm <- getRenameMap
+  -- FIXME: CHECK IF s has number suffix
+  return $ maybe 1 id $ M.lookup s rm
+
+updateSubCount :: Symbol -> Int -> UnrollM ()
+updateSubCount s n = do
+  rm <- getRenameMap
+  let rm' = M.insert s n rm
+  updateRenameMap rm'
+
+-- inherit the orig symbol that the variable was substituted for
+newSub :: Symbol -> Symbol -> UnrollM ()
+newSub s s' = do
+  usubs <- getUnrollSubs
+  let orig = maybe s id (M.lookup s usubs)
+  let usubs' = M.insert s' orig usubs
+  updateUnrollSubs usubs'
+
+renameSymbol :: Symbol -> UnrollM Symbol
+renameSymbol s = do
+  n <- getSubCount s
+  updateSubCount s (n+1)
+  let s' = numSymbol s n
+  cs <- getCreatedSymbols
+  msort <- getSymSort s
+  -- if sort cannot be found, assume it's an int
+  let sort = maybe intSort id msort
+  updateCreatedSymbols (M.insert s' sort cs)
+  return s'
+
+subSymbol = symbol "SUB"
 
 freshSubSymbol :: UnrollM Symbol
 freshSubSymbol = renameSymbol subSymbol
 
 -- apply pending substitutions 
-applySubst :: Subst -> KClauses -> UnrollM (KClauses, [Expr])
-applySubst subs kcs = do
+applySubst :: Subst -> UnrollM (KClauses, [Expr])
+applySubst subs = do
+  kcs <- getKClauses
   foldM applySub1 (kcs,[]) $ substToList subs
   where applySub1 (kcs',tmpexprs) (ssym,sexpr) = do
           tmp <- freshSubSymbol
-          let tmpexpr = PAtom Eq (EVar tmp) sexpr
-          let kcs''   = renameClauses ssym tmp kcs'
+          ss <- getSymSorts
+          let tmpexpr    = PAtom Eq (EVar tmp) sexpr
+          let (kcs'', _) = renameClauses ssym tmp (kcs',ss)
           newSub ssym tmp
           return (kcs'', tmpexpr:tmpexprs)
 
 -- generate disjunctive interpolation query
-unroll :: UnrollDepth -> HeadInfo -> KClauses -> UnrollM InterpQuery
-unroll dmap (k,sym) kcs
-  | Nothing <- M.lookup k kcs = return $ Or Nothing []
-  | Just (crec, cnrec) <- M.lookup k kcs = do
-    let depth = maybe 0 id (M.lookup k dmap)
-    let rec = depth > 0
-    let cs = if not rec then cnrec else crec ++ cnrec
-    let dmap' = M.insert k (depth-1) dmap
+unroll :: UnrollDepth -> HeadInfo -> UnrollM InterpQuery
+unroll dmap (k,sym) = do
+  kcs <- getKClauses
+  case M.lookup k kcs of
+    Nothing -> return $ Or Nothing []
+    Just (crec, cnrec) -> do
+      let depth = maybe 0 id (M.lookup k dmap)
+      let rec = depth > 0
+      let cs = if not rec then cnrec else crec ++ cnrec
+      let dmap' = M.insert k (depth-1) dmap
 
-    -- generate children
-    children <- forM cs $ \(b, c, _) -> do
-      -- rename body to prevent capture
-      sym' <- renameSymbol sym
-      let b' = renameExpr sym sym' b 
-      let c' = map (renameClauseChild sym sym') c
-      let kcs' = renameClauses sym sym' kcs
+      -- generate children
+      children <- forM cs $ \(b, c, _) -> do
+        -- rename body to prevent capture
+        sym' <- renameSymbol sym
+        let b' = renameExpr sym sym' b 
+        let c' = map (renameClauseChild sym sym') c
 
-      -- apply argument of i.e. [nu/x]
-      let b'' = renameExpr vvName sym b'
+        -- apply argument of i.e. [nu/x]
+        let b'' = renameExpr vvName sym b'
+        
+        local (renameClauses sym sym') $ do
+          -- generate child subtree
+          ginfo <- forM c' $ \(ck,csub,csym) -> do
+            (kcs'', tmps) <- applySubst csub
+            local (setKClauses kcs'') $ do
+              gc <- unroll dmap' (ck,csym)
+              return (gc, tmps)
+          
+          let (gchildren, gtmps) = unzip ginfo
 
-      -- generate child subtree
-      ginfo <- forM c' $ \(ck,csub,csym) -> do
-        (kcs'', tmps) <- applySubst csub kcs'
-        gc <- unroll dmap' (ck,csym) kcs''
-        return (gc, tmps)
-      
-      let (gchildren, gtmps) = unzip ginfo
+          -- add substitution predicates to body
+          let b''' = PAnd $ b'':(concat gtmps)
+          return $ And Nothing b''' gchildren
 
-      -- add substitution predicates to body
-      let b''' = PAnd $ b'':(concat gtmps)
-      return $ And Nothing b''' gchildren
-
-    return $ Or (Just (k,sym)) children
-
-  | otherwise = return $ Or Nothing []
+      return $ Or (Just (k,sym)) children
 
 -- generate a disjunctive interpolation query for a query clause
-genInterpQuery :: Int -> KClauses -> Query -> UnrollM InterpQuery
-genInterpQuery n kcs (b, c, h) = do
+unrollQuery :: Int -> Query -> UnrollM InterpQuery
+unrollQuery n (b, c, h) = do
+  kcs <- getKClauses
   let initDepths = map (\k -> (k,n)) $ M.keys kcs
   let dmap = foldr (uncurry M.insert) M.empty $ initDepths
 
   -- rename instances of VV in query, since it's treated specially
   -- in unrolling
   v <- renameSymbol vvName
+  newSub vvName v
   let b' = renameExpr vvName v b 
   let c' = map (renameClauseChild vvName v) c
   let h' = renameExpr vvName v h
 
   -- generate child subtrees
   cinfo <- forM c' $ \(ck,csub,csym) -> do
-    (kcs', tmps) <- applySubst csub kcs
-    child <- unroll dmap (ck,csym) kcs'
-    return (child, tmps)
+    (kcs', tmps) <- applySubst csub
+    local (setKClauses kcs') $ do
+      child <- unroll dmap (ck,csym)
+      return (child, tmps)
 
   let (children, ctmps) = unzip cinfo
   return $ And Nothing (PAnd ([PNot h', b'] ++ (concat ctmps))) children
+
+-- compute the initial rename map for a set of clauses
+-- we have to do this smartly; if there is a variable v101, then
+-- we have to map v |-> 102
+initRenameMap :: UnrollInfo -> RenameMap
+initRenameMap _ = M.empty -- FIXME: IMPLEMENT THIS
+
+-- interface function that unwraps Unroll monad
+genInterpQuery :: Int -> UnrollInfo -> Query -> (InterpQuery, SymSorts, UnrollSubs)
+genInterpQuery n uinfo query = 
+  let rm = initRenameMap uinfo in
+  let ustate = (M.empty, rm, M.empty) in
+  let (diquery, (cs,_,us)) = runState (runReaderT (unrollQuery n query) uinfo) ustate in
+  (diquery, cs, us)
 
 ----------------------------------------------------
 -- | DISJUNCTIVE INTERPOLATION TO TREE INTERPOLATION
@@ -376,7 +461,7 @@ extractCandSolutions usubs t =
   let subtree = mapAOTree (\i e -> subUnroll i $ subNu i e) t in 
   collectSol subtree M.empty
   where subUnroll _ = (subst :: Subst -> Expr -> Expr) usubs
-        subNu (Just (_, sym))e =
+        subNu (Just (_, sym)) e =
           flip (subst1 :: Expr -> (Symbol,Expr) -> Expr) (sym,EVar vvName) e
         subNu Nothing e = e
         collectSol (And Nothing _ children) m = 
@@ -388,6 +473,16 @@ extractCandSolutions usubs t =
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
+-- convert number symbols back to integer constants
+numberifyCand :: Expr -> Expr
+numberifyCand e = V.trans numberifyVisitor () () e
+  where numberify _ e'@(EVar s) =
+          let mnum = readMaybe (symbolString s) :: Maybe Integer in
+          maybe e' (ECon . I) mnum
+        numberify _ e' = e'
+        numberifyVisitor = nv { V.txExpr = numberify }
+        nv = V.defaultVisitor :: V.Visitor () ()
+
 computeCandSolutions :: SInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
 computeCandSolutions sinfo u dquery = do
   -- convert disjunctive interp query to a set of tree interp queries
@@ -397,10 +492,11 @@ computeCandSolutions sinfo u dquery = do
     let tinterp = evalState (genTreeInterp tquery) $ interps ++ [PFalse]
     return tinterp
 
-  let usubs = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
-  let cands = map (extractCandSolutions usubs) tinterps 
-  return $ foldr (M.unionWith (++)) M.empty cands
-
+  let usubs   = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
+  let cands   = map (extractCandSolutions usubs) tinterps 
+  let cands'  = M.toList $ foldr (M.unionWith (++)) M.empty cands
+  let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
+  return cands''
           
 imain = do
   let vars = [(symbol "k",intSort),(vvName,intSort),(symbol "s",intSort),(symbol "s2",intSort),(symbol "tmp",intSort),(symbol "tmp2",intSort)]
@@ -452,14 +548,27 @@ imain2 = do
   let ssym = symbol "s"
   let vsym = symbol "v"
   let vars = [(ksym,intSort),(vvName,intSort),(ssym,intSort),
-              (vsym,intSort),(symbol "VV##1",intSort),(symbol "VV##2",intSort),
-              (symbol "###SUB##1",intSort)]
+              (vsym,intSort)]
   -- SInfo, used for generating SMT context (var declarations, etc.)
+
+  let int i = ECon (I i)
+  let ksum = KV (symbol "sum")
+  let k = EVar ksym
+  let s = EVar ssym
+  let v = EVar vvName
+  -- let v' = EVar vsym
+  let nrec = [(PAnd [PAtom Le k (int 0),PAtom Eq v (int 0)], [], ksum)]
+  let childrec = [(ksum, Su $ M.fromList [(ksym,EBin Minus k (int 1))], ssym)]
+  let rec = [(PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childrec, ksum)]
+  let kcs = M.fromList [(ksum, (rec,nrec))]
+  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], PAtom Ge v k)
+  let uinfo = (kcs, M.empty)
+  let (diquery, cs, usubs) = genInterpQuery 1 uinfo query
   let sinfo = FI {
                 cm = M.empty
               , ws = M.empty
               , bs = emptyBindEnv
-              , lits = fromListSEnv vars
+              , lits = fromListSEnv (vars ++ (M.toList cs))
               , kuts = KS S.empty
               , quals = []
               , bindInfo = M.empty
@@ -467,22 +576,12 @@ imain2 = do
               , Language.Fixpoint.Types.allowHO = False
               }
 
-  let int i = ECon (I i)
-  let ksum = KV (symbol "sum")
-  let k = EVar ksym
-  let s = EVar ssym
-  let v = EVar vvName
-  let v' = EVar vsym
-  let nrec = [(PAnd [PAtom Le k (int 0),PAtom Eq v (int 0)], [], ksum)]
-  let childrec = [(ksum, Su $ M.fromList [(ksym,EBin Minus k (int 1))], ssym)]
-  let rec = [(PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childrec, ksum)]
-  let kcs = M.fromList [(ksum, (rec,nrec))]
-  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], PAtom Ge v k)
-  let ustate = (M.empty, M.empty)
-  let (diquery, (_,usubs)) = runState (genInterpQuery 1 kcs query) ustate
+  putStrLn "Created symbols:"
+  putStrLn $ show cs
+  putStrLn "Substitutions:"
   putStrLn $ show usubs
   -- putStrLn $ show diquery
-  forM_ (expandTree diquery) (putStrLn . show . genQueryFormula)
+  forM_ (expandTree diquery) (putStrLn . show)
 
   -- get candidate solutions!
   candSol <- computeCandSolutions sinfo usubs diquery
