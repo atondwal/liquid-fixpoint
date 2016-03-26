@@ -62,6 +62,7 @@ Library
                    Language.Fixpoint.Types.Substitutions,
                    Language.Fixpoint.Types.Environments,
                    Language.Fixpoint.Types.Constraints,
+                   Language.Fixpoint.Types.SubstKV,
                    Language.Fixpoint.Types,
                    Language.Fixpoint.Smt.Types,
                    Language.Fixpoint.Smt.Bitvector,
