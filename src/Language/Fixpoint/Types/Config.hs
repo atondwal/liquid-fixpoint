@@ -56,8 +56,8 @@ data Config
     , newcheck    :: Bool                -- ^ new fixpoint sort check
     , eliminate   :: Bool                -- ^ eliminate non-cut KVars
     , elimStats   :: Bool                -- ^ print eliminate stats
-    , interpolate :: Int                 -- ^ use interpolation and BMC to find qualifiers
-    , failCons    :: Integer             -- ^ the failing constraint to interpolate
+    , interpolate :: Bool                -- ^ use interpolation and BMC to find qualifiers
+    , unrollDepth :: Int                 -- ^ unrolling depth for interpolation
     , solverStats :: Bool                -- ^ print solver stats
     , metadata    :: Bool                -- ^ print meta-data associated with constraints
     , stats       :: Bool                -- ^ compute constraint statistics
@@ -84,8 +84,8 @@ instance Default Config where
                , newcheck    = False
                , eliminate   = def
                , elimStats   = def
-               , failCons    = 1
-               , interpolate = -1
+               , interpolate = False
+               , unrollDepth = 3
                , solverStats = False
                , metadata    = def
                , stats       = def
@@ -159,8 +159,8 @@ config = Config {
   , allowHO     = False &= help "Allow higher order binders into fixpoint environment"
   , eliminate   = False &= help "(alpha) Eliminate non-cut KVars"
   , elimStats   = False &= help "(alpha) Print eliminate stats"
-  , failCons    = 1     &= help "Failing constriant to interpolate"
-  , interpolate = -1    &= help "(alpha) Perform interpolation to get qualifier"
+  , interpolate = False &= help "(alpha) Extract qualifiers from interpolation"
+  , unrollDepth = 3     &= help "Unrolling depth for interpolation"
   , solverStats = False &= help "Print solver stats"
   , save        = False &= help "Save Query as .fq and .bfq files"
   , metadata    = False &= help "Print meta-data associated with constraints"

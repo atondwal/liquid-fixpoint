@@ -29,7 +29,7 @@ import           System.Exit                        (ExitCode (..))
 -- import           System.Console.CmdArgs.Verbosity   hiding (Loud)
 import           Text.PrettyPrint.HughesPJ          (render)
 -- import           Text.Printf                        (printf)
-import           Control.Monad                      (when)
+import           Control.Monad                      (when, forM_)
 import           Control.Exception                  (catch)
 -- import           Control.Arrow
 
@@ -55,6 +55,7 @@ import           Language.Fixpoint.Parse            (rr', mkQual)
 import           Language.Fixpoint.Types
 -- import qualified Language.Fixpoint.Types.Visitor as V
 import           Language.Fixpoint.Minimize (minQuery)
+import           Language.Fixpoint.Interpolate (genQualifiers)
 import           Control.DeepSeq
 
 -- type Solver a = Config -> FInfo a -> IO (Result a)
@@ -86,7 +87,23 @@ solve cfg q
   | parts cfg    = partition  cfg        $!! q
   | stats cfg    = statistics cfg        $!! q
   | minimize cfg = minQuery   cfg solve' $!! q
+  | interpolate cfg = interpSolve 0 cfg q
   | otherwise    = solve'     cfg        $!! q
+
+interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
+interpSolve n cfg q = do
+  putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
+  interpQuals <- genQualifiers q n
+  putStrLn "Computed qualifiers:"
+  forM_ interpQuals (putStrLn . show)
+  let q' = q { quals = interpQuals }
+  res <- solve' cfg $!! q'
+  case res of
+    (Result Safe _) -> return res 
+    _               -> do
+      if n < unrollDepth cfg
+        then interpSolve (n+1) cfg q
+        else return res
 
 solve' :: (NFData a, Fixpoint a) => Solver a
 solve' cfg q = do

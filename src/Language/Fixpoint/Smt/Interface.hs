@@ -86,7 +86,7 @@ import           System.FilePath
 import           System.IO                (IOMode (..), hClose, hFlush, openFile)
 import           System.Process
 import qualified Data.Attoparsec.Text     as A
-import qualified Debug.Trace as DT
+-- import qualified Debug.Trace as DT
 import           Text.PrettyPrint.HughesPJ (text)
 {-
 runFile f
@@ -175,7 +175,8 @@ smtRes me res = case A.eitherResult res of
       TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
     return r
 
-smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+-- smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+smtParse me parserP = smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
 
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
