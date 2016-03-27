@@ -87,7 +87,7 @@ solve cfg q
   | parts cfg    = partition  cfg        $!! q
   | stats cfg    = statistics cfg        $!! q
   | minimize cfg = minQuery   cfg solve' $!! q
-  | interpolate cfg = interpSolve 0 cfg q
+  | interpolate cfg = interpSolve 0 cfg $!! q
   | otherwise    = solve'     cfg        $!! q
 
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
@@ -97,7 +97,7 @@ interpSolve n cfg q = do
   putStrLn "Computed qualifiers:"
   forM_ interpQuals (putStrLn . show)
   let q' = q { quals = interpQuals }
-  res <- solve' cfg $!! q'
+  res <- solve' cfg q'
   case res of
     (Result Safe _) -> return res 
     _               -> do

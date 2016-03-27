@@ -3,11 +3,11 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Language.Fixpoint.Interpolate ( genQualifiers ) where
+module Language.Fixpoint.Interpolate ( genQualifiers, imain2 ) where
 
 import System.Console.CmdArgs
 import qualified Data.HashMap.Strict as M
--- import qualified Data.HashSet as S
+import qualified Data.HashSet as S
 import Data.List (intercalate, nub)
 import Text.Read (readMaybe)
 import Control.Monad
@@ -20,6 +20,8 @@ import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve
 import Language.Fixpoint.Solver.Solution
 import qualified Language.Fixpoint.Types.Visitor as V
+
+-- import Debug.Trace
 
 data AOTree b a = And b a [AOTree b a]
                 | Or b [AOTree b a]
@@ -110,26 +112,46 @@ numSymbol x i = x `mappendSym` (symbol $ show i)
 -- | PRELIMINARIES FOR UNROLLING
 --------------------------------
 
-toRuleOrQuery :: (Expr -> b) -> BindEnv -> SubC a -> ClauseInfo b
+toRuleOrQuery :: (Show b) => (Expr -> b) -> BindEnv -> SubC a -> ClauseInfo b
 toRuleOrQuery f be c =
   let bids      = elemsIBindEnv $ senv c in
   let bexprs    = map (bindExprs ce) bids in
   let bsyms     = map (flip bindSym be) bids in
-  let esyms     = ([lhs],symlhs):(zip bexprs bsyms) in
+  -- trace ("LHS" ++ (show lhs')) $
+  let esyms     = ([lhs'],vvName):(zip bexprs bsyms) in
   let body      = concatMap (\(es,_) -> filter (not . isKVar) es) esyms in
   let kvars     = concatMap getKVarSym esyms in
-  (PAnd body, kvars, f rhs)
-  where Reft (symlhs, elhs) = sr_reft (slhs c)
-        Reft (symrhs, erhs) = sr_reft (srhs c)
-        lhs                 = subst1 elhs (symlhs, EVar vvName)
-        rhs                 = subst1 erhs (symrhs, EVar vvName)
-        ce                  = (sid c, be, senv c)
-        isKVar (PKVar _ _)  = True
-        isKVar _            = False
-        getKVarSym (es,s)   = map (packHead s) $ filter isKVar es
-        packHead s pk       = let ks = getKVar pk in (fst ks, snd ks, s)
-        getKVar (PKVar k s) = (k, s)
-        getKVar e           = error $ "expr " ++ (show e) ++ " is not a kvar"
+  let res       = (PAnd body, kvars, f rhs') in
+  -- trace ("CONSTRAINT:" ++ (show res)) res
+  res
+  where Reft (symlhs, elhs)   = sr_reft (slhs c)
+        Reft (symrhs, erhs)   = sr_reft (srhs c)
+        lhs                   = subst1 elhs (symlhs, EVar vvName)
+        rhs                   = subst1 erhs (symrhs, EVar vvName)
+        (lhs', rhs')          = (cleanSubs lhs vvName, cleanSubs rhs vvName)
+        ce                    = (sid c, be, senv c)
+        isKVar (PKVar _ _)    = True
+        isKVar _              = False
+        getKVarSym (es,s)     = map (packHead s) $ filter isKVar es
+        packHead s pk         =
+          let ks    = getKVar pk in
+          let subs' = filterConSym (snd ks) s in
+          (fst ks, subs', s)
+        getKVar (PKVar k s)   = (k, s)
+        getKVar e             = error $ "expr " ++ (show e) ++ " is not a kvar"
+        -- filter out substitutions for [x:=s]; this is used by liquid
+        -- fixpoint to insert the actual variable of a constraint instead
+        -- of a generic "v". we erase these subs because they interfere
+        -- with unrolling
+        cleanSubs e s         = V.trans (subVisitor s) () () e
+        cleanSubs' s _ e
+          | PKVar k subs <- e = (PKVar k (filterConSym subs s))
+          | otherwise         = e
+        subVisitor s          = sv { V.txExpr = (cleanSubs' s) }
+        sv                    = V.defaultVisitor
+        filterConSym subs s   = filterSubst (\_ e -> not $ isExprSym e s) subs
+        isExprSym (EVar s') s = s' == s
+        isExprSym _ _         = False
 
 toRule :: BindEnv -> SubC a -> Rule
 toRule be c
@@ -181,7 +203,9 @@ genUnrollInfo finfo =
   let (rules, queries) = foldr addCon ([],[]) $ map snd $ M.toList $ cm finfo in
   let kcs = genKClauses rules in
   let sorts = extractSymSorts finfo in
-  (sorts, kcs, queries)
+  let res = (sorts, kcs, queries) in
+  -- trace ("INFO:" ++ (show res)) res
+  res
   where be = bs finfo
         addCon c (rules,queries)
           | PKVar _ _ <- crhs c = ((toRule be c):rules, queries)
@@ -330,8 +354,10 @@ newSub s s' = do
 
 renameSymbol :: Symbol -> UnrollM Symbol
 renameSymbol s = do
+  -- let spref = unSuffixSymbol s
   n <- getSubCount s
   updateSubCount s (n+1)
+  -- FIXME: change this to intSymbol
   let s' = numSymbol s n
   cs <- getCreatedSymbols
   msort <- getSymSort s
@@ -377,7 +403,7 @@ unroll dmap (k,sym) = do
         let b' = renameExpr sym sym' b 
         let c' = map (renameClauseChild sym sym') c
 
-        -- apply argument of i.e. [nu/x]
+        -- apply argument i.e. [nu/x]
         let b'' = renameExpr vvName sym b'
         
         local (renameClauses sym sym') $ do
@@ -568,9 +594,15 @@ extractQualifiers ss cs = nub $ concatMap kquals (M.toList cs)
 genQualifiers :: Fixpoint a => FInfo a -> Int -> IO [Qualifier]
 genQualifiers finfo n = do
   let (ss, kcs, queries) = genUnrollInfo finfo
+  putStrLn "KClauses:"
+  putStrLn $ show kcs
   quals <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (kcs, ss) query
+    putStrLn "Interp query:"
+    putStrLn $ show diquery
+    putStrLn $ show cs
+    putStrLn $ show usubs
 
     -- add created vars back to finfo
     let vars = toListSEnv (lits finfo)
@@ -627,6 +659,7 @@ imain = do
   forM_ (M.toList $ candSol) $ \(kvar,cands) -> do
     putStrLn $ "Candidates for " ++ (show kvar) ++ ":"
     forM_ (nub cands) (putStrLn . show . smt2)
+-}
 
 -- test unrolling
 -- k <= 0 ^ v = 0 -> k(v)
@@ -682,5 +715,4 @@ imain2 n = do
 
   forM_ (M.toList $ candSol) $ \(kvar,cands) -> do
     putStrLn $ "Candidates for " ++ (show kvar) ++ ":"
-    forM_ (nub cands) (putStrLn . show . smt2)
--}
+    forM_ (nub cands) (putStrLn . show)
