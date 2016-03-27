@@ -21,7 +21,7 @@ import Language.Fixpoint.Solver.Solve
 import Language.Fixpoint.Solver.Solution
 import qualified Language.Fixpoint.Types.Visitor as V
 
--- import Debug.Trace
+import Debug.Trace
 
 data AOTree b a = And b a [AOTree b a]
                 | Or b [AOTree b a]
@@ -75,7 +75,8 @@ type CandSolutions = M.HashMap KVar [Expr]
 type ClauseChild = (KVar, Subst, Symbol)
 type ClauseInfo a = (Expr, [ClauseChild], a)
 type Rule = ClauseInfo KVar
-type Query = ClauseInfo Expr
+type ExprSort = (Expr,Sort)
+type Query = ClauseInfo ExprSort
 
 -- new substitutions generated from unrolling
 -- the Symbol at the value of a mapping corresponds
@@ -112,7 +113,7 @@ numSymbol x i = x `mappendSym` (symbol $ show i)
 -- | PRELIMINARIES FOR UNROLLING
 --------------------------------
 
-toRuleOrQuery :: (Show b) => (Expr -> b) -> BindEnv -> SubC a -> ClauseInfo b
+toRuleOrQuery :: (Show b) => (ExprSort -> b) -> BindEnv -> SubC a -> ClauseInfo b
 toRuleOrQuery f be c =
   let bids      = elemsIBindEnv $ senv c in
   let bexprs    = map (bindExprs ce) bids in
@@ -121,7 +122,7 @@ toRuleOrQuery f be c =
   let esyms     = ([lhs'],vvName):(zip bexprs bsyms) in
   let body      = concatMap (\(es,_) -> filter (not . isKVar) es) esyms in
   let kvars     = concatMap getKVarSym esyms in
-  let res       = (PAnd body, kvars, f rhs') in
+  let res       = (PAnd body, kvars, f (rhs',sortrhs)) in
   -- trace ("CONSTRAINT:" ++ (show res)) res
   res
   where Reft (symlhs, elhs)   = sr_reft (slhs c)
@@ -129,6 +130,7 @@ toRuleOrQuery f be c =
         lhs                   = subst1 elhs (symlhs, EVar vvName)
         rhs                   = subst1 erhs (symrhs, EVar vvName)
         (lhs', rhs')          = (cleanSubs lhs vvName, cleanSubs rhs vvName)
+        sortrhs               = sr_sort (srhs c)
         ce                    = (sid c, be, senv c)
         isKVar (PKVar _ _)    = True
         isKVar _              = False
@@ -157,8 +159,8 @@ toRule :: BindEnv -> SubC a -> Rule
 toRule be c
   | PKVar _ _ <- crhs c = toRuleOrQuery getKVar be c
   | otherwise = error "constraint is not a rule"
-  where getKVar (PKVar k _) = k
-        getKVar _           = error "rhs is not a kvar"
+  where getKVar ((PKVar k _),_) = k
+        getKVar _               = error "rhs is not a kvar"
 
 toQuery :: BindEnv -> SubC a -> Query
 toQuery be c
@@ -204,8 +206,8 @@ genUnrollInfo finfo =
   let kcs = genKClauses rules in
   let sorts = extractSymSorts finfo in
   let res = (sorts, kcs, queries) in
-  -- trace ("INFO:" ++ (show res)) res
-  res
+  trace ("INFO:" ++ (show sorts)) res
+  -- res
   where be = bs finfo
         addCon c (rules,queries)
           | PKVar _ _ <- crhs c = ((toRule be c):rules, queries)
@@ -424,7 +426,7 @@ unroll dmap (k,sym) = do
 
 -- generate a disjunctive interpolation query for a query clause
 unrollQuery :: Int -> Query -> UnrollM InterpQuery
-unrollQuery n (b, c, h) = do
+unrollQuery n (b, c, (h,_)) = do
   kcs <- getKClauses
   let initDepths = map (\k -> (k,n)) $ M.keys kcs
   let dmap = foldr (uncurry M.insert) M.empty $ initDepths
@@ -455,11 +457,13 @@ initRenameMap _ = M.empty -- FIXME: IMPLEMENT THIS
 
 -- interface function that unwraps Unroll monad
 genInterpQuery :: Int -> UnrollInfo -> Query -> (InterpQuery, SymSorts, UnrollSubs)
-genInterpQuery n uinfo query = 
+genInterpQuery n uinfo@(kcs,ss) query@(_,_,(_,vvSort)) = 
   let rm = initRenameMap uinfo in
+  -- we have to insert the type of "VV" (the RHS of a query)
+  let ss' = M.insert vvName vvSort ss in
   let ustate = (M.empty, rm, M.empty) in
   let smonad = unrollQuery n query in
-  let (diquery, (cs,_,us)) = runState (runReaderT smonad uinfo) ustate in
+  let (diquery, (cs,_,us)) = runState (runReaderT smonad (kcs,ss')) ustate in
   (diquery, cs, us)
 
 ----------------------------------------------------
@@ -571,7 +575,8 @@ genCandSolutions finfo u dquery = do
 -- * created variables during unrolling
 -- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs = nub $ concatMap kquals (M.toList cs)
+extractQualifiers ss cs =
+  trace ("QUALSORTS: " ++ (show ss)) $ nub $ concatMap kquals (M.toList cs)
   where kquals (k,es) = map (exprToQual k) (nub $ concatMap atomicExprs es)
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
@@ -605,8 +610,9 @@ genQualifiers finfo n = do
     putStrLn $ show usubs
 
     -- add created vars back to finfo
-    let vars = toListSEnv (lits finfo)
-    let allvars = M.union (M.fromList vars) cs
+    -- let vars = toListSEnv (lits finfo)
+    -- let allvars = M.union (M.fromList vars) cs
+    let allvars = M.union ss cs
     let finfo' = finfo { lits = fromListSEnv (M.toList allvars) }
 
     -- run tree interpolation to compute possible kvar solutions
@@ -683,7 +689,7 @@ imain2 n = do
   let r2 = (PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childr2, ksum)
   let rules = [r1,r2]
   let kcs = genKClauses rules
-  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], PAtom Ge v k)
+  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], (PAtom Ge v k, intSort))
   let uinfo = (kcs, M.empty)
   let (diquery, cs, usubs) = genInterpQuery n uinfo query
   let finfo = FI {
