@@ -22,7 +22,7 @@ import Language.Fixpoint.Solver.Solution
 import qualified Language.Fixpoint.Types.Visitor as V
 -- import Data.Interned
 
-import Debug.Trace
+-- import Debug.Trace
 
 data AOTree b a = And b a [AOTree b a]
                 | Or b [AOTree b a]
@@ -579,7 +579,7 @@ genCandSolutions finfo u dquery = do
   return cands'
   where uninternSym s =
           let uninterned = symbol $ encode $ symbolText s in
-          (uninterned, s
+          (uninterned, s)
         cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
 
 -- generate qualifiers from candidate solutions
