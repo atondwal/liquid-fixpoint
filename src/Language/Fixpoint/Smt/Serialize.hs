@@ -264,7 +264,8 @@ instance SMTLIB2 Command where
   defunc (GetValue xs)       = return $ GetValue xs 
   defunc (CMany cmds)        = CMany <$> mapM defunc cmds 
   -- treat compute-interpolant like assert
-  defunc (Interpolate n e)   = Interpolate n <$> defunc e
+  defunc (Interpolate n e) = Interpolate n <$> defunc e
+  -- defunc (Interpolate n e) = Interpolate n e
 
 smt2s    :: SMTLIB2 a => [a] -> T.Text
 smt2s as = smt2many (smt2 <$> as)

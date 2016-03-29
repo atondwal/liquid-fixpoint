@@ -125,4 +125,5 @@ class SMTLIB2 a where
   smt2 :: a -> T.Text 
 
   runSmt2 :: SMTEnv -> a -> T.Text 
-  runSmt2 env a = smt2 $ evalState (defunc a) (SMTSt 0 env)
+  -- runSmt2 env a = smt2 $ evalState (defunc a) (SMTSt 0 env)
+  runSmt2 env a = smt2 $ evalState (return a) (SMTSt 0 env)

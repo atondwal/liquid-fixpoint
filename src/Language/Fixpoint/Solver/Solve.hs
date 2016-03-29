@@ -18,7 +18,7 @@ import           Language.Fixpoint.Types.Config hiding (stats)
 import qualified Language.Fixpoint.Solver.Solution as S
 import qualified Language.Fixpoint.Solver.Worklist as W
 import           Language.Fixpoint.Solver.Monad
-import           Language.Fixpoint.Solver.Validate (sanitize)
+-- import           Language.Fixpoint.Solver.Validate (sanitize)
 import           Language.Fixpoint.Solver.Graph (isTarget)
 import           Text.PrettyPrint.HughesPJ
 
@@ -177,8 +177,9 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 ---------------------------------------------------------------------------
 interpolation :: Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
 ---------------------------------------------------------------------------
-interpolation cfg fi p = runSolverM cfg fi' 0 $ interpolationSolver fi' p
-  where Right fi' = sanitize fi
+-- interpolation cfg fi p = runSolverM cfg fi' 0 $ interpolationSolver fi' p
+-- where Right fi' = sanitize fi
+interpolation cfg fi p = runSolverM cfg fi 0 $ interpolationSolver fi p
 
 --------------------------------------------------------------------------------
 -- | RJ: @nikivazou please add some description here of what this does.

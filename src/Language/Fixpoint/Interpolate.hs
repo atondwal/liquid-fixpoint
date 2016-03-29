@@ -9,7 +9,7 @@ import System.Console.CmdArgs
 import qualified Data.HashMap.Strict as M
 import qualified Data.HashSet as S
 import Data.List (intercalate, nub)
-import Text.Read (readMaybe)
+-- import Text.Read (readMaybe)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Reader
@@ -20,6 +20,7 @@ import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve
 import Language.Fixpoint.Solver.Solution
 import qualified Language.Fixpoint.Types.Visitor as V
+-- import Data.Interned
 
 import Debug.Trace
 
@@ -106,8 +107,8 @@ substToList :: Subst -> [(Symbol, Expr)]
 substToList (Su map) = M.toList map
 
 -- like intSymbol, but without the separator
-numSymbol :: (Show a) => Symbol -> a -> Symbol
-numSymbol x i = x `mappendSym` (symbol $ show i)
+-- numSymbol :: (Show a) => Symbol -> a -> Symbol
+-- numSymbol x i = x `mappendSym` (symbol $ show i)
 
 --------------------------------
 -- | PRELIMINARIES FOR UNROLLING
@@ -204,10 +205,11 @@ genUnrollInfo :: FInfo a -> (SymSorts, KClauses, [Query])
 genUnrollInfo finfo =
   let (rules, queries) = foldr addCon ([],[]) $ map snd $ M.toList $ cm finfo in
   let kcs = genKClauses rules in
-  let sorts = extractSymSorts finfo in
+  let slits = M.fromList $ toListSEnv $ lits finfo in
+  let sorts = slits `M.union` extractSymSorts finfo in
   let res = (sorts, kcs, queries) in
-  trace ("INFO:" ++ (show sorts)) res
-  -- res
+  -- trace ("INFO:" ++ (show sorts)) res
+  res
   where be = bs finfo
         addCon c (rules,queries)
           | PKVar _ _ <- crhs c = ((toRule be c):rules, queries)
@@ -336,9 +338,10 @@ updateUnrollSubs us = do
 
 getSubCount :: Symbol -> UnrollM Int
 getSubCount s = do
+  let spref = unSuffixSymbol s
   rm <- getRenameMap
   -- FIXME: CHECK IF s has number suffix
-  return $ maybe 1 id $ M.lookup s rm
+  return $ maybe 1 id $ M.lookup spref rm
 
 updateSubCount :: Symbol -> Int -> UnrollM ()
 updateSubCount s n = do
@@ -356,11 +359,11 @@ newSub s s' = do
 
 renameSymbol :: Symbol -> UnrollM Symbol
 renameSymbol s = do
-  -- let spref = unSuffixSymbol s
-  n <- getSubCount s
-  updateSubCount s (n+1)
+  let spref = unSuffixSymbol s
+  n <- getSubCount spref
+  updateSubCount spref (n+1)
   -- FIXME: change this to intSymbol
-  let s' = numSymbol s n
+  let s' = intSymbol spref n
   cs <- getCreatedSymbols
   msort <- getSymSort s
   -- if sort cannot be found, assume it's an int
@@ -453,7 +456,7 @@ unrollQuery n (b, c, (h,_)) = do
 -- we have to do this smartly; if there is a variable v101, then
 -- we have to map v |-> 102
 initRenameMap :: UnrollInfo -> RenameMap
-initRenameMap _ = M.empty -- FIXME: IMPLEMENT THIS
+initRenameMap (_,ss) = M.map (const 1) ss
 
 -- interface function that unwraps Unroll monad
 genInterpQuery :: Int -> UnrollInfo -> Query -> (InterpQuery, SymSorts, UnrollSubs)
@@ -544,6 +547,7 @@ extractSol usubs t =
         collectSol (Or _ _) m = m
 
 -- convert number symbols back to integer constants
+{-
 numberifyCand :: Expr -> Expr
 numberifyCand e = V.trans numberifyVisitor () () e
   where numberify _ e'@(EVar s) =
@@ -552,6 +556,7 @@ numberifyCand e = V.trans numberifyVisitor () () e
         numberify _ e' = e'
         numberifyVisitor = nv { V.txExpr = numberify }
         nv = V.defaultVisitor :: V.Visitor () ()
+-}
 
 genCandSolutions :: Fixpoint a => FInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
 genCandSolutions finfo u dquery = do
@@ -559,15 +564,23 @@ genCandSolutions finfo u dquery = do
   let tqueries = expandTree dquery
   tinterps <- forM tqueries $ \tquery -> do
     let sinfo = convertFormat finfo
-    interps <- interpolation (def :: Config) sinfo $ genQueryFormula tquery
-    let tinterp = evalState (genTreeInterp tquery) $ interps ++ [PFalse]
+    let formula = genQueryFormula tquery
+    let smap = foldr (\s acc -> (uncurry M.insert) (uninternSym s) acc) M.empty (exprSyms formula)
+    interps <- interpolation (def :: Config) sinfo formula
+    -- unintern symbols
+    let interps' = map (cleanSymbols smap) interps
+    let tinterp = evalState (genTreeInterp tquery) $ interps' ++ [PFalse]
     return tinterp
 
   let usubs   = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
   let cands   = map (extractSol usubs) tinterps 
-  let cands'  = M.toList $ foldr (M.unionWith (++)) M.empty cands
-  let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
-  return cands''
+  let cands'  = foldr (M.unionWith (++)) M.empty cands
+  -- let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
+  return cands'
+  where uninternSym s =
+          let uninterned = symbol $ encode $ symbolText s in
+          (uninterned, s
+        cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
 
 -- generate qualifiers from candidate solutions
 -- ss should contain the sorts for
@@ -575,9 +588,12 @@ genCandSolutions finfo u dquery = do
 -- * created variables during unrolling
 -- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs =
-  trace ("QUALSORTS: " ++ (show ss)) $ nub $ concatMap kquals (M.toList cs)
-  where kquals (k,es) = map (exprToQual k) (nub $ concatMap atomicExprs es)
+extractQualifiers ss cs = nub $ concatMap kquals (M.toList cs)
+  where kquals (k,es) =
+          let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
+          -- create disjunction of qualifiers
+          let disj = POr atoms in
+          map (exprToQual k) (disj:atoms)
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
         atomicExprs (PAnd ps) = concatMap atomicExprs ps
@@ -587,25 +603,36 @@ extractQualifiers ss cs =
         symSort k s =
           let ksort = maybe intSort id (M.lookup (ksym k) ss) in
           let ssort = maybe intSort id (M.lookup s ss) in
-          let sort = if s == vvName then ksort else ssort in
+          let sort  = noTySort $ if s == vvName then ksort else ssort in
           (s,sort)
-        exprToQual k e =
-          let syms    = exprSyms e in
-          let params  = map (symSort k) syms in
-          let loc     = dummyPos "no location" in
-          let name    = dummySymbol in
-          Q name params e loc
+        -- convert tySort to
+        -- FIXME: Ask Jhala about this
+        noTySort (FTC _) = FVar 0
+        noTySort s        = s
+        isFunc s          = maybe False (const True) (functionSort s)
+        exprToQual k e    =
+          let syms        = exprSyms e in
+          let params      = map (symSort k) syms in
+          -- don't include uninterpreted functions as parameters!
+          let params'     = filter (not . isFunc . snd) params in
+          let loc         = dummyPos "no location" in
+          let name        = dummySymbol in
+          Q name params' e loc
 
 genQualifiers :: Fixpoint a => FInfo a -> Int -> IO [Qualifier]
 genQualifiers finfo n = do
   let (ss, kcs, queries) = genUnrollInfo finfo
+  putStrLn "BindEnv:"
+  putStrLn $ show $ bs finfo
+  putStrLn "Lits::"
+  putStrLn $ show $ lits finfo
   putStrLn "KClauses:"
   putStrLn $ show kcs
   quals <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (kcs, ss) query
     putStrLn "Interp query:"
-    putStrLn $ show diquery
+    putStrLn $ show $ genQueryFormula diquery
     putStrLn $ show cs
     putStrLn $ show usubs
 
@@ -617,6 +644,8 @@ genQualifiers finfo n = do
 
     -- run tree interpolation to compute possible kvar solutions
     candSol <- genCandSolutions finfo' usubs diquery
+    putStrLn "candidate solutions:"
+    putStrLn $ show candSol
 
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol

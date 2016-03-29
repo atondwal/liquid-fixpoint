@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards             #-}
 {-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
@@ -77,6 +78,7 @@ import           Data.List                as L
 import qualified Data.Text                as T
 import           Data.Text.Format         hiding (format)
 import qualified Data.Text.IO             as TIO
+import           Data.Interned
 -- import qualified Data.Text.Lazy           as LT
 -- import qualified Data.Text.Lazy.IO        as LTIO
 import           System.Directory
@@ -88,6 +90,8 @@ import           System.Process
 import qualified Data.Attoparsec.Text     as A
 -- import qualified Debug.Trace as DT
 import           Text.PrettyPrint.HughesPJ (text)
+import           Text.Read (readMaybe)
+
 {-
 runFile f
   = readFile f >>= runString
@@ -195,7 +199,7 @@ predP = {-# SCC "predP" #-}
     <|> (Sym <$> symbolP)
 
 data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
-type PorE = Either Expr Expr
+-- type PorE = Either Expr Expr
 
 binOpStrings :: [T.Text]
 binOpStrings = [ "+", "-", "*", "/", "mod"]
@@ -219,6 +223,41 @@ strToRel "<=" = Le
 -- Do I need Ne Une Ueq?
 strToRel _ = error "Rel not found"
 
+parseLisp' = parseLisp
+
+parseLisp :: Lisp -> Expr
+parseLisp (Sym s)
+  | symbolText s == "true"  = PTrue
+  | symbolText s == "false" = PFalse
+  | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | otherwise               = EVar s
+parseLisp l@(Lisp xs)
+  | [Sym s, x] <- xs, symbolText s == "not"     =
+    PNot (parseLisp x)
+  | [Sym s, x] <- xs, symbolText s == "-"       =
+    ENeg (parseLisp x)
+  | [Sym s, x, y] <- xs, symbolText s == "=>"   =
+    PImp (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s == "="    =
+    PAtom Eq (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
+    EBin (strToOp $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
+    PAtom (strToRel $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
+    EIte (parseLisp x) (parseLisp y) (parseLisp z)
+  | (Sym s:xs) <- xs, symbolText s == "and"     =
+    PAnd $ L.map parseLisp xs
+  | (Sym s:xs) <- xs, symbolText s == "or"      =
+    POr $ L.map parseLisp xs
+  | otherwise                                   =
+    lispToFunc l
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
+        -- this should not be called
+        lispToFunc (Sym s)   = EVar s
+
+{-
+
 parseLisp' :: Lisp -> Expr
 parseLisp' = toPred
   where toPred :: Lisp -> Expr
@@ -229,8 +268,6 @@ parseLisp' = toPred
         toExpr x = case parseLisp x of
                      Left p -> error $ "expected Expr, got Pred: " ++ show p
                      Right e -> e
-        parseLisp :: Lisp -> PorE
-        parseLisp (Sym s)
           | symbolText s == "true" = Left PTrue
           | symbolText s == "false" = Left PFalse
           | otherwise = Right $ EVar s
@@ -254,6 +291,7 @@ parseLisp' = toPred
         -- parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
         parseLisp x = error $ show x ++ "is Nonsense Lisp!"
         -- PBexp? When do I know to read one of these in?
+-}
 
 responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
          <|> A.string "sat"     *> return Sat
@@ -276,7 +314,7 @@ pairP = {-# SCC "pairP" #-}
      A.char ')'
      return (x,v)
 
-symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x))
+symbolP = {-# SCC "symbolP" #-} textSymbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x))
 
 valueP = {-# SCC "valueP" #-} negativeP
       <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
