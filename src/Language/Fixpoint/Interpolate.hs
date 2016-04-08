@@ -19,6 +19,7 @@ import Language.Fixpoint.Types hiding (renameSymbol)
 import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve
 import Language.Fixpoint.Solver.Solution
+import Language.Fixpoint.Solver.Validate
 import qualified Language.Fixpoint.Types.Visitor as V
 -- import Data.Interned
 
@@ -609,7 +610,7 @@ genCandSolutions finfo u dquery = do
   -- convert disjunctive interp query to a set of tree interp queries
   let tqueries = expandTree dquery
   tinterps <- forM tqueries $ \tquery -> do
-    let sinfo = convertFormat finfo
+    let sinfo = either die id $ sanitize $ convertFormat finfo
     let formula = genQueryFormula tquery
     -- putStrLn "Tree Interp query:"
     -- putStrLn $ show formula
