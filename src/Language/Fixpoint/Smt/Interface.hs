@@ -159,10 +159,16 @@ command me !cmd      = {-# SCC "command" #-} say cmd >> hear cmd
     say cmd           = smtWrite me $ runSmt2 (smtenv me) cmd
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
-    hear (Interpolate n _) = smtRead me >>= \case
-      Unsat -> smtPred n me
-      Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
-      e -> error $ show e
+    hear (Interpolate n _) = do
+      -- write the interpolation query to interp.out
+      -- withFile "interp.out" WriteMode $ \handle -> do
+        -- hPutStrLnNow handle $ runSmt2 (smtenv me) cmd
+
+      resp <- smtRead me
+      case resp of
+        Unsat -> smtPred n me
+        Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
+        e -> error $ show e
  
     hear _            = return Ok
 
@@ -179,8 +185,33 @@ smtRes me res = case A.eitherResult res of
       TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
     return r
 
+
 -- smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
-smtParse me parserP = smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+smtParse me parserP = do
+  t <- smtReadRaw me
+  p <- A.parseWith (smtReadRaw me) parserP t
+  smtRes me p
+
+smtParse' me parserP = do
+  t <- smtReadRaw me
+  let t' = t `T.append` (T.singleton '\n')
+  p <- return $ A.parse parserP t'
+  smtRes me p
+
+{-
+smtReadRawLines me = smtReadRawLines_ me []
+  where smtReadRawLines_ me acc = do
+          t <- smtReadRaw me
+          if t == T.empty then return acc else smtReadRawLines_ me (t:acc)
+
+smtParse' me parserP = do
+  ts <- smtReadRawLines me
+  putStrLn "Interpolants (RAW):"
+  forM ts Prelude.print
+  -- ps <- return $ A.parse parserP t
+  let ps = map (A.parse parserP) ts
+  forM ps (smtRes me)
+-}
 
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
@@ -189,13 +220,21 @@ smtPred :: Int -> Context -> IO Response
 smtPred n me = {-# SCC "smtPred" #-} do
   responses <- forM [1..n] $ \_ -> parseInterp
   return $ Interpolant $ concatMap getInterps responses
-  where parseInterp = smtParse me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
+  -- responses <- parseInterp
+  -- return $ Interpolant $ concatMap getInterps responses
+  where parseInterp = do
+          -- ps <- smtParse me (Interpolant <$> map parseLisp' <$> predP)
+          p <- smtParse' me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
+          return p
         getInterps (Interpolant e) = e
         getInterps _ = []
 -- smtPred n me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> (\x -> [x]) <$> parseLisp' <$> predP)
 
+-- space that 
+space2 c = isSpace c && not (A.isEndOfLine c)
+
 predP = {-# SCC "predP" #-}
-        (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipMany1 A.space) <* A.char ')'))
+        (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipWhile space2) <* A.char ')'))
     <|> (Sym <$> symbolP)
 
 data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
@@ -314,7 +353,7 @@ pairP = {-# SCC "pairP" #-}
      A.char ')'
      return (x,v)
 
-symbolP = {-# SCC "symbolP" #-} textSymbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x))
+symbolP = {-# SCC "symbolP" #-} textSymbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
 valueP = {-# SCC "valueP" #-} negativeP
       <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
@@ -470,7 +509,10 @@ countInterp e = getSum $ execState (visit visitInterp () e) (Sum 0)
         visitInterp = (defaultVisitor :: Visitor (Sum Int) ()) { accExpr = incInterp } 
 
 smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
-smtDoInterpolate me _ p =
+smtDoInterpolate me _ p = do
+  -- icontext <- makeZ3Context "interp.out" (toListSEnv $ lits sinfo)
+  -- smtWrite icontext $ runSmt2 (smtenv icontext) p
+
   respInterp <$> command me (Interpolate n p)
   where n = countInterp p 
 

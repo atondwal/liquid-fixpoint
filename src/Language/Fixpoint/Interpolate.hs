@@ -88,7 +88,7 @@ type UnrollSubs = M.HashMap Symbol Symbol
 type KClauses = M.HashMap KVar ([Rule], [Rule])
 -- sorts of symbols; this is used for 
 type SymSorts = M.HashMap Symbol Sort
-type UnrollInfo = (KClauses, SymSorts)
+data UnrollInfo = UI { kcs :: KClauses, ss :: SymSorts }
 
 -- for generating renamed symbols
 type RenameMap = M.HashMap Symbol Int
@@ -114,19 +114,24 @@ substToList (Su map) = M.toList map
 -- | PRELIMINARIES FOR UNROLLING
 --------------------------------
 
-toRuleOrQuery :: (Show b) => (ExprSort -> b) -> BindEnv -> SubC a -> ClauseInfo b
-toRuleOrQuery f be c =
+atomicExprs :: Expr -> [Expr]
+atomicExprs (PAnd ps) = concatMap atomicExprs ps
+-- atomicExprs (POr ps) = concatMap atomicExprs ps
+atomicExprs e         = [e]
+
+toRuleOrQuery :: (Show b) => FInfo a -> (ExprSort -> b) -> SubC a -> ClauseInfo b
+toRuleOrQuery finfo f c =
   let bids      = elemsIBindEnv $ senv c in
-  let bexprs    = map (bindExprs ce) bids in
+  let bexprs    = map (concatMap atomicExprs . bindExprs ce) bids in
   let bsyms     = map (flip bindSym be) bids in
-  -- trace ("LHS" ++ (show lhs')) $
-  let esyms     = ([lhs'],vvName):(zip bexprs bsyms) in
+  let esyms     = (atomicExprs lhs',vvName):(zip bexprs bsyms) in
   let body      = concatMap (\(es,_) -> filter (not . isKVar) es) esyms in
   let kvars     = concatMap getKVarSym esyms in
   let res       = (PAnd body, kvars, f (rhs',sortrhs)) in
-  -- trace ("CONSTRAINT:" ++ (show res)) res
   res
-  where Reft (symlhs, elhs)   = sr_reft (slhs c)
+  where globals               = map fst $ toListSEnv (lits finfo)
+        be                    = bs finfo
+        Reft (symlhs, elhs)   = sr_reft (slhs c)
         Reft (symrhs, erhs)   = sr_reft (srhs c)
         lhs                   = subst1 elhs (symlhs, EVar vvName)
         rhs                   = subst1 erhs (symrhs, EVar vvName)
@@ -137,36 +142,52 @@ toRuleOrQuery f be c =
         isKVar _              = False
         getKVarSym (es,s)     = map (packHead s) $ filter isKVar es
         packHead s pk         =
-          let ks    = getKVar pk in
-          let subs' = filterConSym (snd ks) s in
-          (fst ks, subs', s)
+          let ks      = getKVar pk in
+          let subs'   = filterConSym (snd ks) s in
+          let subs''  = subsInScope subs' (fst ks) in
+          (fst ks, subs'', s)
         getKVar (PKVar k s)   = (k, s)
         getKVar e             = error $ "expr " ++ (show e) ++ " is not a kvar"
-        -- filter out substitutions for [x:=s]; this is used by liquid
+        -- substitution sanitizer:
+        -- (1) filter out substitutions for [x:=s]; this is used by liquid
         -- fixpoint to insert the actual variable of a constraint instead
         -- of a generic "v". we erase these subs because they interfere
         -- with unrolling
+        -- (2) filter out substitutions of the form [x:=expr], where
+        -- x is in in the WfC of a kvar (or in the "global" scope of
+        -- finfo lits
         cleanSubs e s         = V.trans (subVisitor s) () () e
         cleanSubs' s _ e
-          | PKVar k subs <- e = (PKVar k (filterConSym subs s))
+          | PKVar k subs <- e =
+            let subs'   = filterConSym subs s in
+            let subs''  = subsInScope subs' k in
+            PKVar k subs''
           | otherwise         = e
         subVisitor s          = sv { V.txExpr = (cleanSubs' s) }
         sv                    = V.defaultVisitor
+        -- sanitizer (1)
         filterConSym subs s   = filterSubst (\_ e -> not $ isExprSym e s) subs
         isExprSym (EVar s') s = s' == s
         isExprSym _ _         = False
+        -- sanitizer (2)
+        kenv k                =
+          let wfc = M.lookup k (ws finfo) in
+          let f = map fst . map (flip lookupBindEnv be) . elemsIBindEnv . wenv in
+          maybe [] f wfc
+        subsInScope subs k    =
+          filterSubst (\s _ -> s `elem` kenv k || s `elem` globals) subs
 
-toRule :: BindEnv -> SubC a -> Rule
-toRule be c
-  | PKVar _ _ <- crhs c = toRuleOrQuery getKVar be c
+toRule :: FInfo a -> SubC a -> Rule
+toRule finfo c
+  | PKVar _ _ <- crhs c = toRuleOrQuery finfo getKVar c
   | otherwise = error "constraint is not a rule"
   where getKVar ((PKVar k _),_) = k
         getKVar _               = error "rhs is not a kvar"
 
-toQuery :: BindEnv -> SubC a -> Query
-toQuery be c
+toQuery :: FInfo a -> SubC a -> Query
+toQuery finfo c
   | PKVar _ _ <- crhs c = error "constraint is not a query"
-  | otherwise = toRuleOrQuery id be c
+  | otherwise = toRuleOrQuery finfo id c
 
 isClauseRec :: [Rule] -> Rule -> Bool
 isClauseRec rs r@(_,_,k) = k `elem` childks
@@ -210,10 +231,9 @@ genUnrollInfo finfo =
   let res = (sorts, kcs, queries) in
   -- trace ("INFO:" ++ (show sorts)) res
   res
-  where be = bs finfo
-        addCon c (rules,queries)
-          | PKVar _ _ <- crhs c = ((toRule be c):rules, queries)
-          | otherwise           = (rules, (toQuery be c):queries)
+  where addCon c (rules,queries)
+          | PKVar _ _ <- crhs c = ((toRule finfo c):rules, queries)
+          | otherwise           = (rules, (toQuery finfo c):queries)
 
 --------------
 -- | UNROLLING
@@ -274,7 +294,7 @@ renameClauseChild s s' (ck,csub,csym) = (ck, newsub, newsym)
 
 -- replace all instances of s in kcs with s'
 renameClauses :: Symbol -> Symbol -> UnrollInfo -> UnrollInfo
-renameClauses s s' (kcs,ss) = (M.fromList $ map renameK $ M.toList kcs, ss)
+renameClauses s s' (UI kcs ss) = UI (M.fromList $ map renameK $ M.toList kcs) ss
   where renameK (k,(rec,nrec)) = (k, (map renameRule rec, map renameRule nrec))
         renameRule (b, cs, h) =
           let b'  = renameExpr s s' b in
@@ -288,13 +308,13 @@ lput :: UnrollState -> UnrollM ()
 lput = lift . put
 
 getKClauses :: UnrollM KClauses
-getKClauses = fst <$> ask
+getKClauses = kcs <$> ask
 
 setKClauses :: KClauses -> UnrollInfo -> UnrollInfo
-setKClauses kcs (_, ss) = (kcs, ss)
+setKClauses kcs (UI _ ss) = UI kcs ss
 
 getSymSorts :: UnrollM SymSorts
-getSymSorts = snd <$> ask
+getSymSorts = ss <$> ask
 
 -- get sort for a symbol (could be in uinfo or created symbols)
 getSymSort :: Symbol -> UnrollM (Maybe Sort)
@@ -379,27 +399,42 @@ freshSubSymbol = renameSymbol subSymbol
 -- apply pending substitutions 
 applySubst :: Subst -> UnrollM (KClauses, [Expr])
 applySubst subs = do
-  kcs <- getKClauses
-  foldM applySub1 (kcs,[]) $ substToList subs
-  where applySub1 (kcs',tmpexprs) (ssym,sexpr) = do
-          tmp <- freshSubSymbol
-          ss <- getSymSorts
-          let tmpexpr    = PAtom Eq (EVar tmp) sexpr
-          let (kcs'', _) = renameClauses ssym tmp (kcs',ss)
-          newSub ssym tmp
-          return (kcs'', tmpexpr:tmpexprs)
+  kc <- getKClauses
+  foldM applySub1 (kc,[]) $ substToList subs
+  where applySub1 (kc',tmpexprs) (ssym,sexpr) = do
+          case sexpr of
+           -- if the substitution is symbol to symbol,
+           -- we don't introduce a new "tmp expr"
+            EVar ssym' -> do
+              tmp <- freshSubSymbol
+              ss <- getSymSorts 
+              let uinfo'  = renameClauses ssym' tmp (UI kc' ss)
+              let uinfo'' = renameClauses ssym ssym' (UI (kcs uinfo') ss)
+              newSub ssym ssym'
+              newSub ssym' tmp
+              return (kcs uinfo'',tmpexprs)
+
+            _ -> do
+              tmp <- freshSubSymbol
+              ss <- getSymSorts
+              let tmpexpr    = PAtom Eq (EVar tmp) sexpr
+              let uinfo' = renameClauses ssym tmp (UI kc' ss)
+              newSub ssym tmp
+              return (kcs uinfo', tmpexpr:tmpexprs)
 
 -- generate disjunctive interpolation query
 unroll :: UnrollDepth -> HeadInfo -> UnrollM InterpQuery
 unroll dmap (k,sym) = do
-  kcs <- getKClauses
-  case M.lookup k kcs of
+  kc <- getKClauses
+  case M.lookup k kc of
     Nothing -> return $ Or Nothing []
     Just (crec, cnrec) -> do
       let depth = maybe 0 id (M.lookup k dmap)
       let rec = depth > 0
       let cs = if not rec then cnrec else crec ++ cnrec
       let dmap' = M.insert k (depth-1) dmap
+
+      -- trace ("K:" ++ show k ++ "sym:" ++ show sym) $ do
 
       -- generate children
       children <- forM cs $ \(b, c, _) -> do
@@ -414,9 +449,12 @@ unroll dmap (k,sym) = do
         local (renameClauses sym sym') $ do
           -- generate child subtree
           ginfo <- forM c' $ \(ck,csub,csym) -> do
-            (kcs'', tmps) <- applySubst csub
-            local (setKClauses kcs'') $ do
-              gc <- unroll dmap' (ck,csym)
+            -- if csym == VV, then it's the LHS of a constraint
+            -- and so csym = the symbol on the head (i.e., sym)
+            let csym' = if vvName == csym then sym else csym
+            (kc'', tmps) <- applySubst csub
+            local (setKClauses kc'') $ do
+              gc <- unroll dmap' (ck,csym')
               return (gc, tmps)
           
           let (gchildren, gtmps) = unzip ginfo
@@ -427,16 +465,21 @@ unroll dmap (k,sym) = do
 
       return $ Or (Just (k,sym)) children
 
+-- we use this instead of vvName because liquid-fixpoint
+-- uses vvName internally, and if we use it here we get
+-- weird bugs
+argName = symbol "ARG"
+
 -- generate a disjunctive interpolation query for a query clause
 unrollQuery :: Int -> Query -> UnrollM InterpQuery
 unrollQuery n (b, c, (h,_)) = do
-  kcs <- getKClauses
-  let initDepths = map (\k -> (k,n)) $ M.keys kcs
+  kc <- getKClauses
+  let initDepths = map (\k -> (k,n)) $ M.keys kc
   let dmap = foldr (uncurry M.insert) M.empty $ initDepths
 
   -- rename instances of VV in query, since it's treated specially
   -- in unrolling
-  v <- renameSymbol vvName
+  v <- renameSymbol argName
   newSub vvName v
   let b' = renameExpr vvName v b 
   let c' = map (renameClauseChild vvName v) c
@@ -444,9 +487,12 @@ unrollQuery n (b, c, (h,_)) = do
 
   -- generate child subtrees
   cinfo <- forM c' $ \(ck,csub,csym) -> do
-    (kcs', tmps) <- applySubst csub
-    local (setKClauses kcs') $ do
-      child <- unroll dmap (ck,csym)
+    (kc', tmps) <- applySubst csub
+    local (setKClauses kc') $ do
+      -- if csym == VV, then it's the LHS of a constraint
+      -- and so csym = the symbol on the head (i.e., v)
+      let csym' = if csym == vvName then v else csym
+      child <- unroll dmap (ck,csym')
       return (child, tmps)
 
   let (children, ctmps) = unzip cinfo
@@ -456,17 +502,17 @@ unrollQuery n (b, c, (h,_)) = do
 -- we have to do this smartly; if there is a variable v101, then
 -- we have to map v |-> 102
 initRenameMap :: UnrollInfo -> RenameMap
-initRenameMap (_,ss) = M.map (const 1) ss
+initRenameMap (UI _ ss) = M.map (const 1) ss
 
 -- interface function that unwraps Unroll monad
 genInterpQuery :: Int -> UnrollInfo -> Query -> (InterpQuery, SymSorts, UnrollSubs)
-genInterpQuery n uinfo@(kcs,ss) query@(_,_,(_,vvSort)) = 
+genInterpQuery n uinfo@(UI kcs ss) query@(_,_,(_,argSort)) = 
   let rm = initRenameMap uinfo in
   -- we have to insert the type of "VV" (the RHS of a query)
-  let ss' = M.insert vvName vvSort ss in
+  let ss' = M.insert argName argSort ss in
   let ustate = (M.empty, rm, M.empty) in
   let smonad = unrollQuery n query in
-  let (diquery, (cs,_,us)) = runState (runReaderT smonad (kcs,ss')) ustate in
+  let (diquery, (cs,_,us)) = runState (runReaderT smonad (UI kcs ss')) ustate in
   (diquery, cs, us)
 
 ----------------------------------------------------
@@ -565,6 +611,8 @@ genCandSolutions finfo u dquery = do
   tinterps <- forM tqueries $ \tquery -> do
     let sinfo = convertFormat finfo
     let formula = genQueryFormula tquery
+    -- putStrLn "Tree Interp query:"
+    -- putStrLn $ show formula
     let smap = foldr (\s acc -> (uncurry M.insert) (uninternSym s) acc) M.empty (exprSyms formula)
     interps <- interpolation (def :: Config) sinfo formula
     -- unintern symbols
@@ -574,10 +622,11 @@ genCandSolutions finfo u dquery = do
 
   let usubs   = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
   let cands   = map (extractSol usubs) tinterps 
-  let cands'  = foldr (M.unionWith (++)) M.empty cands
+  let cands'  = foldr (M.unionWith (uniqAdd)) M.empty cands
   -- let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
   return cands'
-  where uninternSym s =
+  where uniqAdd a b = nub $ a ++ b
+        uninternSym s =
           let uninterned = symbol $ encode $ symbolText s in
           (uninterned, s)
         cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
@@ -588,64 +637,108 @@ genCandSolutions finfo u dquery = do
 -- * created variables during unrolling
 -- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs = nub $ concatMap kquals (M.toList cs)
-  where kquals (k,es) =
+extractQualifiers ss cs = filter hasArgs $ nub $ concatMap kquals (M.toList cs)
+  where hasArgs (Q _ (_:_) _ _) = True
+        hasArgs (Q _ [] _ _)    = False
+        kquals (k,es) =
           let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
           -- create disjunction of qualifiers
           let disj = POr atoms in
           map (exprToQual k) (disj:atoms)
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
-        atomicExprs (PAnd ps) = concatMap atomicExprs ps
-        atomicExprs (POr ps) = concatMap atomicExprs ps
-        atomicExprs e = [e]
         ksym (KV k) = k
         symSort k s =
           let ksort = maybe intSort id (M.lookup (ksym k) ss) in
           let ssort = maybe intSort id (M.lookup s ss) in
-          let sort  = noTySort $ if s == vvName then ksort else ssort in
-          (s,sort)
-        -- convert tySort to
+          let sort  = if s == vvName then ksort else ssort in (s,sort)
+        -- convert tySort to a variable type
         -- FIXME: Ask Jhala about this
-        noTySort (FTC _) = FVar 0
-        noTySort s        = s
+        realSort FInt     = FInt
+        realSort FNum     = FNum
+        -- realSort (FTC _)  = 
+        realSort _        = FVar 0
         isFunc s          = maybe False (const True) (functionSort s)
         exprToQual k e    =
           let syms        = exprSyms e in
           let params      = map (symSort k) syms in
           -- don't include uninterpreted functions as parameters!
           let params'     = filter (not . isFunc . snd) params in
+          let params''    = map (\(p,s) -> (p,realSort s)) params' in
           let loc         = dummyPos "no location" in
           let name        = dummySymbol in
-          Q name params' e loc
+          Q name params'' e loc
+
+printKClauses kcs = forM_ (M.toList kcs) printKClause
+  where printKClause (k, (rec, nrec)) =  do
+          putStrLn $ "Kvar: " ++ (show k)
+          putStrLn ""
+          putStrLn "Recursive clauses:"
+          forM_ rec $ \clause -> do
+            putStrLn "-------------------"
+            printClause clause
+            putStrLn "-------------------"
+          putStrLn ""
+          putStrLn "Nonrecursive clauses:"
+          forM_ nrec $ \clause -> do
+            putStrLn "-------------------"
+            printClause clause
+            putStrLn "-------------------"
+          putStrLn ""
+
+        printClause (body, children, head) = do
+          putStrLn "body:"
+          print body
+          putStrLn "head:"
+          print head
+          putStrLn "children:"
+          forM_ children $ \child -> do
+            putStrLn "-------------------"
+            printClauseChild child
+            putStrLn "-------------------"
+
+        printClauseChild (k, subs, sym) = do
+          putStrLn $ "clause child"
+          putStrLn $ "k:" ++ (show k)
+          putStr "subs: "
+          print subs
+          putStrLn $ "sym: " ++ show sym
 
 genQualifiers :: Fixpoint a => FInfo a -> Int -> IO [Qualifier]
 genQualifiers finfo n = do
   let (ss, kcs, queries) = genUnrollInfo finfo
+  {-
   putStrLn "BindEnv:"
   putStrLn $ show $ bs finfo
   putStrLn "Lits::"
   putStrLn $ show $ lits finfo
+  -}
   putStrLn "KClauses:"
-  putStrLn $ show kcs
+  printKClauses kcs
   quals <- forM queries $ \query -> do
     -- unroll
-    let (diquery, cs, usubs) = genInterpQuery n (kcs, ss) query
+    let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss) query
     putStrLn "Interp query:"
     putStrLn $ show $ genQueryFormula diquery
+    {-
+    putStrLn "Created symbols:"
     putStrLn $ show cs
+    putStrLn "usubs:"
     putStrLn $ show usubs
+    -}
 
     -- add created vars back to finfo
     -- let vars = toListSEnv (lits finfo)
     -- let allvars = M.union (M.fromList vars) cs
     let allvars = M.union ss cs
-    let finfo' = finfo { lits = fromListSEnv (M.toList allvars) }
+    let finfo' = finfo { lits = fromListSEnv (nub $ M.toList allvars) }
 
     -- run tree interpolation to compute possible kvar solutions
     candSol <- genCandSolutions finfo' usubs diquery
+    {-
     putStrLn "candidate solutions:"
     putStrLn $ show candSol
+    -}
 
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
@@ -693,7 +786,7 @@ imain = do
 
   forM_ (M.toList $ candSol) $ \(kvar,cands) -> do
     putStrLn $ "Candidates for " ++ (show kvar) ++ ":"
-    forM_ (nub cands) (putStrLn . show . smt2)
+    forM_ (nub cands) (putStrLn . show)
 -}
 
 -- test unrolling
@@ -719,7 +812,7 @@ imain2 n = do
   let rules = [r1,r2]
   let kcs = genKClauses rules
   let query = (PTrue, [(ksum, Su $ M.empty, vvName)], (PAtom Ge v k, intSort))
-  let uinfo = (kcs, M.empty)
+  let uinfo = UI kcs M.empty
   let (diquery, cs, usubs) = genInterpQuery n uinfo query
   let finfo = FI {
                 cm = M.empty

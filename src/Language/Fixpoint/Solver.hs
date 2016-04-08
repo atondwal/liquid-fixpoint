@@ -69,6 +69,8 @@ solveFQ cfg = do
     fi      <- readFInfo file
     r       <- solve cfg fi
     let stat = resStatus $!! r
+    putStrLn "solution:"
+    print $ resSolution r
     -- let str  = render $ resultDoc $!! (const () <$> stat)
     -- putStrLn "\n"
     colorStrLn (colorResult stat) (statStr $!! stat)
