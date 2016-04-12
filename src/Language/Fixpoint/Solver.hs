@@ -56,6 +56,7 @@ import           Language.Fixpoint.Types
 -- import qualified Language.Fixpoint.Types.Visitor as V
 import           Language.Fixpoint.Minimize (minQuery)
 import           Language.Fixpoint.Interpolate (genQualifiers)
+import           Language.Fixpoint.Smt.Types
 import           Control.DeepSeq
 
 -- type Solver a = Config -> FInfo a -> IO (Result a)
@@ -97,7 +98,7 @@ interpSolve n cfg q = do
   putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
   interpQuals <- genQualifiers q n
   putStrLn "Computed qualifiers:"
-  forM_ interpQuals (putStrLn . show)
+  forM_ interpQuals (putStrLn . show . smt2 . q_body)
   let q' = q { quals = interpQuals }
   res <- solve' cfg q'
   case res of
