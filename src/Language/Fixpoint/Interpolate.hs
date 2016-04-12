@@ -592,18 +592,6 @@ extractSol usubs t =
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
--- convert number symbols back to integer constants
-{-
-numberifyCand :: Expr -> Expr
-numberifyCand e = V.trans numberifyVisitor () () e
-  where numberify _ e'@(EVar s) =
-          let mnum = readMaybe (symbolString s) :: Maybe Integer in
-          maybe e' (ECon . I) mnum
-        numberify _ e' = e'
-        numberifyVisitor = nv { V.txExpr = numberify }
-        nv = V.defaultVisitor :: V.Visitor () ()
--}
-
 genCandSolutions :: Fixpoint a => FInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
 genCandSolutions finfo u dquery = do
   -- convert disjunctive interp query to a set of tree interp queries
@@ -669,6 +657,7 @@ extractQualifiers ss cs = filter hasArgs $ nub $ concatMap kquals (M.toList cs)
           let name        = dummySymbol in
           Q name params'' e loc
 
+{-
 printKClauses kcs = forM_ (M.toList kcs) printKClause
   where printKClause (k, (rec, nrec)) =  do
           putStrLn $ "Kvar: " ++ (show k)
@@ -703,6 +692,7 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStr "subs: "
           print subs
           putStrLn $ "sym: " ++ show sym
+-}
 
 genQualifiers :: Fixpoint a => FInfo a -> Int -> IO [Qualifier]
 genQualifiers finfo n = do
@@ -712,15 +702,15 @@ genQualifiers finfo n = do
   putStrLn $ show $ bs finfo
   putStrLn "Lits::"
   putStrLn $ show $ lits finfo
-  -}
   putStrLn "KClauses:"
   printKClauses kcs
+  -}
   quals <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss) query
+    {-
     putStrLn "Interp query:"
     putStrLn $ show $ genQueryFormula diquery
-    {-
     putStrLn "Created symbols:"
     putStrLn $ show cs
     putStrLn "usubs:"

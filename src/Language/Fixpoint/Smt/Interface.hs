@@ -269,6 +269,7 @@ parseLisp (Sym s)
   | symbolText s == "true"  = PTrue
   | symbolText s == "false" = PFalse
   | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
   | otherwise               = EVar s
 parseLisp l@(Lisp xs)
   | [Sym s, x] <- xs, symbolText s == "not"     =
