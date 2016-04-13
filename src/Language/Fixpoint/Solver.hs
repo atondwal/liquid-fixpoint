@@ -70,8 +70,8 @@ solveFQ cfg = do
     fi      <- readFInfo file
     r       <- solve cfg fi
     let stat = resStatus $!! r
-    putStrLn "solution:"
-    print $ resSolution r
+    -- putStrLn "solution:"
+    -- print $ resSolution r
     -- let str  = render $ resultDoc $!! (const () <$> stat)
     -- putStrLn "\n"
     colorStrLn (colorResult stat) (statStr $!! stat)
@@ -96,6 +96,10 @@ solve cfg q
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
 interpSolve n cfg q = do
   putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
+  putStrLn "BEFORE Lits:"
+  print (lits q)
+  putStrLn "BEFORE BindEnv:"
+  print (bs q)
   interpQuals <- genQualifiers q n
   putStrLn "Computed qualifiers:"
   forM_ interpQuals (putStrLn . show . smt2 . q_body)

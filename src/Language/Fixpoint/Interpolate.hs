@@ -19,7 +19,7 @@ import Language.Fixpoint.Types hiding (renameSymbol)
 import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve
 import Language.Fixpoint.Solver.Solution
-import Language.Fixpoint.Solver.Validate
+-- import Language.Fixpoint.Solver.Validate
 import qualified Language.Fixpoint.Types.Visitor as V
 -- import Data.Interned
 
@@ -594,11 +594,12 @@ extractSol usubs t =
         collectSol (Or _ _) m = m
 
 genCandSolutions :: Fixpoint a => FInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
-genCandSolutions finfo u dquery = do
+genCandSolutions sinfo u dquery = do
   -- convert disjunctive interp query to a set of tree interp queries
   let tqueries = expandTree dquery
   tinterps <- forM tqueries $ \tquery -> do
-    let sinfo = either die id $ sanitize $ convertFormat finfo
+    -- let sinfo = either die id $ sanitize $ convertFormat finfo
+    let sinfo = convertFormat finfo
     let formula = genQueryFormula tquery
     -- putStrLn "Tree Interp query:"
     -- putStrLn $ show formula
@@ -696,7 +697,7 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
 -}
 
 genQualifiers :: Fixpoint a => FInfo a -> Int -> IO [Qualifier]
-genQualifiers finfo n = do
+genQualifiers fi0 n = do
   let (ss, kcs, queries) = genUnrollInfo finfo
   {-
   putStrLn "BindEnv:"
@@ -718,18 +719,28 @@ genQualifiers finfo n = do
     putStrLn $ show usubs
     -}
 
+    -- this preprocessing is from solveNative'
+    let fi1 = fi0 { quals = remakeQual <$> quals fi0 }
+    -- let si0   = {-# SCC "convertFormat" #-} convertFormat fi1
+    let fi2 = either die id $ {-# SCC "validate" #-} sanitize $!! fi1
+    let fi3 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! fi2
+    let fi4 = {-# SCC "renameAll" #-} renameAll $!! fi3
+    (s0, fi5) <- {-# SCC "elim" #-} elim cfg $!! fi4
+
     -- add created vars back to finfo
     -- let vars = toListSEnv (lits finfo)
     -- let allvars = M.union (M.fromList vars) cs
     let allvars = M.union ss cs
-    let finfo' = finfo { lits = fromListSEnv (nub $ M.toList allvars) }
+    let fi6 = fi5 { lits = fromListSEnv (nub $ M.toList allvars) }
+    putStrLn "AFTER Lits:"
+    print (lits finfo')
+    putStrLn "AFTER BindEnv:"
+    print (bs finfo')
 
     -- run tree interpolation to compute possible kvar solutions
     candSol <- genCandSolutions finfo' usubs diquery
-    {-
     putStrLn "candidate solutions:"
     putStrLn $ show candSol
-    -}
 
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
