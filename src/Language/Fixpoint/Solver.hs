@@ -24,6 +24,7 @@ import           Data.Binary
 -- import           Data.Maybe                         (fromMaybe)
 -- import           Data.List                          hiding (partition)
 -- import qualified Data.HashSet                       as S
+import qualified Data.HashMap.Strict as M
 import           System.Exit                        (ExitCode (..))
 
 -- import           System.Console.CmdArgs.Verbosity   hiding (Loud)
@@ -95,18 +96,34 @@ solve cfg q
 
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
 interpSolve n cfg q = do
+  let fi1 = q { quals = remakeQual <$> quals q }
+  let si0 = {-# SCC "convertFormat" #-} convertFormat fi1
+  let si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
+  -- let si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
+  let si' = {-# SCC "renameAll" #-} renameAll $!! si1
+  -- (_, si') <- {-# SCC "elim" #-} elim cfg $!! si3
+  writeLoud $ "About to solve: \n" ++ render (toFixpoint cfg si')
+  
+  let csyms = M.map (\c -> (reftBind $ sr_reft $ srhs c, sr_sort $ srhs c)) (cm q)
   putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
+  {-
+  putStrLn "BEFORE csyms:"
+  print csyms
   putStrLn "BEFORE Lits:"
-  print (lits q)
+  print (lits si')
   putStrLn "BEFORE BindEnv:"
-  print (bs q)
-  interpQuals <- genQualifiers q n
+  print (bs si')
+  -}
+  interpQuals <- genQualifiers csyms si' n
   putStrLn "Computed qualifiers:"
   forM_ interpQuals (putStrLn . show . smt2 . q_body)
   let q' = q { quals = interpQuals }
   res <- solve' cfg q'
   case res of
-    (Result Safe _) -> return res 
+    (Result Safe sol) -> do
+      putStrLn "Solution:"
+      print sol
+      return res 
     _               -> do
       if n < unrollDepth cfg
         then interpSolve (n+1) cfg q
@@ -219,7 +236,7 @@ solveNative' !cfg !fi0 = do
   --let stat = resStatus res
   saveSolution cfg res
   -- when (save cfg) $ saveSolution cfg
-  -- writeLoud $ "\nSolution:\n"  ++ showpp (resSolution res)
+  writeLoud $ "\nSolution:\n"  ++ showpp (resSolution res)
   -- colorStrLn (colorResult stat) (show stat)
   return res
 
