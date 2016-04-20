@@ -50,7 +50,8 @@ import           Data.Maybe (fromMaybe)
 -}
 
 instance SMTLIB2 Sort where
-  smt2 s@(FFunc _ _)           = errorstar $ "smt2 FFunc: " ++ show s
+  -- smt2 s@(FFunc _ _)           = errorstar $ "smt2 FFunc: " ++ show s
+  smt2 (FFunc _ _)             = "Int"
   smt2 FInt                    = "Int"
   smt2 FReal                   = "Real"
   smt2 t
@@ -367,7 +368,9 @@ grapLambdas e = go [] e
                                return (PExist bs e', fs) 
     go acc e@PGrad        = return (e, acc)
     go acc e@(PKVar _ _)  = return (e, acc)
-    go acc (Interp e)     = go acc e
+    -- go acc (Interp e)     =  go acc e >>= (\(e', fs) -> return (Interp e', fs))
+    go acc (Interp e)     =  go acc e
+                              
 
 -- NIKI: This is new code, check and formalize!
 

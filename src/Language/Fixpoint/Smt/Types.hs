@@ -3,7 +3,6 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE UndecidableInstances      #-}
-{-# LANGUAGE ExistentialQuantification #-}
 
 -- | This module contains the types defining an SMTLIB2 interface.
 
