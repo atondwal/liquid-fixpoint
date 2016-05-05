@@ -97,10 +97,15 @@ solve cfg q
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
 interpSolve n cfg q = do
   let fi1 = q { quals = remakeQual <$> quals q }
+  -- fi2 <- minimizeCons cfg solve' fi1
   let si0 = {-# SCC "convertFormat" #-} convertFormat fi1
   let si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
   -- let si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
   let si' = {-# SCC "renameAll" #-} renameAll $!! si1
+
+  -- save renamed sinfo
+  -- mapM putStrLn $ lines $ render (toFixpoint cfg si')
+
   -- (_, si') <- {-# SCC "elim" #-} elim cfg $!! si3
   writeLoud $ "About to solve: \n" ++ render (toFixpoint cfg si')
   

@@ -3,7 +3,7 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Language.Fixpoint.Interpolate ( genQualifiers ) where
+module Language.Fixpoint.Interpolate ( genQualifiers, imain ) where
 
 import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
@@ -141,7 +141,14 @@ toRuleOrQuery (symrhs,sortrhs) sinfo f c =
           let h = map (flip subst1 (symrhs, EVar vvName)) in
           let g = concatMap atomicExprs in
           let f = bindExprs ce in
-          h . g . f
+          filter cleanExprs . h . g . f
+        -- only inlcude exprs that have content
+        -- (i.e., remove True and exprs of the form x == x
+        cleanExprs expr
+          | PTrue <- expr                 = False
+          | PAnd [] <- expr               = False
+          | PAtom Eq x y <- expr, x == y  = False
+          | otherwise                     = True
         isKVar (PKVar _ _)    = True
         isKVar _              = False
         getKVarSym (es,s)     = map (packHead s) $ filter isKVar es
@@ -407,8 +414,8 @@ freshSubSymbol :: UnrollM Symbol
 freshSubSymbol = renameSymbol subSymbol
 
 -- head subtitutions on the RHS of a constraint
-applyHeadSubs :: Subst -> Expr -> UnrollM Expr
-applyHeadSubs subs b = do
+applyHeadSubsBody :: Subst -> Expr -> UnrollM Expr
+applyHeadSubsBody subs b = do
   argmap <- getArgMap
   foldM (applyHeadSub1 argmap) b $ substToList subs
   where applyHeadSub1 argmap e (s,EVar v) = do
@@ -417,6 +424,19 @@ applyHeadSubs subs b = do
             Just v' -> return $ renameExpr v v' e
         applyHeadSub1 _ _ _ = error "head substitution should be a variable!"
 
+applyHeadSubsChildren :: Subst -> [ClauseChild] -> UnrollM [ClauseChild]
+applyHeadSubsChildren subs ccs = do
+  argmap <- getArgMap
+  let slist = substToList subs
+  let headSubs = concatMap (uncurry $ getHeadSub argmap) slist
+  return $ map (applyHeadSubsChild headSubs) ccs
+  where applyHeadSubsChild headSubs (ck, csubs, csyms) =
+          let csubs' = foldr applyHeadSubChild csubs headSubs in
+          (ck, csubs', csyms)
+        applyHeadSubChild (v,v') acc = renameSubst v v' acc
+        getHeadSub am s (EVar v) = maybe [] (\v' -> [(v,v')]) $ M.lookup s am
+        getHeadSub _ _ _ = error "head substitution should be a variable!"
+          
 updateArgMap :: Subst -> UnrollInfo -> UnrollInfo
 updateArgMap subs uinfo =
   let am = argmap uinfo in
@@ -427,7 +447,7 @@ updateArgMap subs uinfo =
           case subsyms of
             [] -> M.insert s v acc
             xs -> foldr (\x acc2 -> M.insert x v acc2) acc xs
-        insertArg _ _ = error "substitution shoul be a variable!"
+        insertArg _ _ = error "substitution should be a variable!"
 
 -- apply pending substitutions 
 applySubst :: Subst -> UnrollM (KClauses, [Expr])
@@ -471,19 +491,20 @@ unroll dmap (k,sym) = do
 
       -- generate children
       children <- forM cs $ \(b, c, (_,hsubs)) -> do
-        b1 <- applyHeadSubs hsubs b
+        b1 <- applyHeadSubsBody hsubs b
+        c1 <- applyHeadSubsChildren hsubs c
 
         -- rename body to prevent capture
         sym' <- renameSymbol sym
         let b2 = renameExpr sym sym' b1
-        let c' = map (renameClauseChild sym sym') c
+        let c2 = map (renameClauseChild sym sym') c1
 
         -- apply argument i.e. [nu/x]
         let b3 = renameExpr vvName sym b2
         
         local (renameClauses sym sym') $ do
           -- generate child subtree
-          ginfo <- forM c' $ \(ck,csub,csym) -> do
+          ginfo <- forM c2 $ \(ck,csub,csym) -> do
             -- if csym == VV, then it's the LHS of a constraint
             -- and so csym = the symbol on the head (i.e., sym)
             let csym' = if vvName == csym then sym else csym
@@ -627,6 +648,40 @@ extractSol usubs t =
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
+-- manually run tree interpolation here in pieces
+-- this is to prune the tree query, since many queries
+-- have huge numbers of variables
+-- the idea is to run DFS on the tree, computing interpolants for each
+-- node one by one and then for each interpolation query discarding
+-- binders that are redundant within one side of a cut
+{-
+select :: [a] -> [(a,[a])]
+select []     = []
+select (x:xs) = (x,xs):[(y,x:ys) | (y,ys) <- select xs]
+
+-- generate cuts from a tree interp query
+generateCuts :: InterpQuery -> [(InterpQuery, InterpQuery)]
+generateCuts query = generateCuts' Nothing query
+  where generateCuts' Nothing (And info node children) =
+          let childSelect = select children in
+          let childrenCuts = concatMap (childCuts info node) childSelect in
+          let nodeCuts = map (\(c,cs) -> (And info node cs, c)) childSelect in
+          nodeCuts ++ childrenCuts
+        generateCuts' (Just (And pinfo pnode pcs)) (And info node children) =
+          let childSelect = select children in
+          let childrenCuts = concatMap (childCuts info node) childSelect in
+          let nodeCuts = map (\(c,cs) -> (cparent (c,cs),c)) childSelect in
+          nodeCuts ++ childrenCuts
+          where cparent (_,cs) = And pinfo pnode ((And info node cs):pcs)
+        generateCuts _ _ = error "no Or nodes allowed for generating cuts"
+        childCuts info node (c,cs) = generateCuts' (Just $ And info node cs) c
+          
+treeInterpolation :: InterpQuery -> IO TreeInterp
+treeInterpolation query
+  | And _ node children <- query = do
+    forM children $ \child -> do
+-}
+
 genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
 genCandSolutions sinfo u dquery = do
   -- convert disjunctive interp query to a set of tree interp queries
@@ -655,20 +710,33 @@ genCandSolutions sinfo u dquery = do
           (uninterned, s)
         cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
 
+qarg = symbol "QARG"
+
 -- generate qualifiers from candidate solutions
 -- ss should contain the sorts for
 -- * kvars
 -- * created variables during unrolling
 -- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs = filter hasArgs $ nub $ concatMap kquals (M.toList cs)
-  where hasArgs (Q _ (_:_) _ _) = True
+extractQualifiers ss cs =
+  let rawQuals = filter validQual $ concatMap kquals (M.toList cs) in
+  let quals    = map renameQualParams rawQuals in
+  nub $ quals
+  where validQual q = hasArgs q && nonTrivial q
+        -- don't add true or false as qualifiers
+        nonTrivial q
+          | Q _ _ (PAnd []) _ <- q  = False
+          | Q _ _ PTrue _ <- q      = False
+          | Q _ _ (POr []) _ <- q   = False
+          | Q _ _ PFalse _<- q      = False
+          | otherwise               = True
+        hasArgs (Q _ (_:_) _ _) = True
         hasArgs (Q _ [] _ _)    = False
         kquals (k,es) =
           let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
           -- create disjunction of qualifiers
-          let disj = POr atoms in
-          map (exprToQual k) (disj:atoms)
+          let exprs = if length atoms > 1 then (POr atoms):atoms else atoms in
+          map (exprToQual k) exprs
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
         ksym (KV k) = k
@@ -692,8 +760,16 @@ extractQualifiers ss cs = filter hasArgs $ nub $ concatMap kquals (M.toList cs)
           let loc         = dummyPos "no location" in
           let name        = dummySymbol in
           Q name params'' e loc
-
-{-
+        -- rename params so that redundant qualifiers may be discarded
+        renameQualParams (Q name params body loc) =
+          let n = length params in
+          let renamedParams = map (intSymbol qarg) [1..n] in
+          let zipParam      = zip params renamedParams in
+          let newParams     = map (\((_,sort),sym') -> (sym',sort)) zipParam in
+          let subs          = mkSubst $ map (uncurry paramSubst) zipParam in
+          Q name newParams (subst subs body) loc
+          where paramSubst (sym,_) sym' = (sym, EVar sym')
+          
 printKClauses kcs = forM_ (M.toList kcs) printKClause
   where printKClause (k, (rec, nrec)) =  do
           putStrLn $ "Kvar: " ++ (show k)
@@ -728,7 +804,6 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStr "subs: "
           print subs
           putStrLn $ "sym: " ++ show sym
--}
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
@@ -738,9 +813,9 @@ genQualifiers csyms sinfo n = do
   putStrLn $ show $ bs finfo
   putStrLn "Lits::"
   putStrLn $ show $ lits finfo
+  -}
   putStrLn "KClauses:"
   printKClauses kcs
-  -}
   quals <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
@@ -776,4 +851,35 @@ genQualifiers csyms sinfo n = do
     return $ extractQualifiers allvars candSol
 
   return $ nub $ concat quals
+
+imain n = do
+  let ksym = symbol "k"
+  let ssym = symbol "s"
+  {-
+  let vsym = symbol "v"
+  let vars = [(ksym,intSort),(vvName,intSort),(ssym,intSort),
+              (vsym,intSort)]
+  -}
+  -- FInfo, used for generating SMT context (var declarations, etc.)
+
+  let int i = ECon (I i)
+  let ksum = KV (symbol "sum")
+  let k = EVar ksym
+  let s = EVar ssym
+  let v = EVar vvName
+  -- let v' = EVar vsym
+  let r1 = (PAnd [PAtom Le k (int 0),PAtom Eq v (int 0)], [], (ksum,Su M.empty))
+  let childr2 = [(ksum, Su $ M.fromList [(ksym,EBin Minus k (int 1))], ssym)]
+  let r2 = (PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childr2, (ksum,Su M.empty))
+  let rules = [r1,r2]
+  let kcs = genKClauses rules
+  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], (PAtom Ge v k, intSort))
+  let uinfo = UI kcs M.empty M.empty
+  let (diquery, _, _) = genInterpQuery n uinfo query
+  let tiqueries = expandTree diquery
+  forM tiqueries $ \tiquery -> do
+    putStrLn "tiquery:"
+    print tiquery
+    putStrLn "cuts:"
+    -- print $ generateCuts tiquery
 

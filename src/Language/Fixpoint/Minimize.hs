@@ -4,7 +4,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Fixpoint.Minimize ( minQuery ) where
+module Language.Fixpoint.Minimize ( minQuery, minimizeCons ) where
 
 import qualified Data.HashMap.Strict                as M
 import           Control.Monad                      (filterM)
@@ -18,18 +18,23 @@ import           Control.DeepSeq
 concatMapM :: (Monad m) => (a -> m [b]) -> [a] -> m [b]
 concatMapM f = fmap concat . mapM f
 
----------------------------------------------------------------------------
-minQuery :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a
-         -> IO (Result (Integer, a))
----------------------------------------------------------------------------
-minQuery cfg solve fi = do
+minimizeCons :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a -> IO (FInfo a)
+minimizeCons cfg solve fi = do
   let cfg'     = cfg { minimize = False }
   let (_, fis) = partition' Nothing fi
   failFis     <- filterM (fmap isUnsafe . solve cfg') fis
   failCs      <- concatMapM (getMinFailingCons cfg' solve) failFis
   let minFi    = fi { cm = M.fromList failCs, fileName = minFileName fi }
-  saveQuery cfg' minFi
-  putStrLn $ "Minimized Constraints: " ++ show (fst <$> failCs)
+  return minFi
+
+---------------------------------------------------------------------------
+minQuery :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a
+         -> IO (Result (Integer, a))
+---------------------------------------------------------------------------
+minQuery cfg solve fi = do
+  minFi <- minimizeCons cfg solve fi
+  saveQuery (cfg { minimize = False }) minFi
+  -- putStrLn $ "Minimized Constraints: " ++ show (fst <$> failCs)
   return mempty
 
 minFileName :: FInfo a -> FilePath
