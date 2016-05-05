@@ -234,9 +234,7 @@ genUnrollInfo csyms sinfo =
   let kcs = genKClauses rules in
   let slits = M.fromList $ toListSEnv $ lits sinfo in
   let sorts = slits `M.union` extractSymSorts sinfo in
-  let res = (sorts, kcs, queries) in
-  -- trace ("INFO:" ++ (show sorts)) res
-  res
+  (sorts, kcs, queries)
   where addCon (i,c) (rules,queries)
           | PKVar _ _ <- crhs c = ((toRule (symsort i) sinfo c):rules, queries)
           | otherwise           = (rules, (toQuery (symsort i) sinfo c):queries)
@@ -730,6 +728,15 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStrLn $ "sym: " ++ show sym
 -}
 
+rhsQual :: SymSorts -> SimpC a -> Qualifier
+rhsQual ss c = Q name params (crhs c) loc
+  where params      = [(vvName, M.lookupDefault intSort vvName ss)]
+        -- ^ This can't be right, can it? @FIXME
+        -- How do we find the sort of vvName in this context?
+        -- This based on extractQualifiers, line 675, commit 9e5142785
+        loc         = dummyPos "no location"
+        name        = dummySymbol
+
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
   let (ss, kcs, queries) = genUnrollInfo csyms sinfo
@@ -775,5 +782,6 @@ genQualifiers csyms sinfo n = do
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
 
-  return $ nub $ concat quals
+  let rhsQuals = rhsQual ss . snd <$> M.toList (cm sinfo)
+  return $ nub $ concat $ rhsQuals:quals
 
