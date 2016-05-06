@@ -9,6 +9,7 @@ import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
 -- import qualified Data.HashSet as S
 import Data.List (intercalate, nub)
+import Data.Maybe (catMaybes)
 -- import Text.Read (readMaybe)
 import Control.Monad
 import Control.Monad.State
@@ -803,11 +804,14 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           print subs
           putStrLn $ "sym: " ++ show sym
 
-rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Qualifier
-rhsQual csyms (i,c) = Q name params (crhs c) loc
+rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Maybe Qualifier
+rhsQual csyms (i,c) = case e of 
+                        PKVar _ _ -> Nothing
+                        _ -> Just $ Q name params (crhs c) loc
   where params      = [(vvName, M.lookupDefault intSort i csyms)]
         loc         = dummyPos "no location"
         name        = dummySymbol
+        e           = crhs c
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
@@ -854,7 +858,7 @@ genQualifiers csyms sinfo n = do
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
 
-  let rhsQuals = rhsQual (snd <$> csyms) <$> M.toList (cm sinfo)
+  let rhsQuals = catMaybes $ rhsQual (snd<$>csyms) <$> M.toList (cm sinfo)
   return $ nub $ concat $ rhsQuals:quals
 
 imain n = do
