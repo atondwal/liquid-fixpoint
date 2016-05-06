@@ -806,9 +806,9 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
 rhsQual :: SymSorts -> SimpC a -> Qualifier
 rhsQual ss c = Q name params (crhs c) loc
   where params      = [(vvName, M.lookupDefault intSort vvName ss)]
-        -- ^ This can't be right, can it? @FIXME
-        -- How do we find the sort of vvName in this context?
         -- This based on extractQualifiers, line 675, commit 9e5142785
+        -- `ss` is fine for everything that's uniquified: so everything except vvName
+        -- @FIXME replace this with a lookup in `csyms` from `genQualifiers`
         loc         = dummyPos "no location"
         name        = dummySymbol
 
