@@ -803,12 +803,9 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           print subs
           putStrLn $ "sym: " ++ show sym
 
-rhsQual :: SymSorts -> SimpC a -> Qualifier
-rhsQual ss c = Q name params (crhs c) loc
-  where params      = [(vvName, M.lookupDefault intSort vvName ss)]
-        -- This based on extractQualifiers, line 675, commit 9e5142785
-        -- `ss` is fine for everything that's uniquified: so everything except vvName
-        -- @FIXME replace this with a lookup in `csyms` from `genQualifiers`
+rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Qualifier
+rhsQual csyms (i,c) = Q name params (crhs c) loc
+  where params      = [(vvName, M.lookupDefault intSort i csyms)]
         loc         = dummyPos "no location"
         name        = dummySymbol
 
@@ -857,7 +854,7 @@ genQualifiers csyms sinfo n = do
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
 
-  let rhsQuals = rhsQual ss . snd <$> M.toList (cm sinfo)
+  let rhsQuals = rhsQual (snd <$> csyms) <$> M.toList (cm sinfo)
   return $ nub $ concat $ rhsQuals:quals
 
 imain n = do
