@@ -55,7 +55,7 @@ import           Language.Fixpoint.Partition        -- (mcInfo, partition, parti
 import           Language.Fixpoint.Parse            (rr', mkQual)
 import           Language.Fixpoint.Types
 -- import qualified Language.Fixpoint.Types.Visitor as V
-import           Language.Fixpoint.Minimize (minQuery)
+import           Language.Fixpoint.Minimize (minQuery, minimizeQuals)
 import           Language.Fixpoint.Interpolate (genQualifiers)
 import           Language.Fixpoint.Smt.Types
 import           Control.DeepSeq
@@ -71,8 +71,8 @@ solveFQ cfg = do
     fi      <- readFInfo file
     r       <- solve cfg fi
     let stat = resStatus $!! r
-    -- putStrLn "solution:"
-    -- print $ resSolution r
+    putStrLn "solution:"
+    print $ resSolution r
     -- let str  = render $ resultDoc $!! (const () <$> stat)
     -- putStrLn "\n"
     colorStrLn (colorResult stat) (statStr $!! stat)
@@ -96,6 +96,10 @@ solve cfg q
 
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
 interpSolve n cfg q = do
+  minquals <- minimizeQuals cfg solve' $!! q
+  putStrLn "min quals:"
+  forM_ minquals print
+
   let fi1 = q { quals = remakeQual <$> quals q }
   -- fi2 <- minimizeCons cfg solve' fi1
   let si0 = {-# SCC "convertFormat" #-} convertFormat fi1
@@ -122,6 +126,7 @@ interpSolve n cfg q = do
   interpQuals <- genQualifiers csyms si' n
   putStrLn "Computed qualifiers:"
   forM_ interpQuals (putStrLn . show . smt2 . q_body)
+  -- let q' = q { quals = remakeQual <$> interpQuals }
   let q' = q { quals = interpQuals }
   res <- solve' cfg q'
   case res of

@@ -4,7 +4,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Fixpoint.Minimize ( minQuery, minimizeCons ) where
+module Language.Fixpoint.Minimize ( minQuery, minimizeCons, minimizeQuals ) where
 
 import qualified Data.HashMap.Strict                as M
 import           Control.Monad                      (filterM)
@@ -77,3 +77,14 @@ getMinFailingCons :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a -> 
 getMinFailingCons cfg solve fi = do
   let cons = M.toList $ cm fi
   deltaDebug testConstraints cfg solve fi cons []
+
+testQualifiers :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a -> [Qualifier] -> IO Bool
+testQualifiers cfg solve fi qs = do
+  let fi' = fi { quals = qs }
+  res <- solve cfg fi'
+  return $ not $ isUnsafe res
+
+minimizeQuals :: (NFData a, Fixpoint a) => Config -> Solver a -> FInfo a -> IO [Qualifier]
+minimizeQuals cfg solve fi = do
+  let qs = quals fi
+  deltaDebug testQualifiers cfg solve fi qs []

@@ -82,13 +82,18 @@ type Query = ClauseInfo ExprSort
 -- the Symbol at the value of a mapping corresponds
 -- to the original variable that the tmp var substituted
 type UnrollSubs = M.HashMap Symbol Symbol
-type SymbolMap     = M.HashMap Symbol Symbol
+-- type SymbolMap  = M.HashMap Symbol Symbol
 
 -- mapping from kvars to rec/nonrec-clauses with head as the kvar
 type KClauses = M.HashMap KVar ([Rule], [Rule])
 -- sorts of symbols; this is used for 
 type SymSorts = M.HashMap Symbol Sort
-data UnrollInfo = UI { kcs :: KClauses, ss :: SymSorts, argmap :: SymbolMap }
+type ArgMap   = M.HashMap Symbol (Symbol, Maybe Symbol)
+data UnrollInfo = UI {
+                    kcs :: KClauses
+                  , ss :: SymSorts
+                  , argmap :: M.HashMap Symbol (Symbol, Maybe Symbol)
+                  }
 
 -- for generating renamed symbols
 type RenameMap = M.HashMap Symbol Int
@@ -328,7 +333,7 @@ setKClauses kcs (UI _ ss am) = UI kcs ss am
 getSymSorts :: UnrollM SymSorts
 getSymSorts = ss <$> ask
 
-getArgMap :: UnrollM SymbolMap
+getArgMap :: UnrollM ArgMap
 getArgMap = argmap <$> ask
 
 -- get sort for a symbol (could be in uinfo or created symbols)
@@ -411,29 +416,34 @@ subSymbol = symbol "SUB"
 freshSubSymbol :: UnrollM Symbol
 freshSubSymbol = renameSymbol subSymbol
 
--- head subtitutions on the RHS of a constraint
-applyHeadSubsBody :: Subst -> Expr -> UnrollM Expr
-applyHeadSubsBody subs b = do
-  argmap <- getArgMap
-  foldM (applyHeadSub1 argmap) b $ substToList subs
-  where applyHeadSub1 argmap e (s,EVar v) = do
-          case M.lookup s argmap of
-            Nothing -> return e
-            Just v' -> return $ renameExpr v v' e
-        applyHeadSub1 _ _ _ = error "head substitution should be a variable!"
+generateHeadSubst :: ArgMap -> [(Symbol,Symbol)]
+generateHeadSubst argmap = concatMap toHeadSubs $ M.elems argmap
+  where toHeadSubs (_,Nothing) = []
+        toHeadSubs (s,Just v)  = [(v,s)]
 
-applyHeadSubsChildren :: Subst -> [ClauseChild] -> UnrollM [ClauseChild]
-applyHeadSubsChildren subs ccs = do
+-- update argmap information and return
+-- a new set of head substitutions
+updateHeadSubs :: Subst -> UnrollM ([(Symbol,Symbol)], ArgMap)
+updateHeadSubs hsubs = do
   argmap <- getArgMap
-  let slist = substToList subs
-  let headSubs = concatMap (uncurry $ getHeadSub argmap) slist
-  return $ map (applyHeadSubsChild headSubs) ccs
-  where applyHeadSubsChild headSubs (ck, csubs, csyms) =
-          let csubs' = foldr applyHeadSubChild csubs headSubs in
+  let slist = substToList hsubs
+  argmap' <- foldM updateHeadSub argmap slist
+  let subs = generateHeadSubst argmap'
+  return (subs, argmap')
+  where updateHeadSub argmap (s,EVar v) = do
+          case M.lookup s argmap of
+            Nothing -> return argmap
+            Just (v',_) -> return $ M.insert s (v',Just v) argmap
+        updateHeadSub _ _ = error "head substitution must be a variable!"
+
+applyHeadSubsBody :: [(Symbol,Symbol)] -> Expr -> Expr
+applyHeadSubsBody hsubs b = foldr (uncurry renameExpr) b hsubs
+
+applyHeadSubsChildren :: [(Symbol,Symbol)] -> [ClauseChild] -> [ClauseChild]
+applyHeadSubsChildren hsubs ccs = map applyHeadSubsChild ccs
+  where applyHeadSubsChild (ck, csubs, csyms) =
+          let csubs' = foldr (uncurry renameSubst) csubs hsubs in
           (ck, csubs', csyms)
-        applyHeadSubChild (v,v') acc = renameSubst v v' acc
-        getHeadSub am s (EVar v) = maybe [] (\v' -> [(v,v')]) $ M.lookup s am
-        getHeadSub _ _ _ = error "head substitution should be a variable!"
           
 updateArgMap :: Subst -> UnrollInfo -> UnrollInfo
 updateArgMap subs uinfo =
@@ -441,10 +451,10 @@ updateArgMap subs uinfo =
   let am' = foldr insertArg am $ substToList subs in
   uinfo { argmap = am' }
   where insertArg (s,EVar v) acc =
-          let subsyms = M.keys $ M.filter (== s) acc in
+          let subsyms = M.keys $ M.filter (\(s',_) -> s' == s) acc in
           case subsyms of
-            [] -> M.insert s v acc
-            xs -> foldr (\x acc2 -> M.insert x v acc2) acc xs
+            [] -> M.insert s (v,Nothing) acc
+            xs -> foldr (\x acc2 -> M.insert x (v,Nothing) acc2) acc xs
         insertArg _ _ = error "substitution should be a variable!"
 
 -- apply pending substitutions 
@@ -489,8 +499,9 @@ unroll dmap (k,sym) = do
 
       -- generate children
       children <- forM cs $ \(b, c, (_,hsubs)) -> do
-        b1 <- applyHeadSubsBody hsubs b
-        c1 <- applyHeadSubsChildren hsubs c
+        (hsubs2, argmap') <- updateHeadSubs hsubs
+        let b1 = applyHeadSubsBody hsubs2 b
+        let c1 = applyHeadSubsChildren hsubs2 c
 
         -- rename body to prevent capture
         sym' <- renameSymbol sym
@@ -500,7 +511,7 @@ unroll dmap (k,sym) = do
         -- apply argument i.e. [nu/x]
         let b3 = renameExpr vvName sym b2
         
-        local (renameClauses sym sym') $ do
+        local (renameClauses sym sym' . setArgMap argmap') $ do
           -- generate child subtree
           ginfo <- forM c2 $ \(ck,csub,csym) -> do
             -- if csym == VV, then it's the LHS of a constraint
@@ -518,6 +529,8 @@ unroll dmap (k,sym) = do
           return $ And Nothing b4 gchildren
 
       return $ Or (Just (k,sym)) children
+
+  where setArgMap argmap' uinfo = uinfo { argmap = argmap' }
 
 -- we use this instead of vvName because liquid-fixpoint
 -- uses vvName internally, and if we use it here we get
@@ -709,18 +722,47 @@ genCandSolutions sinfo u dquery = do
         cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
 
 qarg = symbol "QARG"
+        
+renameQualParams :: Qualifier -> Qualifier
+-- rename params so that redundant qualifiers may be discarded
+renameQualParams (Q name params body loc) =
+  let n = length params in
+  let renamedParams = map (intSymbol qarg) [1..n] in
+  let zipParam      = zip params renamedParams in
+  let newParams     = map (\((_,sort),sym') -> (sym',sort)) zipParam in
+  let subs          = mkSubst $ map (uncurry paramSubst) zipParam in
+  Q name newParams (subst subs body) loc
+  where paramSubst (sym,_) sym' = (sym, EVar sym')
 
--- generate qualifiers from candidate solutions
--- ss should contain the sorts for
--- * kvars
--- * created variables during unrolling
--- * variables in finfo
-extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs =
-  let rawQuals = filter validQual $ concatMap kquals (M.toList cs) in
-  let quals    = map renameQualParams rawQuals in
+exprToQual :: (Symbol -> Sort) -> Expr -> Qualifier
+exprToQual symsort e =
+  let syms        = exprSyms e in
+  let params      = map (\s -> (s,symsort s)) syms in
+  -- don't include uninterpreted functions as parameters!
+  let params'     = filter (not . isFunc . snd) params in
+  let params''    = map (\(p,s) -> (p,realSort s)) params' in
+  let loc         = dummyPos "no location" in
+  let name        = dummySymbol in
+  Q name params'' e loc
+  where -- convert tySort to a variable type
+        -- FIXME: Ask Jhala about this
+        realSort FInt     = FInt
+        realSort FNum     = FNum
+        -- realSort (FTC _)  = 
+        realSort x        = x
+        isFunc s          = maybe False (const True) (functionSort s)
+        -- isFunc s          = False
+
+sanitizeQualifiers :: [Qualifier] -> [Qualifier]
+sanitizeQualifiers quals = 
+  let validQuals = filter validQual quals in
+  let quals      = map renameQualParams validQuals in
   nub $ quals
-  where validQual q = hasArgs q && nonTrivial q
+  where validQual q = hasArgs q && nonTrivial q && nonVar q
+        -- qualifier is not a kvar or a regular var
+        nonVar (Q _ _ (PKVar _ _) _) = False
+        nonVar (Q _ _ (EVar _) _)    = False
+        nonVar (Q _ _ _ _)           = True
         -- don't add true or false as qualifiers
         nonTrivial q
           | Q _ _ (PAnd []) _ <- q  = False
@@ -730,44 +772,44 @@ extractQualifiers ss cs =
           | otherwise               = True
         hasArgs (Q _ (_:_) _ _) = True
         hasArgs (Q _ [] _ _)    = False
-        kquals (k,es) =
+
+
+maxDisj = 3
+
+-- generate qualifiers from candidate solutions
+-- ss should contain the sorts for
+-- * kvars
+-- * created variables during unrolling
+-- * variables in finfo
+extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
+extractQualifiers ss cs = sanitizeQualifiers $ concatMap kquals (M.toList cs)
+  where kquals (k,es) =
           let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
           -- create disjunction of qualifiers
-          let exprs = if length atoms > 1 then (POr atoms):atoms else atoms in
-          map (exprToQual k) exprs
+          let exprs = if length atoms > 1 && length atoms <= maxDisj
+                      then (POr atoms):atoms else atoms in
+          map (exprToQual (symSort k)) exprs
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
         ksym (KV k) = k
         symSort k s =
           let ksort = maybe intSort id (M.lookup (ksym k) ss) in
           let ssort = maybe intSort id (M.lookup s ss) in
-          let sort  = if s == vvName then ksort else ssort in (s,sort)
-        -- convert tySort to a variable type
-        -- FIXME: Ask Jhala about this
-        realSort FInt     = FInt
-        realSort FNum     = FNum
-        -- realSort (FTC _)  = 
-        realSort _        = FVar 0
-        isFunc s          = maybe False (const True) (functionSort s)
-        exprToQual k e    =
-          let syms        = exprSyms e in
-          let params      = map (symSort k) syms in
-          -- don't include uninterpreted functions as parameters!
-          let params'     = filter (not . isFunc . snd) params in
-          let params''    = map (\(p,s) -> (p,realSort s)) params' in
-          let loc         = dummyPos "no location" in
-          let name        = dummySymbol in
-          Q name params'' e loc
-        -- rename params so that redundant qualifiers may be discarded
-        renameQualParams (Q name params body loc) =
-          let n = length params in
-          let renamedParams = map (intSymbol qarg) [1..n] in
-          let zipParam      = zip params renamedParams in
-          let newParams     = map (\((_,sort),sym') -> (sym',sort)) zipParam in
-          let subs          = mkSubst $ map (uncurry paramSubst) zipParam in
-          Q name newParams (subst subs body) loc
-          where paramSubst (sym,_) sym' = (sym, EVar sym')
-          
+          if s == vvName then ksort else ssort
+
+queryQuals :: SymSorts -> [Query] -> [Qualifier]
+queryQuals ss queries =
+  sanitizeQualifiers $ map (exprToQual symSort . queryHead) queries
+  where queryHead (_, _, (e,_)) = e
+        symSort s = maybe intSort id (M.lookup s ss)
+
+defaultQualifiers :: [Qualifier]
+defaultQualifiers = [trueQual, falseQual]
+  where loc       = dummyPos "no location"
+        trueQual  = Q dummySymbol [(symbol "x",FVar 0)] PTrue loc
+        falseQual = Q dummySymbol [(symbol "x",FVar 0)] PFalse loc
+
+{-
 printKClauses kcs = forM_ (M.toList kcs) printKClause
   where printKClause (k, (rec, nrec)) =  do
           putStrLn $ "Kvar: " ++ (show k)
@@ -802,15 +844,7 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStr "subs: "
           print subs
           putStrLn $ "sym: " ++ show sym
-
-rhsQual :: SymSorts -> SimpC a -> Qualifier
-rhsQual ss c = Q name params (crhs c) loc
-  where params      = [(vvName, M.lookupDefault intSort vvName ss)]
-        -- ^ This can't be right, can it? @FIXME
-        -- How do we find the sort of vvName in this context?
-        -- This based on extractQualifiers, line 675, commit 9e5142785
-        loc         = dummyPos "no location"
-        name        = dummySymbol
+-}
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
@@ -820,15 +854,15 @@ genQualifiers csyms sinfo n = do
   putStrLn $ show $ bs finfo
   putStrLn "Lits::"
   putStrLn $ show $ lits finfo
-  -}
   putStrLn "KClauses:"
   printKClauses kcs
+  -}
   quals <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
+    {-
     putStrLn "Interp query:"
     putStrLn $ show $ genQueryFormula diquery
-    {-
     putStrLn "Created symbols:"
     putStrLn $ show cs
     putStrLn "usubs:"
@@ -857,8 +891,12 @@ genQualifiers csyms sinfo n = do
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
 
-  let rhsQuals = rhsQual ss . snd <$> M.toList (cm sinfo)
-  return $ nub $ concat $ rhsQuals:quals
+  let rhsQuals = queryQuals ss queries
+  let allquals = nub $ concat $ defaultQualifiers:rhsQuals:quals
+  -- let allquals = nub $ concat $ quals
+  putStrLn "QUALS:"
+  forM allquals print
+  return allquals
 
 imain n = do
   let ksym = symbol "k"
