@@ -1,4 +1,5 @@
 -- | This module uses Craig interpolation to compute qualifiers
+  -- Q name (reverse params'') e loc
 -- | that can be used to solve constraint sets
 
 {-# LANGUAGE PatternGuards #-}
@@ -8,8 +9,8 @@ module Language.Fixpoint.Interpolate ( genQualifiers, imain ) where
 import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
 -- import qualified Data.HashSet as S
-import Data.List (intercalate, nub)
-import Data.Maybe (catMaybes)
+import Data.List (intercalate, nub, permutations)
+-- import Data.Maybe (catMaybes)
 -- import Text.Read (readMaybe)
 import Control.Monad
 import Control.Monad.State
@@ -735,23 +736,30 @@ renameQualParams (Q name params body loc) =
   Q name newParams (subst subs body) loc
   where paramSubst (sym,_) sym' = (sym, EVar sym')
 
-exprToQual :: (Symbol -> Sort) -> Expr -> Qualifier
+exprToQual :: (Symbol -> Sort) -> Expr -> [Qualifier]
 exprToQual symsort e =
   let syms        = exprSyms e in
   let params      = map (\s -> (s,symsort s)) syms in
   -- don't include uninterpreted functions as parameters!
   let params'     = filter (not . isFunc . snd) params in
-  let params''    = map (\(p,s) -> (p,realSort s)) params' in
+  let params''    = paramSorts 0 M.empty params' in
+  -- let params''    = map (\(i,(p,s)) -> (p,realSort i s)) (zip [1..] params') in
   let loc         = dummyPos "no location" in
   let name        = dummySymbol in
-  Q name params'' e loc
+  -- trace ("PARAMS:" ++ show params') $ map (\p -> Q name p e loc) (permutations params'')
+  map (\p -> Q name p e loc) (permutations params'')
   where -- convert tySort to a variable type
         -- FIXME: Ask Jhala about this
-        realSort FInt     = FInt
-        realSort FNum     = FNum
-        -- realSort (FTC _)  = 
-        realSort x        = x
-        isFunc s          = maybe False (const True) (functionSort s)
+        -- realSort _ _          = FVar 0
+        -- realSort FNum      = FNum
+        -- realSort (FTC _)   = 
+        -- realSort x         = x
+        paramSorts _ _ []     = []
+        paramSorts i m ((p,s):pps) =
+          case M.lookup s m of
+            Nothing -> (p,FVar i):(paramSorts (i+1) (M.insert s i m) pps)
+            Just n -> (p,FVar n):(paramSorts i m pps)
+        isFunc s              = maybe False (const True) (functionSort s)
         -- isFunc s          = False
 
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
@@ -789,7 +797,7 @@ extractQualifiers ss cs = sanitizeQualifiers $ concatMap kquals (M.toList cs)
           -- create disjunction of qualifiers
           let exprs = if length atoms > 1 && length atoms <= maxDisj
                       then (POr atoms):atoms else atoms in
-          map (exprToQual (symSort k)) exprs
+          concatMap (concatMap (exprToQual (symSort k)). atomicExprs) exprs
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
         ksym (KV k) = k
@@ -800,17 +808,17 @@ extractQualifiers ss cs = sanitizeQualifiers $ concatMap kquals (M.toList cs)
 
 queryQuals :: SymSorts -> [Query] -> [Qualifier]
 queryQuals ss queries =
-  sanitizeQualifiers $ map (exprToQual symSort . queryHead) queries
+  sanitizeQualifiers $ concatMap (concatMap (exprToQual symSort) . atomicExprs . queryHead) queries
   where queryHead (_, _, (e,_)) = e
         symSort s = maybe intSort id (M.lookup s ss)
 
+{-
 defaultQualifiers :: [Qualifier]
 defaultQualifiers = [trueQual, falseQual]
   where loc       = dummyPos "no location"
         trueQual  = Q dummySymbol [(symbol "x",FVar 0)] PTrue loc
         falseQual = Q dummySymbol [(symbol "x",FVar 0)] PFalse loc
 
-{-
 printKClauses kcs = forM_ (M.toList kcs) printKClause
   where printKClause (k, (rec, nrec)) =  do
           putStrLn $ "Kvar: " ++ (show k)
@@ -847,6 +855,7 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStrLn $ "sym: " ++ show sym
 -}
 
+{-
 rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Maybe Qualifier
 rhsQual csyms (i,c) = case e of 
                         PKVar _ _ -> Nothing
@@ -855,6 +864,7 @@ rhsQual csyms (i,c) = case e of
         loc         = dummyPos "no location"
         name        = dummySymbol
         e           = crhs c
+-}
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
@@ -902,10 +912,12 @@ genQualifiers csyms sinfo n = do
     return $ extractQualifiers allvars candSol
 
   let rhsQuals = queryQuals ss queries
-  let allquals = nub $ concat $ defaultQualifiers:rhsQuals:quals
-  -- let allquals = nub $ concat $ quals
-  putStrLn "QUALS:"
-  forM allquals print
+  let allquals = nub $ concat $ rhsQuals:quals
+  -- let allquals2 = nub $ concat $ [rhsQuals]
+  putStrLn "RHSQUALS:"
+  forM rhsQuals print
+  putStrLn "INTERP QUALS:"
+  forM (concat quals) print
   return allquals
   {-
   let rhsQuals = catMaybes $ rhsQual (snd<$>csyms) <$> M.toList (cm sinfo)

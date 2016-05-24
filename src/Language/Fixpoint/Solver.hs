@@ -131,6 +131,10 @@ interpSolve n cfg q = do
   res <- solve' cfg q'
   case res of
     (Result Safe sol) -> do
+      minquals' <- minimizeQuals cfg solve' $!! q'
+      putStrLn "min interp quals:"
+      forM_ minquals' print
+
       putStrLn "Solution:"
       print sol
       return res 
