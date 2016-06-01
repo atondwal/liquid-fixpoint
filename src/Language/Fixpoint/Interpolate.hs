@@ -877,7 +877,7 @@ genQualifiers csyms sinfo n = do
   putStrLn "KClauses:"
   printKClauses kcs
   -}
-  quals <- forM queries $ \query -> do
+quals  <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
     {-
@@ -914,11 +914,11 @@ genQualifiers csyms sinfo n = do
   let rhsQuals = queryQuals ss queries
   let allquals = nub $ concat $ rhsQuals:quals
   -- let allquals2 = nub $ concat $ [rhsQuals]
-  putStrLn "RHSQUALS:"
-  forM rhsQuals print
-  putStrLn "INTERP QUALS:"
-  forM (concat quals) print
-  return allquals
+  -- putStrLn "RHSQUALS:"
+  -- forM rhsQuals print
+  -- putStrLn "INTERP QUALS:"
+  -- forM (concat quals) print
+  return $ nub $ allquals
   {-
   let rhsQuals = catMaybes $ rhsQual (snd<$>csyms) <$> M.toList (cm sinfo)
   return $ nub $ concat $ rhsQuals:quals

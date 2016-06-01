@@ -55,7 +55,7 @@ import           Language.Fixpoint.Partition        -- (mcInfo, partition, parti
 import           Language.Fixpoint.Parse            (rr', mkQual)
 import           Language.Fixpoint.Types
 -- import qualified Language.Fixpoint.Types.Visitor as V
-import           Language.Fixpoint.Minimize (minQuery, minimizeQuals)
+import           Language.Fixpoint.Minimize (minQuery)
 import           Language.Fixpoint.Interpolate (genQualifiers)
 import           Language.Fixpoint.Smt.Types
 import           Control.DeepSeq
@@ -96,9 +96,9 @@ solve cfg q
 
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
 interpSolve n cfg q = do
-  minquals <- minimizeQuals cfg solve' $!! q
-  putStrLn "min quals:"
-  forM_ minquals print
+  -- minquals <- minimizeQuals cfg solve' $!! q
+  -- putStrLn "min quals:"
+  -- forM_ minquals print
 
   let fi1 = q { quals = remakeQual <$> quals q }
   -- fi2 <- minimizeCons cfg solve' fi1
@@ -130,13 +130,13 @@ interpSolve n cfg q = do
   let q' = q { quals = interpQuals }
   res <- solve' cfg q'
   case res of
-    (Result Safe sol) -> do
-      minquals' <- minimizeQuals cfg solve' $!! q'
-      putStrLn "min interp quals:"
-      forM_ minquals' print
+    (Result Safe _) -> do
+      -- minquals' <- minimizeQuals cfg solve' $!! q'
+      -- putStrLn "min interp quals:"
+      -- forM_ minquals' print
 
-      putStrLn "Solution:"
-      print sol
+      -- putStrLn "Solution:"
+      -- print sol
       return res 
     _               -> do
       if n < unrollDepth cfg
