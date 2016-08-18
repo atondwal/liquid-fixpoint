@@ -877,7 +877,7 @@ genQualifiers csyms sinfo n = do
   putStrLn "KClauses:"
   printKClauses kcs
   -}
-quals  <- forM queries $ \query -> do
+  quals  <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
     {-
