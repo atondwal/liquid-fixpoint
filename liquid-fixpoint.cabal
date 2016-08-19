@@ -96,7 +96,6 @@ Library
                    Language.Fixpoint.Solver.Eliminate,
                    Language.Fixpoint.Solver.Validate,
                    Language.Fixpoint.Utils.Statistics,
-                   Language.Fixpoint.Solver.Unroll,
                    Language.Fixpoint.Solver.Solve
 
   Build-Depends: base >= 4.7 && < 5
@@ -132,7 +131,6 @@ Library
                , fgl
                , fgl-visualize
                , dotgen
-               , comonad
   if impl(ghc >= 7.10.2)
     Build-Depends: located-base
   if !os(windows)
