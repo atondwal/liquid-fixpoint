@@ -86,6 +86,7 @@ Library
                    Language.Fixpoint.Smt.Serialize,
                    Language.Fixpoint.Smt.Interface,
                    Language.Fixpoint.Minimize,
+                   Language.Fixpoint.Interpolate,
                    Language.Fixpoint.Solver,
                    Language.Fixpoint.Parse,
                    Language.Fixpoint.SortCheck,

@@ -656,6 +656,7 @@ mapExpr' f e = go e
     go (PAnd es)       = f $ PAnd $ map go es 
     go (POr es)        = f $ POr  $ map go es  
     go (PNot e)        = f $ PNot $ go e 
+    go (Interp e)      = f $ Interp $ go e 
     go (PImp e1 e2)    = f $ PImp (go e1) (go e2)
     go (PIff e1 e2)    = f $ PIff (go e1) (go e2) 
     go (PAtom a e1 e2) = f $ PAtom a (go e1) (go e2) 

@@ -60,6 +60,8 @@ data Config
     -- , oldElim     :: Bool                -- ^ use old eliminate algorithm (deprecate)
     , elimBound   :: Maybe Int           -- ^ maximum length of KVar chain to eliminate
     , elimStats   :: Bool                -- ^ print eliminate stats
+    , interpolate :: Bool                -- ^ use interpolation and BMC to find qualifiers
+    , unrollDepth :: Int                 -- ^ unrolling depth for interpolation
     , solverStats :: Bool                -- ^ print solver stats
     , metadata    :: Bool                -- ^ print meta-data associated with constraints
     , stats       :: Bool                -- ^ compute constraint statistics
@@ -113,6 +115,8 @@ defConfig = Config {
   , elimBound   = Nothing &= name "elimBound"
                           &= help "(alpha) Maximum eliminate-chain depth"
   , elimStats   = False   &= help "(alpha) Print eliminate stats"
+  , interpolate = False &= help "(alpha) Extract qualifiers from interpolation"
+  , unrollDepth = 3     &= help "Unrolling depth for interpolation"
   , solverStats = False   &= help "Print solver stats"
   , save        = False   &= help "Save Query as .fq and .bfq files"
   , metadata    = False   &= help "Print meta-data associated with constraints"

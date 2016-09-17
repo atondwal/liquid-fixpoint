@@ -20,6 +20,7 @@ module Language.Fixpoint.Types.Visitor (
 
   -- * Accumulators
   , fold
+  , accumulate
 
   -- * Clients
   , kvars
@@ -73,6 +74,9 @@ fold v c a t = snd $ execVisitM v c a visit t
 
 trans        :: (Visitable t, Monoid a) => Visitor a ctx -> ctx -> a -> t -> t
 trans v c _ z = fst $ execVisitM v c mempty visit z
+
+accumulate :: (Monoid c, Visitable t) => Visitor c c -> c -> t -> (t, c)
+accumulate visitor s = execVisitM visitor s s visit
 
 execVisitM :: Visitor a ctx -> ctx -> a -> (Visitor a ctx -> ctx -> t -> State a t) -> t -> (t, a)
 execVisitM v c a f x = runState (f v c x) a
@@ -138,6 +142,7 @@ visitExpr v = vE
     step _ e@(EVar _)      = return e
     step c (EApp f e)      = EApp       <$> vE c f  <*> vE c e
     step c (ENeg e)        = ENeg       <$> vE c e
+    step c (Interp e)      = Interp     <$> vE c e
     step c (EBin o e1 e2)  = EBin o     <$> vE c e1 <*> vE c e2
     step c (EIte p e1 e2)  = EIte       <$> vE c p  <*> vE c e1 <*> vE c e2
     step c (ECst e t)      = (`ECst` t) <$> vE c e
@@ -186,6 +191,7 @@ mapMExpr f = go
     go (PAnd  ps)      = (PAnd       <$> (go <$$> ps)) >>= f
     go (POr  ps)       = (POr        <$> (go <$$> ps)) >>= f
     go (PNot p)        = (PNot       <$> go p) >>= f
+    go (Interp p)      = (Interp     <$> go p) >>= f
     go (PImp p1 p2)    = (PImp       <$> go p1 <*> go p2) >>= f
     go (PIff p1 p2)    = (PIff       <$> go p1 <*> go p2) >>= f
     go (PAtom r e1 e2) = (PAtom r    <$> go e1 <*> go e2) >>= f

@@ -115,6 +115,7 @@ instance Subable Expr where
   substf f (PImp p1 p2)    = PImp (substf f p1) (substf f p2)
   substf f (PIff p1 p2)    = PIff (substf f p1) (substf f p2)
   substf f (PAtom r e1 e2) = PAtom r (substf f e1) (substf f e2)
+  substf f (Interp e)        = Interp (substf f e)
   substf _ p@(PKVar _ _)   = p
   substf _  (PAll _ _)     = errorstar "substf: FORALL"
   substf _  p              = p
@@ -140,6 +141,7 @@ instance Subable Expr where
   subst su (PExist bs p)
           | disjoint su bs = PExist bs $ subst su p --(substExcept su (fst <$> bs)) p
           | otherwise      = errorstar ("subst: EXISTS (without disjoint binds)" ++ show (bs, su))
+  subst su (Interp e)      = Interp (subst su e)
   subst _  p               = p
 
 removeSubst :: Subst -> Symbol -> Subst
@@ -274,4 +276,5 @@ exprSymbols = go
     go (PAtom _ e1 e2)    = exprSymbols e1 ++ exprSymbols e2
     go (PKVar _ (Su su))  = {- CUTSOLVER k : -} syms (M.elems su)
     go (PAll xts p)       = (fst <$> xts) ++ go p
+    go (Interp e)           = go e
     go _                  = []

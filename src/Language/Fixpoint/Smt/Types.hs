@@ -44,12 +44,14 @@ import           System.Process
 type Raw          = LT.Text
 
 -- | Commands issued to SMT engine
+
 data Command      = Push
                   | Pop
                   | CheckSat
                   | Declare   !Symbol [Sort] !Sort
                   | Define    !Sort
                   | Assert    !(Maybe Int) !Expr
+                  | Interpolate Int Expr
                   | Distinct  [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue  [Symbol]
                   | CMany [Command]
@@ -62,6 +64,7 @@ data Response     = Ok
                   | Unknown
                   | Values [(Symbol, T.Text)]
                   | Error !T.Text
+                  | Interpolant [Expr]
                   deriving (Eq, Show)
 
 -- | Information about the external SMT process

@@ -8,7 +8,7 @@ module Language.Fixpoint.Solver.Solution
     -- * Update Solution
   , update
 
-  -- * Lookup Solution
+    -- * Lookup Solution
   , lhsPred
   ) where
 
