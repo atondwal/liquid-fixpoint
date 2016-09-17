@@ -71,6 +71,8 @@ data Config
     , eliminate   :: Eliminate           -- ^ eliminate non-cut KVars
     , elimBound   :: Maybe Int           -- ^ maximum length of KVar chain to eliminate
     , elimStats   :: Bool                -- ^ print eliminate stats
+    , interpolate :: Bool                -- ^ use interpolation and BMC to find qualifiers
+    , unrollDepth :: Int                 -- ^ unrolling depth for interpolation
     , solverStats :: Bool                -- ^ print solver stats
     , metadata    :: Bool                -- ^ print meta-data associated with constraints
     , stats       :: Bool                -- ^ compute constraint statistics
@@ -145,6 +147,8 @@ defConfig = Config {
   , eliminate        = None    &= help "Eliminate KVars [none = quals for all-kvars, cuts = quals for cut-kvars, all = eliminate all-kvars (TRUE for cuts)]"
   , elimBound        = Nothing &= name "elimBound"  &= help "(alpha) Maximum eliminate-chain depth"
   , elimStats        = False   &= help "(alpha) Print eliminate stats"
+  , interpolate = False &= help "(alpha) Extract qualifiers from interpolation"
+  , unrollDepth = 3     &= help "Unrolling depth for interpolation"
   , solverStats      = False   &= help "Print solver stats"
   , save             = False   &= help "Save Query as .fq and .bfq files"
   , metadata         = False   &= help "Print meta-data associated with constraints"

@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards             #-}
 {-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE LambdaCase                #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -44,6 +46,8 @@ module Language.Fixpoint.Smt.Interface (
     , smtCheckSat
     , smtBracket
     , smtDistinct
+    , smtDoInterpolate
+    , smtInterpolate
 
     -- * Check Validity
     , checkValid
@@ -66,6 +70,7 @@ import           Language.Fixpoint.Types.Errors
 -- import           Language.Fixpoint.SortCheck    (elaborate)
 import           Language.Fixpoint.Utils.Files
 import           Language.Fixpoint.Types hiding (allowHO)
+import           Language.Fixpoint.Types.Visitor
 import           Language.Fixpoint.Smt.Types
 import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Smt.Serialize ()
@@ -73,14 +78,17 @@ import           Language.Fixpoint.Smt.Serialize ()
 import           Control.Applicative      ((<|>))
 import           Control.Monad
 import           Control.Exception
+import           Control.Monad.State.Strict
 import           Data.Char
 import           Data.Monoid
+import           Data.List                as L
 import qualified Data.Text                as T
 import           Data.Text.Format
 import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
+import           Data.Interned
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -91,6 +99,8 @@ import qualified Data.Attoparsec.Text     as A
 import qualified Data.HashMap.Strict      as M
 import           Data.Attoparsec.Internal.Types (Parser)
 import           Text.PrettyPrint.HughesPJ (text)
+import           Text.Read (readMaybe)
+
 {-
 runFile f
   = readFile f >>= runString
@@ -163,22 +173,178 @@ command me !cmd       = say cmd >> hear cmd
     say               = smtWrite me . Builder.toLazyText . runSmt2
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
+    hear (Interpolate n _) = do
+      -- write the interpolation query to interp.out
+      -- withFile "interp.out" WriteMode $ \handle -> do
+        -- hPutStrLnNow handle $ runSmt2 (smtenv me) cmd
+
+      resp <- smtRead me
+      case resp of
+        Unsat -> smtPred n me
+        Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
+        e -> error $ show e
+ 
     hear _            = return Ok
 
 
 smtWrite :: Context -> Raw -> IO ()
 smtWrite me !s = smtWriteRaw me s
 
+smtRes :: Context -> A.IResult T.Text Response -> IO Response
+smtRes me res = case A.eitherResult res of
+  Left e  -> error e
+  Right r -> do
+    maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (ctxLog me)
+    -- when (verbose me) $ TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
+    return r
+
+
+-- smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
+smtParse me parserP = do
+  t <- smtReadRaw me
+  p <- A.parseWith (smtReadRaw me) parserP t
+  smtRes me p
+
+smtParse' me parserP = do
+  t <- smtReadRaw me
+  let t' = t `T.append` (T.singleton '\n')
+  p <- return $ A.parse parserP t'
+  smtRes me p
+
+{-
+smtReadRawLines me = smtReadRawLines_ me []
+  where smtReadRawLines_ me acc = do
+          t <- smtReadRaw me
+          if t == T.empty then return acc else smtReadRawLines_ me (t:acc)
+
+smtParse' me parserP = do
+  ts <- smtReadRawLines me
+  putStrLn "Interpolants (RAW):"
+  forM ts Prelude.print
+  -- ps <- return $ A.parse parserP t
+  let ps = map (A.parse parserP) ts
+  forM ps (smtRes me)
+-}
+
 smtRead :: Context -> IO Response
-smtRead me = {-# SCC "smtRead" #-}
-    do ln  <- smtReadRaw me
-       res <- A.parseWith (smtReadRaw me) responseP ln
-       case A.eitherResult res of
-         Left e  -> errorstar $ "SMTREAD:" ++ e
-         Right r -> do
-           maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (ctxLog me)
-           -- when (verbose me) $ TIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
-           return r
+smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
+
+smtPred :: Int -> Context -> IO Response
+smtPred n me = {-# SCC "smtPred" #-} do
+  responses <- forM [1..n] $ \_ -> parseInterp
+  return $ Interpolant $ concatMap getInterps responses
+  -- responses <- parseInterp
+  -- return $ Interpolant $ concatMap getInterps responses
+  where parseInterp = do
+          -- ps <- smtParse me (Interpolant <$> map parseLisp' <$> predP)
+          p <- smtParse' me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
+          return p
+        getInterps (Interpolant e) = e
+        getInterps _ = []
+-- smtPred n me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> (\x -> [x]) <$> parseLisp' <$> predP)
+
+-- space that 
+space2 c = isSpace c && not (A.isEndOfLine c)
+
+predP = {-# SCC "predP" #-}
+        (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipWhile space2) <* A.char ')'))
+    <|> (Sym <$> symbolP)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
+-- type PorE = Either Expr Expr
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+strToOp _ = error "Op not found"
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+strToRel _ = error "Rel not found"
+
+parseLisp' = parseLisp
+
+parseLisp :: Lisp -> Expr
+parseLisp (Sym s)
+  | symbolText s == "true"  = PTrue
+  | symbolText s == "false" = PFalse
+  | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
+  | otherwise               = EVar s
+parseLisp l@(Lisp xs)
+  | [Sym s, x] <- xs, symbolText s == "not"     =
+    PNot (parseLisp x)
+  | [Sym s, x] <- xs, symbolText s == "-"       =
+    ENeg (parseLisp x)
+  | [Sym s, x, y] <- xs, symbolText s == "=>"   =
+    PImp (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s == "="    =
+    PAtom Eq (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
+    EBin (strToOp $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
+    PAtom (strToRel $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
+    EIte (parseLisp x) (parseLisp y) (parseLisp z)
+  | (Sym s:xs) <- xs, symbolText s == "and"     =
+    PAnd $ L.map parseLisp xs
+  | (Sym s:xs) <- xs, symbolText s == "or"      =
+    POr $ L.map parseLisp xs
+  | otherwise                                   =
+    lispToFunc l
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
+        -- this should not be called
+        lispToFunc (Sym s)   = EVar s
+
+{-
+
+parseLisp' :: Lisp -> Expr
+parseLisp' = toPred
+  where toPred :: Lisp -> Expr
+        toPred x = case parseLisp x of
+                     Left p -> p
+                     Right e -> error $ "expected Pred, got Expr: " ++ show e
+        toExpr :: Lisp -> Expr
+        toExpr x = case parseLisp x of
+                     Left p -> error $ "expected Expr, got Pred: " ++ show p
+                     Right e -> e
+          | symbolText s == "true" = Left PTrue
+          | symbolText s == "false" = Left PFalse
+          | otherwise = Right $ EVar s
+        parseLisp (Lisp (Sym s:xs))
+          | symbolText s == "and" = Left $ PAnd $ L.map toPred xs
+          | symbolText s == "or" = Left $ POr $ L.map toPred xs
+        parseLisp (Lisp [Sym s,x])
+          | symbolText s == "not" = Left $ PNot $ toPred x
+          | symbolText s == "-" = Right $ ENeg $ toExpr x
+          | otherwise           = Right $ EVar s -- ELit (dummyLoc s) $ fromJust $ lookup s (lits fi)
+        parseLisp (Lisp [Sym s,x,y])
+          | symbolText s == "=>" = Left $ PImp (toPred x) (toPred y)
+          | symbolText s `elem` binOpStrings = Right $ EBin (strToOp $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s `elem` binRelStrings = Left $ PAtom (strToRel $ symbolText s) (toExpr x) (toExpr y)
+          | symbolText s == "=" = Left $ case (parseLisp x, parseLisp y) of
+                                    (Left p, Left q) -> PIff p q
+                                    (Right p, Right q) -> PAtom Eq p q
+                                    _ -> error $ "Can't compare `" ++ show x ++ "` with`" ++ show y ++ "`. Kind Error."
+        parseLisp (Lisp [Sym s, x, y, z])
+          | symbolText s == "ite" = Right $ EIte (toPred x) (toExpr y) (toExpr z)
+        -- parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
+        parseLisp x = error $ show x ++ "is Nonsense Lisp!"
+        -- PBexp? When do I know to read one of these in?
+-}
 
 type SmtParser a = Parser T.Text a
 
@@ -209,7 +375,7 @@ pairP = {-# SCC "pairP" #-}
      return (x,v)
 
 symbolP :: SmtParser Symbol
-symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (not . isSpace)
+symbolP = {-# SCC "symbolP" #-} textSymbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
 valueP :: SmtParser T.Text
 valueP = {-# SCC "valueP" #-} negativeP
@@ -296,7 +462,7 @@ hCloseMe msg h = hClose h `catch` (\(exn :: IOException) -> putStrLn $ "OOPS, hC
 {- "z3 -smtc -in MBQI=false"        -}
 
 smtCmd         :: SMTSolver -> String --  T.Text
-smtCmd Z3      = "z3 -smt2 -in"
+smtCmd Z3      = "z3 pp.single-line=true -smt2 -in"
 smtCmd Mathsat = "mathsat -input=smt2"
 smtCmd Cvc4    = "cvc4 --incremental -L smtlib2"
 
@@ -381,6 +547,35 @@ smtBracket me _msg a   = do
   smtPop me
   return r
 
+-- the number of interpolants we expect from Z3
+countInterp :: Expr -> Int
+countInterp e = getSum $ execState (visit visitInterp () e) (Sum 0)
+  where incInterp _ (Interp _)  = Sum 1
+        incInterp _ _           = Sum 0
+        visitInterp :: Visitor (Sum Int) ()
+        visitInterp = (defaultVisitor :: Visitor (Sum Int) ()) { accExpr = incInterp } 
+
+smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
+smtDoInterpolate me _ p = do
+  -- icontext <- makeZ3Context "interp.out" (toListSEnv $ lits sinfo)
+  -- smtWrite icontext $ runSmt2 (smtenv icontext) p
+
+  respInterp <$> command me (Interpolate n p)
+  where n = countInterp p 
+
+{-
+smtLoadEnv :: Context -> [(Symbol, SortedReft)] -> IO ()
+smtLoadEnv me env = mapM_ smtDecl' $ L.map (second sr_sort) env
+  where smtDecl' = uncurry $ smtDecl me
+-}
+
+smtInterpolate :: Context -> SInfo () -> Expr -> IO [Expr]
+smtInterpolate me _ p = respInterp <$> command me (Interpolate n p)
+  where n = countInterp p 
+
+respInterp (Interpolant ps) = ps
+respInterp r = die $ err dummySpan $ text ("crash: SMTLIB2 respInterp = " ++ show r)
+
 respSat :: Response -> Bool
 respSat Unsat   = True
 respSat Sat     = False
@@ -400,10 +595,18 @@ z3_432_options :: [LT.Text]
 z3_432_options
   = [ "(set-option :auto-config false)"
     , "(set-option :model true)"
-    , "(set-option :model.partial false)"]
+    , "(set-option :model.partial false)"
+    , "(set-option :smt.mbqi false)"
+    -- add these options so Z3 doesn't let-simplify interpolants
+    , "(set-option :pp.max-depth 1000)"
+    , "(set-option :pp.min-alias-size 1000)"]
 
 z3_options :: [LT.Text]
 z3_options
   = [ "(set-option :auto-config false)"
     , "(set-option :model true)"
-    , "(set-option :model-partial false)"]
+    , "(set-option :model-partial false)"
+    , "(set-option :mbqi false)"
+    -- add these options so Z3 doesn't let-simplify interpolants
+    , "(set-option :pp.max-depth 1000)"
+    , "(set-option :pp.min-alias-size 1000)"]
