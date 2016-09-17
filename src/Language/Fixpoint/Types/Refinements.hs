@@ -278,6 +278,8 @@ data Expr = ESym !SymConst
           | PAll   ![(Symbol, Sort)] !Expr
           | PExist ![(Symbol, Sort)] !Expr
           | PGrad  !KVar !Subst !GradInfo !Expr
+--- To mark interpolation cuts
+          | Interp !Expr
           deriving (Eq, Show, Data, Typeable, Generic)
 
 type Pred = Expr
@@ -333,6 +335,7 @@ debruijnIndex = go
     go (PAnd es)       = foldl (\n e -> n + go e) 0 es
     go (POr es)        = foldl (\n e -> n + go e) 0 es
     go (PNot e)        = go e
+    go (Interp e)        = go e 
     go (PImp e1 e2)    = go e1 + go e2
     go (PIff e1 e2)    = go e1 + go e2
     go (PAtom _ e1 e2) = go e1 + go e2
@@ -426,6 +429,7 @@ instance Fixpoint Expr where
   toFix (ETApp e s)      = text "tapp" <+> toFix e <+> toFix s
   toFix (ETAbs e s)      = text "tabs" <+> toFix e <+> toFix s
   toFix (PGrad k _ _ e)  = toFix e <+> text "&&" <+> toFix k -- text "??" -- <+> toFix k <+> toFix su
+  toFix (Interp e)         = parens $ text "interp" <+> toFix e
   toFix (ELam (x,s) e)   = text "lam" <+> toFix x <+> ":" <+> toFix s <+> "." <+> toFix e
 
   simplify (PAnd [])     = PTrue
@@ -597,6 +601,7 @@ instance PPrint Expr where
   pprintPrec _ _ (ETApp e s)     = "ETApp" <+> toFix e <+> toFix s
   pprintPrec _ _ (ETAbs e s)     = "ETAbs" <+> toFix e <+> toFix s
   pprintPrec z k (PGrad x _ _ e) = pprintPrec z k e <+> "&&" <+> toFix x -- "??"
+  pprintPrec z k (Interp e)      = "interp " <+> pprintPrec z k e
 
 pprintQuant :: Tidy -> Doc -> [(Symbol, Sort)] -> Expr -> Doc
 pprintQuant k d xts p = (d <+> toFix xts)
@@ -662,6 +667,9 @@ instance Expression Integer where
 
 instance Expression Int where
   expr = expr . toInteger
+
+instance Predicate SortedReft where
+  prop = reftPred . sr_reft
 
 instance Predicate Symbol where
   prop = eProp

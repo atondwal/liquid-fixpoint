@@ -20,6 +20,7 @@ module Language.Fixpoint.Types.Visitor (
 
   -- * Accumulators
   , fold
+  , accumulate
 
   -- * Clients
   , stripCasts
@@ -75,6 +76,9 @@ fold v c a t = snd $ execVisitM v c a visit t
 
 trans        :: (Visitable t, Monoid a) => Visitor a ctx -> ctx -> a -> t -> t
 trans v c _ z = fst $ execVisitM v c mempty visit z
+
+accumulate :: (Monoid c, Visitable t) => Visitor c c -> c -> t -> (t, c)
+accumulate visitor s = execVisitM visitor s s visit
 
 execVisitM :: Visitor a ctx -> ctx -> a -> (Visitor a ctx -> ctx -> t -> State a t) -> t -> (t, a)
 execVisitM v c a f x = runState (f v c x) a
@@ -142,6 +146,7 @@ visitExpr v = vE
     step _ e@(EVar _)      = return e
     step c (EApp f e)      = EApp        <$> vE c f  <*> vE c e
     step c (ENeg e)        = ENeg        <$> vE c e
+    step c (Interp e)      = Interp     <$> vE c e
     step c (EBin o e1 e2)  = EBin o      <$> vE c e1 <*> vE c e2
     step c (EIte p e1 e2)  = EIte        <$> vE c p  <*> vE c e1 <*> vE c e2
     step c (ECst e t)      = (`ECst` t)  <$> vE c e
@@ -212,6 +217,7 @@ mapMExpr f = go
     go (EIte p e1 e2)  = f =<< (EIte        <$>  go p  <*> go e1 <*> go e2)
     go (PAnd  ps)      = f =<< (PAnd        <$> (go <$$> ps)              )
     go (POr  ps)       = f =<< (POr         <$> (go <$$> ps)              )
+    go (Interp p)      = f =<< (Interp      <$> go p)
 
 mapKVarSubsts :: Visitable t => (KVar -> Subst -> Subst) -> t -> t
 mapKVarSubsts f          = trans kvVis () []

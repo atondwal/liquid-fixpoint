@@ -23,6 +23,10 @@ module Language.Fixpoint.Solver.Monad
          -- * Debug
        , Stats
        , tickIter
+
+         -- * Interpolation
+       , interpolationSolver
+
        , stats
        , numIter
        )
@@ -292,6 +296,11 @@ distinctLiterals xts = [ es | (_, es) <- tess ]
     tess             = groupList [(t, F.expr x) | (x, t) <- xts, notFun t]
     notFun           = not . F.isFunctionSortedReft . (`F.RR` F.trueReft)
     -- _notStr          = not . (F.strSort ==) . F.sr_sort . (`F.RR` F.trueReft)
+
+---------------------------------------------------------------------------
+interpolationSolver :: F.SInfo a -> F.Expr -> SolveM [F.Expr]
+---------------------------------------------------------------------------
+interpolationSolver fi p = withContext $ \me -> smtDoInterpolate me fi p
 
 ---------------------------------------------------------------------------
 stats :: SolveM Stats

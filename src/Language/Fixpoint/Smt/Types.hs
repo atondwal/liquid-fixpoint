@@ -49,6 +49,7 @@ symbolBuilder :: Symbol -> LT.Builder
 symbolBuilder = LT.fromText . symbolSafeText
 
 -- | Commands issued to SMT engine
+
 data Command      = Push
                   | Pop
                   | CheckSat
@@ -56,6 +57,7 @@ data Command      = Push
                   | Define    !Sort
                   | Assert    !(Maybe Int) !Expr
                   | AssertAxiom  !(Triggered Expr)
+                  | Interpolate Int Expr
                   | Distinct  [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue  [Symbol]
                   | CMany [Command]
@@ -65,16 +67,17 @@ instance PPrint Command where
   pprintTidy _ = ppCmd
 
 ppCmd :: Command -> Doc
-ppCmd Push          = text "Push"
-ppCmd Pop           = text "Pop"
-ppCmd CheckSat      = text "CheckSat"
-ppCmd (Declare {})  = text "Declare ..."
-ppCmd (Define {})   = text "Define ..."
-ppCmd (Assert _ e)  = text "Assert" <+> pprint e
-ppCmd (AssertAxiom _) = text "AssertAxiom ..."
-ppCmd (Distinct {}) = text "Distinct ..."
-ppCmd (GetValue {}) = text "GetValue ..."
-ppCmd (CMany {})    = text "CMany ..."
+ppCmd (Interpolate _ _) = text "Interpolate"
+ppCmd Push              = text "Push"
+ppCmd Pop               = text "Pop"
+ppCmd CheckSat          = text "CheckSat"
+ppCmd (Declare {})      = text "Declare ..."
+ppCmd (Define {})       = text "Define ..."
+ppCmd (Assert _ e)      = text "Assert" <+> pprint e
+ppCmd (AssertAxiom _)   = text "AssertAxiom ..."
+ppCmd (Distinct {})     = text "Distinct ..."
+ppCmd (GetValue {})     = text "GetValue ..."
+ppCmd (CMany {})        = text "CMany ..."
 
 -- | Responses received from SMT engine
 data Response     = Ok
@@ -83,6 +86,7 @@ data Response     = Ok
                   | Unknown
                   | Values [(Symbol, T.Text)]
                   | Error !T.Text
+                  | Interpolant [Expr]
                   deriving (Eq, Show)
 
 -- | Information about the external SMT process
