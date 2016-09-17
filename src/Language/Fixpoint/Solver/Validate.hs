@@ -27,8 +27,10 @@ import qualified Data.Text                                         as T
 import           Data.Maybe          (isNothing, mapMaybe)
 import           Control.Monad       ((>=>))
 import           Text.PrettyPrint.HughesPJ
+import           Debug.Trace
 
 type ValidateM a = Either E.Error a
+
 
 --------------------------------------------------------------------------------
 sanitize :: F.SInfo a -> ValidateM (F.SInfo a)
@@ -140,7 +142,7 @@ banConstraintFreeVars fi0 = Misc.applyNonNull (Right fi0) (Left . badCs) bads
     bads = [(c, fs) | c <- M.elems $ F.cm fi, Just fs <- [cNoFreeVars fi c]]
 
 cNoFreeVars :: F.SInfo a -> F.SimpC a -> Maybe [F.Symbol]
-cNoFreeVars fi c = if S.null fv then Nothing else Just (S.toList fv)
+cNoFreeVars fi c = if S.null fv then Nothing else Just (S.toList fv)  
   where
     be   = F.bs fi
     lits = fst <$> F.toListSEnv (F.gLits fi)
@@ -221,7 +223,7 @@ defuncSort t            = t
 compact :: [(F.Symbol, F.Sort)] -> Either E.Error [(F.Symbol, F.Sort)]
 compact xts
   | null bad  = Right [(x, t) | (x, [t]) <- ok ]
-  | otherwise = Left $ dupBindErrors bad'
+  | otherwise = trace ("COMPACT: \n" ++ show xts) $ Left $ dupBindErrors bad'
   where
     bad'      = [(x, (, []) <$> ts) | (x, ts) <- bad]
     (bad, ok) = L.partition multiSorted . binds $ xts

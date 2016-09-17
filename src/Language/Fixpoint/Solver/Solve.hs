@@ -7,7 +7,7 @@
 -- | Solve a system of horn-clause constraints ---------------------------------
 --------------------------------------------------------------------------------
 
-module Language.Fixpoint.Solver.Solve (solve, gradualSolve ) where
+module Language.Fixpoint.Solver.Solve (solve, interpolation, gradualSolve ) where
 
 import           Control.Monad (when, filterM)
 import           Control.Monad.State.Strict (lift)
@@ -208,6 +208,13 @@ isValid :: F.Expr -> F.Expr -> SolveM Bool
 isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
+---------------------------------------------------------------------------
+interpolation :: Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
+---------------------------------------------------------------------------
+interpolation cfg fi p = runSolverM cfg sI 0 s0 $ interpolationSolver fi p
+  where sI   = solverInfo cfg fi
+        s0   = siSol  sI
+
 --------------------------------------------------------------------------------
 -- | RJ: @nikivazou please add some description here of what this does.
 --------------------------------------------------------------------------------
@@ -274,7 +281,6 @@ removePGrads _
   = Nothing
 
 {-
----------------------------------------------------------------------------
 donePhase' :: String -> SolveM ()
 ---------------------------------------------------------------------------
 donePhase' msg = lift $ do

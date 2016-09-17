@@ -266,6 +266,7 @@ checkExpr f (PIff p p')    = mapM_ (checkPred f) [p, p'] >> return boolSort
 checkExpr f (PAnd ps)      = mapM_ (checkPred f) ps >> return boolSort
 checkExpr f (POr ps)       = mapM_ (checkPred f) ps >> return boolSort
 checkExpr f (PAtom r e e') = checkRel f r e e' >> return boolSort
+checkExpr f (Interp e)     = checkExpr f e
 checkExpr _ (PKVar {})     = return boolSort
 checkExpr _ PGrad          = return boolSort
 
@@ -387,6 +388,7 @@ elab _ (ETApp _ _) =
   error "SortCheck.elab: TODO: implement ETApp"
 elab _ (ETAbs _ _) =
   error "SortCheck.elab: TODO: implement ETAbs"
+elab f (Interp e) = elab f e
 
 elabAs :: Env -> Sort -> Expr -> CheckM Expr
 elabAs f t (EApp e1 e2) = elabAppAs f t e1 e2
@@ -674,8 +676,8 @@ unify1 f e θ t1@(FAbs _ _) t2 = do
 unify1 f e θ t1 t2@(FAbs _ _) = do
   t2' <- generalize t2
   unifyMany f e θ [t1] [t2']
-unify1 _ _ θ s1 s2
-  | isString s1, isString s2
+unify1 _ _ θ s1 s2 
+  | isString s1, isString s2 
   = return θ
 
 unify1 _ _ θ FInt  FReal = return θ

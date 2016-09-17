@@ -96,14 +96,14 @@ subSymbol (Just (EVar y)) _ = y
 subSymbol Nothing         x = x
 subSymbol a               b = errorstar (printf "Cannot substitute symbol %s with expression %s" (showFix b) (showFix a))
 
-substfLam :: (Symbol -> Expr) -> (Symbol, Sort) -> Expr -> Expr
+substfLam :: (Symbol -> Expr) -> (Symbol, Sort) -> Expr -> Expr 
 substfLam f s@(x, _) e =  ELam s (substf (\y -> if y == x then EVar x else f y) e)
 
 instance Subable Expr where
   syms                     = exprSymbols
   substa f                 = substf (EVar . f)
   substf f (EApp s e)      = EApp (substf f s) (substf f e)
-  substf f (ELam x e)      = substfLam f x e
+  substf f (ELam x e)      = substfLam f x e 
   substf f (ENeg e)        = ENeg (substf f e)
   substf f (EBin op e1 e2) = EBin op (substf f e1) (substf f e2)
   substf f (EIte p e1 e2)  = EIte (substf f p) (substf f e1) (substf f e2)
@@ -115,6 +115,7 @@ instance Subable Expr where
   substf f (PImp p1 p2)    = PImp (substf f p1) (substf f p2)
   substf f (PIff p1 p2)    = PIff (substf f p1) (substf f p2)
   substf f (PAtom r e1 e2) = PAtom r (substf f e1) (substf f e2)
+  substf f (Interp e)        = Interp (substf f e)
   substf _ p@(PKVar _ _)   = p
   substf _  (PAll _ _)     = errorstar "substf: FORALL"
   substf _  p              = p
@@ -140,10 +141,11 @@ instance Subable Expr where
   subst su (PExist bs p)
           | disjoint su bs = PExist bs $ subst su p --(substExcept su (fst <$> bs)) p
           | otherwise      = errorstar ("subst: EXISTS (without disjoint binds)" ++ show (bs, su))
+  subst su (Interp e)      = Interp (subst su e)
   subst _  p               = p
 
 removeSubst :: Subst -> Symbol -> Subst
-removeSubst (Su su) x = Su $ M.delete x su
+removeSubst (Su su) x = Su $ M.delete x su 
 
 disjoint :: Subst -> [(Symbol, Sort)] -> Bool
 disjoint (Su su) bs = S.null $ suSyms `S.intersection` bsSyms
@@ -274,4 +276,5 @@ exprSymbols = go
     go (PAtom _ e1 e2)    = exprSymbols e1 ++ exprSymbols e2
     go (PKVar _ (Su su))  = {- CUTSOLVER k : -} syms (M.elems su)
     go (PAll xts p)       = (fst <$> xts) ++ go p
+    go (Interp e)           = go e
     go _                  = []

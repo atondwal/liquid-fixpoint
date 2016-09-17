@@ -48,7 +48,8 @@ import           Data.Maybe (fromMaybe)
 -}
 
 instance SMTLIB2 Sort where
-  smt2 s@(FFunc _ _)           = errorstar $ "smt2 FFunc: " ++ show s
+  -- smt2 s@(FFunc _ _)           = errorstar $ "smt2 FFunc: " ++ show s
+  smt2 (FFunc _ _)             = "Int"
   smt2 FInt                    = "Int"
   smt2 FReal                   = "Real"
   smt2 t
@@ -66,7 +67,7 @@ instance SMTLIB2 (Symbol, Sort) where
   smt2 (sym, t) = build "({} {})" (smt2 sym, smt2 t)
 
 instance SMTLIB2 SymConst where
-  smt2 (SL s)  = build "\"{}\"" (Only s)
+  smt2 (SL s)  = build "\"{}\"" (Only s) 
 
 
 instance SMTLIB2 Constant where
@@ -114,12 +115,13 @@ instance SMTLIB2 Expr where
   smt2 (PNot p)         = build "(not {})"   (Only $ smt2  p)
   smt2 (PImp p q)       = build "(=> {} {})" (smt2 p, smt2 q)
   smt2 (PIff p q)       = build "(= {} {})"  (smt2 p, smt2 q)
-  smt2 (PExist [] p)    = smt2 p
+  smt2 (PExist [] p)    = smt2 p 
   smt2 (PExist bs p)    = build "(exists ({}) {})"  (smt2s bs, smt2 p)
-  smt2 (PAll   [] p)    = smt2 p
+  smt2 (PAll   [] p)    = smt2 p 
   smt2 (PAll   bs p)    = build "(forall ({}) {})"  (smt2s bs, smt2 p)
 
   smt2 (PAtom r e1 e2)  = mkRel r e1 e2
+  smt2 (Interp e)       = build "(interp {})"         (Only $ smt2 e)
   smt2 PGrad            = "true"
   smt2 (ELam (x, _) e)  = smt2Lam x e
   smt2  e               = errorstar ("smtlib2 Pred  " ++ show e)
@@ -167,6 +169,7 @@ instance SMTLIB2 Command where
   smt2 (Pop)               = "(pop 1)"
   smt2 (CheckSat)          = "(check-sat)"
   smt2 (GetValue xs)       = "(get-value (" <> smt2s xs <> "))"
+  smt2 (Interpolate _ p)   = build "(compute-interpolant {})"  (Only $ smt2 p)
   smt2 (CMany cmds)        = smt2many (smt2 <$> cmds)
 
 
@@ -210,7 +213,7 @@ initSMTEnv = fromListSEnv $
   ++ [(makeLamArg s i, s) | i <- [1..maxLamArg], s <- sorts]
 
 
--- THESE ARE DUPLICATED IN DEFUNCTIONALIZATION
+-- THESE ARE DUPLICATED IN DEFUNCTIONALIZATION 
 maxLamArg :: Int
 maxLamArg = 7
 

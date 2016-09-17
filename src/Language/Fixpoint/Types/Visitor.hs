@@ -20,6 +20,7 @@ module Language.Fixpoint.Types.Visitor (
 
   -- * Accumulators
   , fold
+  , accumulate
 
   -- * Clients
   , kvars
@@ -73,6 +74,9 @@ fold v c a t = snd $ execVisitM v c a visit t
 
 trans        :: (Visitable t, Monoid a) => Visitor a ctx -> ctx -> a -> t -> t
 trans v c _ z = fst $ execVisitM v c mempty visit z
+
+accumulate :: (Monoid c, Visitable t) => Visitor c c -> c -> t -> (t, c)
+accumulate visitor s = execVisitM visitor s s visit
 
 execVisitM :: Visitor a ctx -> ctx -> a -> (Visitor a ctx -> ctx -> t -> State a t) -> t -> (t, a)
 execVisitM v c a f x = runState (f v c x) a
@@ -138,6 +142,7 @@ visitExpr v = vE
     step _ e@(EVar _)      = return e
     step c (EApp f e)      = EApp       <$> vE c f  <*> vE c e
     step c (ENeg e)        = ENeg       <$> vE c e
+    step c (Interp e)      = Interp     <$> vE c e
     step c (EBin o e1 e2)  = EBin o     <$> vE c e1 <*> vE c e2
     step c (EIte p e1 e2)  = EIte       <$> vE c p  <*> vE c e1 <*> vE c e2
     step c (ECst e t)      = (`ECst` t) <$> vE c e
@@ -168,7 +173,7 @@ mapKVars' f            = trans kvVis () []
       | Just p' <- f (k, su) = subst su p'
     txK _ p            = p
 
-mapExpr :: (Expr -> Expr) -> Expr -> Expr
+mapExpr :: (Expr -> Expr) -> Expr -> Expr 
 mapExpr f = trans (defaultVisitor {txExpr = const f}) () []
 
 
@@ -180,12 +185,13 @@ mapMExpr f = go
     go e@(EVar _)      = f e
     go (EApp g e)      = (EApp       <$> go g  <*> go e) >>= f
     go (ENeg e)        = (ENeg       <$> go e) >>= f
-    go (EBin o e1 e2)  = (EBin o     <$> go e1 <*> go e2) >>= f
-    go (EIte p e1 e2)  = (EIte       <$> go p  <*> go e1 <*> go e2) >>= f
-    go (ECst e t)      = ((`ECst` t) <$> go e) >>= f
+    go (EBin o e1 e2)  = (EBin o     <$> go e1 <*> go e2) >>= f 
+    go (EIte p e1 e2)  = (EIte       <$> go p  <*> go e1 <*> go e2) >>= f 
+    go (ECst e t)      = ((`ECst` t) <$> go e) >>= f 
     go (PAnd  ps)      = (PAnd       <$> (go <$$> ps)) >>= f
     go (POr  ps)       = (POr        <$> (go <$$> ps)) >>= f
     go (PNot p)        = (PNot       <$> go p) >>= f
+    go (Interp p)      = (Interp     <$> go p) >>= f
     go (PImp p1 p2)    = (PImp       <$> go p1 <*> go p2) >>= f
     go (PIff p1 p2)    = (PIff       <$> go p1 <*> go p2) >>= f
     go (PAtom r e1 e2) = (PAtom r    <$> go e1 <*> go e2) >>= f
@@ -193,7 +199,7 @@ mapMExpr f = go
     go (ELam (x,t) e)  = (ELam (x,t) <$> go e) >>= f
     go (PExist xts p)  = (PExist xts <$> go p) >>= f
     go (ETApp e s)     = ((`ETApp` s) <$> go e) >>= f
-    go (ETAbs e s)     = ((`ETAbs` s) <$> go e) >>= f
+    go (ETAbs e s)     = ((`ETAbs` s) <$> go e) >>= f 
     go p@(PKVar _ _)   = f p
     go PGrad           = f PGrad
 
@@ -225,7 +231,7 @@ lamSize t    = n
     MInt n = fold szV () mempty t
     szV    = (defaultVisitor :: Visitor MInt t) { accExpr = accum }
     accum _ (ELam _ _) = MInt 1
-    accum _ _          = MInt 0
+    accum _ _          = MInt 0 
 
 
 kvars :: Visitable t => t -> [KVar]

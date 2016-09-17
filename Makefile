@@ -57,3 +57,9 @@ test:
 
 test710:
 	$(TASTY)
+
+stack-prof:
+	stack install --executable-profiling
+	
+stack:
+	stack install
