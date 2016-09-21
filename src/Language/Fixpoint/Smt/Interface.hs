@@ -180,7 +180,7 @@ command me !cmd       = say cmd >> hear cmd
       resp <- smtRead me
       case resp of
         Unsat -> smtPred n me
-        Sat -> error "Not UNSAT. No interpolation needed. Why did you call me?"
+        Sat -> putStrLn "Not UNSAT." >> return Sat
         e -> error $ show e
  
     hear _            = return Ok
