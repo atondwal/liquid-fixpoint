@@ -10,6 +10,12 @@ DEPS=unix-compat transformers mtl filemanip text parsec ghc-paths deepseq comona
 
 TASTY=./dist/build/test/test
 
+stack-prof:
+	stack install --executable-profiling --library-profiling --ghc-options="-fprof-auto -rtsopts"
+	
+stack:
+	stack install
+
 all:
 	$(CABAL) install --ghc-options=$(OPTS)
 
@@ -57,9 +63,3 @@ test:
 
 test710:
 	$(TASTY)
-
-stack-prof:
-	stack install --executable-profiling
-	
-stack:
-	stack install
