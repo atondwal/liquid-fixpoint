@@ -11,7 +11,7 @@ module Language.Fixpoint.Interpolate ( genQualifiers ) where
 import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
 import Data.List (intercalate, nub, permutations)
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe, maybeToList, isNothing)
 
 import Control.Arrow ((&&&), (>>>))
 import Control.Monad
@@ -601,30 +601,23 @@ renameQualParams (Q name params body loc) =
   where paramSubst (sym,_) sym' = (sym, EVar sym')
 
 exprToQual :: (Symbol -> Sort) -> Expr -> [Qualifier]
-exprToQual symsort e =
-  let syms        = exprSyms e in
-  let params      = map (\s -> (s,symsort s)) syms in
-  -- don't include uninterpreted functions as parameters!
-  let params'     = filter (not . isFunc . snd) params in
-  let params''    = paramSorts 0 M.empty params' in
-  -- let params''    = map (\(i,(p,s)) -> (p,realSort i s)) (zip [1..] params') in
-  let loc         = dummyPos "no location" in
-  let name        = dummySymbol in
-  -- trace ("PARAMS:" ++ show params') $ map (\p -> Q name p e loc) (permutations params'')
-  map (\p -> Q name p e loc) (permutations params'')
-  where -- convert tySort to a variable type
-        -- FIXME: Ask Jhala about this
-        -- realSort _ _          = FVar 0
-        -- realSort FNum      = FNum
-        -- realSort (FTC _)   = 
-        -- realSort x         = x
-        paramSorts _ _ []     = []
-        paramSorts i m ((p,s):pps) =
-          case M.lookup s m of
-            Nothing -> (p,FVar i):(paramSorts (i+1) (M.insert s i m) pps)
-            Just n -> (p,FVar n):(paramSorts i m pps)
-        isFunc s              = maybe False (const True) (functionSort s)
-        -- isFunc s          = False
+exprToQual symsort e = (\p -> Q dummySymbol p e interpLoc) <$> permutations params
+  where -- don't include uninterpreted functions as parameters!
+        params    = paramSorts 0 M.empty
+                    (filter (isNotFunc . snd) $
+                      (id &&& symsort) <$> exprSyms e)
+
+interpLoc   = dummyPos "interpolated"
+isNotFunc s = isNothing $ functionSort s
+
+-- convert tySort to a variable type
+-- a.k.a fake deBrujin indicies
+-- FIXME: Ask RJ about this
+paramSorts _ _ []     = []
+paramSorts i m ((p,s):pps) =
+  case M.lookup s m of
+    Nothing -> (p,FVar i):(paramSorts (i+1) (M.insert s i m) pps)
+    Just n -> (p,FVar n):(paramSorts i m pps)
 
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
 sanitizeQualifiers quals = 
@@ -633,6 +626,7 @@ sanitizeQualifiers quals =
   nub $ quals
   where validQual q = hasArgs q && nonTrivial q && nonVar q
         -- qualifier is not a kvar or a regular var
+        -- shouln't need this... @TODO fix what breaks when we don't
         nonVar (Q _ _ (PKVar _ _) _) = False
         nonVar (Q _ _ (EVar _) _)    = False
         nonVar (Q _ _ _ _)           = True
@@ -647,6 +641,7 @@ sanitizeQualifiers quals =
         hasArgs (Q _ [] _ _)    = False
 
 
+-- @TODO won't have to do this for disjunctive interpolation
 maxDisj = 3
 
 -- generate qualifiers from candidate solutions
@@ -681,10 +676,10 @@ genQualifiers csyms sinfo n = do
   let (ss, kcs, queries) = genUnrollInfo csyms sinfo
   quals  <- forM queries $ \query -> do
     -- unroll
-    let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
+    let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query
 
     -- add created vars back to finfo
-    let allvars = M.union ss cs
+    let allvars = M.union ss ssyms
     let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) }
 
     -- run tree interpolation to compute possible kvar solutions
