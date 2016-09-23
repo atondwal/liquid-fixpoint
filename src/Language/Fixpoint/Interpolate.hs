@@ -12,14 +12,14 @@ import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
 import Data.List (intercalate, nub, permutations)
 import Data.Maybe (fromMaybe, maybeToList, isNothing)
+import Data.Function ((&))
 
-import Control.Arrow ((&&&), (>>>))
+import Control.Arrow ((&&&), (>>>), second)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Reader
 
 import Language.Fixpoint.Types hiding (renameSymbol)
-import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve
 import qualified Language.Fixpoint.Types.Visitor as V
 
@@ -512,41 +512,39 @@ popInterp = do
 
 -- construct a tree interpolant from a list of interpolants
 -- returned by Z3
-genTreeInterp :: InterpQuery -> State [Expr] TreeInterp
-genTreeInterp query
-  | And info _ [] <- query = do
-    interp <- popInterp
-    return (And info interp [])
+genTreeInterp query = evalState (go query) . (++ [PFalse])
+  where go :: InterpQuery -> State [Expr] TreeInterp
+        go query
+          | And info _ [] <- query = do
+            interp <- popInterp
+            return (And info interp [])
 
-  | And info _ children <- query = do
-    ichildren <- forM children genTreeInterp
-    interp <- popInterp
-    return (And info interp ichildren)
+          | And info _ children <- query = do
+            ichildren <- forM children go
+            interp <- popInterp
+            return (And info interp ichildren)
 
-  -- this is for tree interpolants, so we don't
-  -- do anything for OR nodes
-  | Or info children <- query = do
-    ichildren <- forM children genTreeInterp
-    return (Or info ichildren)
+          -- this is for tree interpolants, so we don't
+          -- do anything for OR nodes
+          | Or info children <- query = do
+            ichildren <- forM children go
+            return (Or info ichildren)
 
-  | otherwise = return query
+          | otherwise = return query
 
 -- map a tree interpolant to candidate solutions
 -- we do this by substituting the following at an interpolant:
 -- * the symbol at the head |--> v (or nu)
 -- * sub symbols (e.g. tmp) generated from unrolling |--> original symbol
 extractSol :: Subst -> TreeInterp -> CandSolutions
-extractSol usubs t =
-  let subtree = mapAOTree (\i e -> subUnroll i $ subNu i e) t in 
-  collectSol subtree M.empty
-  where subUnroll _ = (subst :: Subst -> Expr -> Expr) usubs
-        subNu (Just (_, sym)) e =
-          flip (subst1 :: Expr -> (Symbol,Expr) -> Expr) (sym,EVar vvName) e
+extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.empty
+  where subUnroll = subst usubs
+        subNu (Just (_, sym)) e = subst1 e (sym,EVar vvName)
         subNu Nothing e = e
-        collectSol (And Nothing _ children) m = 
+        collectSol (And Nothing _ children) m =
           foldr collectSol m children
         collectSol (And (Just (k,_)) v children) m =
-          let m' = M.insertWith (++) k [v] m in 
+          let m' = M.insertWith (++) k [v] m in
           foldr collectSol m' children
         -- this is supposed to be called on tree interps only,
         -- so we set a dummy value for OR nodes
@@ -558,47 +556,35 @@ extractSol usubs t =
 -- the idea is to run DFS on the tree, computing interpolants for each
 -- node one by one and then for each interpolation query discarding
 -- binders that are redundant within one side of a cut
-
 genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
-genCandSolutions sinfo u dquery = do
-  -- convert disjunctive interp query to a set of tree interp queries
-  let tqueries = expandTree dquery
-  tinterps <- forM tqueries $ \tquery -> do
-    -- let sinfo = either die id $ sanitize $ convertFormat finfo
-    -- let sinfo = convertFormat finfo
-    let formula = genQueryFormula tquery
-    -- putStrLn "Tree Interp query:"
-    -- putStrLn $ show formula
-    let smap = foldr (\s acc -> (uncurry M.insert) (uninternSym s) acc) M.empty (exprSyms formula)
-    interps <- interpolation (def :: Config) sinfo formula
+genCandSolutions sinfo u dquery =
+  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty .
+  (extractSol usubs <$>) <$>
+  forM tqueries (\tquery ->
+    let formula = genQueryFormula tquery in
     -- unintern symbols
-    let interps' = map (cleanSymbols smap) interps
-    let tinterp = evalState (genTreeInterp tquery) $ interps' ++ [PFalse]
-    return tinterp
-
-  let usubs   = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
-  let cands   = map (extractSol usubs) tinterps 
-  let cands'  = foldr (M.unionWith (uniqAdd)) M.empty cands
-  -- let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
-  return cands'
-  where uniqAdd a b = nub $ a ++ b
-        uninternSym s =
-          let uninterned = symbol $ encode $ symbolText s in
-          (uninterned, s)
-        cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
+    let smap = M.toList $
+              foldr (\s acc -> uncurry M.insert (uninternSym s) acc) M.empty
+              (exprSyms formula) in
+    genTreeInterp tquery .
+    map (cleanSymbols smap) <$>
+    interpolation def sinfo formula)
+  where uninternSym s = (symbol $ encode $ symbolText s, s)
+        cleanSymbols  = flip $ foldr (uncurry renameExpr)
+        usubs         = Su $ M.fromList $ second EVar <$> M.toList u
+        tqueries      = expandTree dquery
 
 qarg = symbol "QARG"
-        
+
 renameQualParams :: Qualifier -> Qualifier
 -- rename params so that redundant qualifiers may be discarded
-renameQualParams (Q name params body loc) =
-  let n = length params in
-  let renamedParams = map (intSymbol qarg) [1..n] in
-  let zipParam      = zip params renamedParams in
-  let newParams     = map (\((_,sort),sym') -> (sym',sort)) zipParam in
-  let subs          = mkSubst $ map (uncurry paramSubst) zipParam in
-  Q name newParams (subst subs body) loc
-  where paramSubst (sym,_) sym' = (sym, EVar sym')
+-- more fake deBrujin
+renameQualParams (Q name params body loc) = Q name newParams newBody loc
+  where zipParam      = zip params $ intSymbol qarg <$> [1 .. length params]
+        newParams     = (\((_,sort),sym') -> (sym',sort)) <$> zipParam
+        newBody       = subst (mkSubst $ paramSubst <$> zipParam) body
+
+paramSubst ((sym,_), sym') = (sym, EVar sym')
 
 exprToQual :: (Symbol -> Sort) -> Expr -> [Qualifier]
 exprToQual symsort e = (\p -> Q dummySymbol p e interpLoc) <$> permutations params
@@ -620,25 +606,23 @@ paramSorts i m ((p,s):pps) =
     Just n -> (p,FVar n):(paramSorts i m pps)
 
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
-sanitizeQualifiers quals = 
-  let validQuals = filter validQual quals in
-  let quals      = map renameQualParams validQuals in
-  nub $ quals
-  where validQual q = hasArgs q && nonTrivial q && nonVar q
-        -- qualifier is not a kvar or a regular var
-        -- shouln't need this... @TODO fix what breaks when we don't
-        nonVar (Q _ _ (PKVar _ _) _) = False
-        nonVar (Q _ _ (EVar _) _)    = False
-        nonVar (Q _ _ _ _)           = True
-        -- don't add true or false as qualifiers
-        nonTrivial q
-          | Q _ _ (PAnd []) _ <- q  = False
-          | Q _ _ PTrue _ <- q      = False
-          | Q _ _ (POr []) _ <- q   = False
-          | Q _ _ PFalse _<- q      = False
-          | otherwise               = True
-        hasArgs (Q _ (_:_) _ _) = True
-        hasArgs (Q _ [] _ _)    = False
+sanitizeQualifiers quals = nub $ renameQualParams <$> filter validQual quals
+
+validQual q = hasArgs q && nonTrivial q && nonVar q
+-- qualifier is not a kvar or a regular var
+-- shouln't need this... @TODO fix what breaks when we don't
+nonVar (Q _ _ (PKVar _ _) _) = False
+nonVar (Q _ _ (EVar _) _)    = False
+nonVar (Q _ _ _ _)           = True
+-- don't add true or false as qualifiers
+nonTrivial q
+  | Q _ _ (PAnd []) _ <- q  = False
+  | Q _ _ PTrue _ <- q      = False
+  | Q _ _ (POr []) _ <- q   = False
+  | Q _ _ PFalse _<- q      = False
+  | otherwise               = True
+hasArgs (Q _ (_:_) _ _) = True
+hasArgs (Q _ [] _ _)    = False
 
 
 -- @TODO won't have to do this for disjunctive interpolation
@@ -650,44 +634,40 @@ maxDisj = 3
 -- * created variables during unrolling
 -- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs = sanitizeQualifiers $ concatMap kquals (M.toList cs)
-  where kquals (k,es) =
-          let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
-          -- create disjunction of qualifiers
-          let exprs = if length atoms > 1 && length atoms <= maxDisj
-                      then (POr atoms):atoms else atoms in
-          concatMap (concatMap (exprToQual (symSort k)). atomicExprs) exprs
+extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
+  where kquals (k,es) = do let atoms = nub $ atomicExprs =<< es
+                            -- create disjunction of qualifiers (evil hack)
+                           expr <- if length atoms > 1
+                                      && length atoms <= maxDisj
+                                    then (POr atoms):atoms
+                                    else atoms
+                           atomicExpr <- atomicExprs expr
+                           exprToQual (symSort k) atomicExpr
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
-        ksym (KV k) = k
         symSort k s =
-          let ksort = maybe intSort id (M.lookup (ksym k) ss) in
-          let ssort = maybe intSort id (M.lookup s ss) in
-          if s == vvName then ksort else ssort
+          if s == vvName
+            then M.lookupDefault intSort (kv k) ss
+            else M.lookupDefault intSort s ss
 
 queryQuals :: SymSorts -> [Query] -> [Qualifier]
-queryQuals ss queries =
-  sanitizeQualifiers $ concatMap (concatMap (exprToQual symSort) . atomicExprs . queryHead) queries
+queryQuals ss queries = sanitizeQualifiers $ do
+    query <- queries
+    e <- atomicExprs $ queryHead query
+    exprToQual symSort e
   where queryHead (_, _, (e,_)) = e
-        symSort s = maybe intSort id (M.lookup s ss)
+        symSort s = M.lookupDefault intSort s ss
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
-genQualifiers csyms sinfo n = do
-  let (ss, kcs, queries) = genUnrollInfo csyms sinfo
-  quals  <- forM queries $ \query -> do
+genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
+  forM queries (\query ->
     -- unroll
-    let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query
-
+    let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query in
     -- add created vars back to finfo
-    let allvars = M.union ss ssyms
-    let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) }
-
+    let allvars = M.union ss ssyms in
+    let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) } in
     -- run tree interpolation to compute possible kvar solutions
-    candSol <- genCandSolutions si' usubs diquery
-
-    -- extract qualifiers
-    return $ extractQualifiers allvars candSol
-
-  let rhsQuals = queryQuals ss queries
-  let allquals = nub $ concat $ rhsQuals:quals
-  return $ nub $ allquals
+    extractQualifiers allvars <$> genCandSolutions si' usubs diquery)
+  where (ss, kcs, queries) = genUnrollInfo csyms sinfo
+        -- Ranjit's "seeding" trick
+        rhsQuals = queryQuals ss queries
