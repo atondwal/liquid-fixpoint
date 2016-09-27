@@ -578,7 +578,6 @@ qarg = symbol "QARG"
 
 renameQualParams :: Qualifier -> Qualifier
 -- rename params so that redundant qualifiers may be discarded
--- more fake deBrujin
 renameQualParams (Q name params body loc) = Q name newParams newBody loc
   where zipParam      = zip params $ intSymbol qarg <$> [1 .. length params]
         newParams     = (\((_,sort),sym') -> (sym',sort)) <$> zipParam
@@ -586,24 +585,30 @@ renameQualParams (Q name params body loc) = Q name newParams newBody loc
 
 paramSubst ((sym,_), sym') = (sym, EVar sym')
 
-exprToQual :: (Symbol -> Sort) -> Expr -> [Qualifier]
+exprToQual :: M.HashMap Symbol Sort -> Expr -> [Qualifier]
 exprToQual symsort e = (\p -> Q dummySymbol p e interpLoc) <$> permutations params
   where -- don't include uninterpreted functions as parameters!
-        params    = paramSorts 0 M.empty
+        params    = -- paramSorts 0 M.empty
                     (filter (isNotFunc . snd) $
-                      (id &&& symsort) <$> exprSyms e)
+                      (id &&& lookupSymsort) <$> exprSyms e)
+        lookupSymsort s = M.lookupDefault intSort s symsort
 
 interpLoc   = dummyPos "interpolated"
 isNotFunc s = isNothing $ functionSort s
 
+{-
+
 -- convert tySort to a variable type
 -- a.k.a fake deBrujin indicies
 -- FIXME: Ask RJ about this
+paramSorts :: Int -> M.HashMap Sort Int -> [(t, Sort)] -> [(t, Sort)]
 paramSorts _ _ []     = []
 paramSorts i m ((p,s):pps) =
   case M.lookup s m of
     Nothing -> (p,FVar i):(paramSorts (i+1) (M.insert s i m) pps)
     Just n -> (p,FVar n):(paramSorts i m pps)
+-}
+
 
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
 sanitizeQualifiers quals = nub $ renameQualParams <$> filter validQual quals
@@ -645,18 +650,14 @@ extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
                            exprToQual (symSort k) atomicExpr
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
-        symSort k s =
-          if s == vvName
-            then M.lookupDefault intSort (kv k) ss
-            else M.lookupDefault intSort s ss
+        symSort k = M.insert vvName (M.lookupDefault intSort (kv k) ss) ss
 
 queryQuals :: SymSorts -> [Query] -> [Qualifier]
 queryQuals ss queries = sanitizeQualifiers $ do
     query <- queries
     e <- atomicExprs $ queryHead query
-    exprToQual symSort e
+    exprToQual ss e
   where queryHead (_, _, (e,_)) = e
-        symSort s = M.lookupDefault intSort s ss
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
