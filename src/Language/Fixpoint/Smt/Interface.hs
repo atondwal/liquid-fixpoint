@@ -368,7 +368,7 @@ pairP = {-# SCC "pairP" #-}
      return (x,v)
 
 symbolP :: SmtParser Symbol
-symbolP = {-# SCC "symbolP" #-} textSymbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
+symbolP = {-# SCC "symbolP" #-} symbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
 valueP :: SmtParser T.Text
 valueP = {-# SCC "valueP" #-} negativeP
