@@ -30,8 +30,8 @@ module Language.Fixpoint.Types.Names (
   , symbolSafeString
   , symbolText
   , symbolString
-  , textSymbol
-  , encode
+  -- , textSymbol
+  -- , encode
 
   -- Predicates
   , isPrefixOfSym
@@ -48,13 +48,13 @@ module Language.Fixpoint.Types.Names (
   , dropSym
   , headSym
   , lengthSym
-  , unSuffixSymbol
+  -- , unSuffixSymbol
 
   -- * Transforms
   , nonSymbol
   , vvCon
   , tidySymbol
-  , mappendSym
+  -- , mappendSym
 
   -- * Widely used prefixes
   , anfPrefix

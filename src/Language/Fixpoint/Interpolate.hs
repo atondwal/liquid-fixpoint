@@ -125,7 +125,7 @@ updateUnrollSubs us = modify $ \x -> x {unrollSubs = us}
 
   -- FIXME: CHECK IF s has number suffix
 getSubCount :: Symbol -> UnrollM Int
-getSubCount s = M.lookupDefault 1 (unSuffixSymbol s) . renameMap <$> get
+getSubCount s = M.lookupDefault 1 (tidySymbol s) . renameMap <$> get
 
 updateSubCount :: Symbol -> Int -> UnrollM ()
 updateSubCount s n = updateRenameMap =<< M.insert s n . renameMap <$> get
@@ -328,7 +328,7 @@ newSub s s' = do
 
 renameSymbol :: Symbol -> UnrollM Symbol
 renameSymbol s = do
-  let spref = unSuffixSymbol s
+  let spref = tidySymbol s
   n <- getSubCount spref
   updateSubCount spref (n+1)
   let s' = intSymbol spref n
@@ -569,7 +569,7 @@ genCandSolutions sinfo u dquery =
     genTreeInterp tquery .
     map (cleanSymbols smap) <$>
     interpolation def sinfo formula)
-  where uninternSym s = (symbol $ encode $ symbolText s, s)
+  where uninternSym s = (symbol $ symbolText s, s)
         cleanSymbols  = flip $ foldr (uncurry renameExpr)
         usubs         = Su $ M.fromList $ second EVar <$> M.toList u
         tqueries      = expandTree dquery
