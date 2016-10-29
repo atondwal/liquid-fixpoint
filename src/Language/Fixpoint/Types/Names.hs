@@ -146,7 +146,7 @@ type SafeText = T.Text
 --
 --   If the original text has ANY other chars, it is represented as:
 --
---     lq$i
+--     lq$i$
 --
 --   where i is a unique integer (for each text)
 
