@@ -476,6 +476,7 @@ pred0P =  trueP
       <|> try (eVar <$> symbolP)
       <|> try (reservedOp "&&" >> PAnd <$> predsP)
       <|> try (reservedOp "||" >> POr  <$> predsP)
+      <|> try expr0P
 
 -- qmP    = reserved "?" <|> reserved "Bexp"
 
