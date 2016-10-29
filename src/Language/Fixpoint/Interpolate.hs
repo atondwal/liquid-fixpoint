@@ -335,12 +335,9 @@ renameSymbol s = do
   cs <- createdSymbols <$> get
   msort <- getSymSort s
   -- if sort cannot be found, assume it's an int
-  let sort = fromMaybe intSort msort
+  let sort = fromMaybe (error $ "renameSymbol: Sort not found " ++ show s') msort
   updateCreatedSymbols (M.insert s' sort cs)
   return s'
-
-freshSubSymbol :: UnrollM Symbol
-freshSubSymbol = renameSymbol $ symbol "SUB"
 
 generateHeadSubst :: ArgMap -> [(Symbol,Symbol)]
 generateHeadSubst = (toHeadSubs =<<) . M.elems
@@ -396,13 +393,13 @@ applySub1 (ui,tmpexprs) (ssym,sexpr) =
    -- if the substitution is symbol to symbol,
    -- we don't introduce a new "tmp expr"
     EVar ssym' -> do
-      tmp <- freshSubSymbol
+      tmp <- renameSymbol ssym
       newSub ssym ssym'
       newSub ssym' tmp
       return (renameClauses ssym ssym' (renameClauses ssym' tmp ui), tmpexprs)
 
     _ -> do
-      tmp <- freshSubSymbol
+      tmp <- renameSymbol ssym
       newSub ssym tmp
       return (renameClauses ssym tmp ui, PAtom Eq (EVar tmp) sexpr:tmpexprs)
 
@@ -650,14 +647,17 @@ extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
                            exprToQual (symSort k) atomicExpr
         -- get atomic expressions from conjunctions and disjunctions
         -- we want qualifiers to be simple (atomic) predicates
-        symSort k = M.insert vvName (M.lookupDefault intSort (kv k) ss) ss
+        symSort k = M.insert vvName (M.lookupDefault (error "exprToPred: no such KV")
+                                                     (kv k) ss)
+                                    ss
 
 queryQuals :: SymSorts -> [Query] -> [Qualifier]
 queryQuals ss queries = sanitizeQualifiers $ do
     query <- queries
     e <- atomicExprs $ queryHead query
-    exprToQual ss e
+    exprToQual (symSort query) e
   where queryHead (_, _, (e,_)) = e
+        symSort (_,_,(_,s)) = M.insert vvName s ss
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
