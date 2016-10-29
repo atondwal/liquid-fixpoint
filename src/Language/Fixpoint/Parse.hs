@@ -549,6 +549,7 @@ pred0P =  trueP
       <|> (eVar <$> symbolP)
       <|> (reservedOp "&&" >> pGAnds <$> predsP)
       <|> (reservedOp "||" >> POr  <$> predsP)
+      <|> try expr0P
 
 makeUniquePGrad :: Parser Expr
 makeUniquePGrad
