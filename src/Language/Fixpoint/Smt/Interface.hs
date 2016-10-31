@@ -84,7 +84,6 @@ import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
-import           Data.Interned
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -95,6 +94,7 @@ import qualified Data.Attoparsec.Text     as A
 import           Data.Attoparsec.Internal.Types (Parser)
 import           Text.PrettyPrint.HughesPJ (text)
 import           Text.Read (readMaybe)
+import           Data.Text.Read (decimal)
 
 {-
 runFile f
@@ -368,7 +368,13 @@ pairP = {-# SCC "pairP" #-}
      return (x,v)
 
 symbolP :: SmtParser Symbol
-symbolP = {-# SCC "symbolP" #-} symbol <$> unintern <$> symbol <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
+symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
+
+decode :: T.Text -> T.Text
+decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fromRight . decimal]) (T.split (=='$') s)
+
+fromRight (Right (x,_)) = x
+fromRight (Left _) = error "Invalid hashcons format"
 
 valueP :: SmtParser T.Text
 valueP = {-# SCC "valueP" #-} negativeP
