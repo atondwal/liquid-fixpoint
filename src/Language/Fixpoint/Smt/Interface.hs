@@ -580,6 +580,7 @@ smtInterpolate me _ p = respInterp <$> command me (Interpolate n p)
   where n = countInterp p 
 
 respInterp (Interpolant ps) = ps
+respInterp Sat = []
 respInterp r = die $ err dummySpan $ text ("crash: SMTLIB2 respInterp = " ++ show r)
 
 respSat :: Response -> Bool
