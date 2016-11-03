@@ -20,11 +20,11 @@ module Language.Fixpoint.Solver (
 
 import           Control.Concurrent
 import           Data.Binary
-import qualified Data.HashMap.Strict as M
 import           System.Exit                        (ExitCode (..))
 import           System.Console.CmdArgs.Verbosity   (whenNormal)
 import           Text.PrettyPrint.HughesPJ          (render)
-import           Control.Monad                      (when, forM_)
+import           Control.Monad                      (when)
+import           Control.Arrow                      ((&&&))
 import           Control.Exception                  (catch)
 import           Language.Fixpoint.Solver.Sanitize  (symbolEnv, sanitize)
 import           Language.Fixpoint.Solver.UniqifyBinds (renameAll)
@@ -44,7 +44,6 @@ import           Language.Fixpoint.Minimize (minQuery, minQuals, minKvars)
 import           Language.Fixpoint.Solver.Instantiate (instantiateFInfo)
 import           Language.Fixpoint.Smt.Interface (makeSmtContext, smtPush)
 import           Language.Fixpoint.Interpolate (genQualifiers)
-import           Language.Fixpoint.Smt.Types
 import           Control.DeepSeq
 
 ---------------------------------------------------------------------------
@@ -90,53 +89,24 @@ solve cfg q
   | otherwise      = solve'     cfg        $!! q
 
 interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
-interpSolve n cfg q = do
-  -- minquals <- minimizeQuals cfg solve' $!! q
-  -- putStrLn "min quals:"
-  -- forM_ minquals print
+interpSolve n cfg q = interpSolve' n cfg si4 cs
+  where
+  cs  = (reftBind . sr_reft . srhs &&& sr_sort . srhs) <$> cm q
+  si0 = {-# SCC "convertFormat" #-} convertFormat q
+  si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
+  -- TODO Fix this?
+  -- si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
+  si3 = {-# SCC "renameAll" #-} renameAll $!! si1
+  si4  = {-# SCC "defunctionalize" #-} defunctionalize cfg $!! si3
 
-  let fi1 = q { quals = remakeQual <$> quals q }
-  -- fi2 <- minimizeCons cfg solve' fi1
-  let si0 = {-# SCC "convertFormat" #-} convertFormat fi1
-  let si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
-  -- let si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
-  let si' = {-# SCC "renameAll" #-} renameAll $!! si1
-
-  -- save renamed sinfo
-  -- mapM putStrLn $ lines $ render (toFixpoint cfg si')
-
-  -- (_, si') <- {-# SCC "elim" #-} elim cfg $!! si3
-  writeLoud $ "About to solve: \n" ++ render (toFixpoint cfg si')
-  
-  let csyms = M.map (\c -> (reftBind $ sr_reft $ srhs c, sr_sort $ srhs c)) (cm q)
+{-@ Lazy interpSolve' @-}
+interpSolve' n cfg q csyms = do
   putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
-  {-
-  putStrLn "BEFORE csyms:"
-  print csyms
-  putStrLn "BEFORE Lits:"
-  print (lits si')
-  putStrLn "BEFORE BindEnv:"
-  print (bs si')
-  -}
-  interpQuals <- genQualifiers csyms si' n
-  putStrLn "Computed qualifiers:"
-  forM_ interpQuals (putStrLn . show . smt2 . qBody)
-  -- let q' = q { quals = remakeQual <$> interpQuals }
-  let q' = q { quals = interpQuals }
-  res <- solve' cfg q'
+  interpQuals <- genQualifiers csyms q n
+  res <- Sol.solve cfg $!! q { quals = interpQuals }
   case res of
-    (Result Safe _) -> do
-      -- minquals' <- minimizeQuals cfg solve' $!! q'
-      -- putStrLn "min interp quals:"
-      -- forM_ minquals' print
-
-      -- putStrLn "Solution:"
-      -- print sol
-      return res 
-    _               -> do
-      if n < unrollDepth cfg
-        then interpSolve (n+1) cfg q
-        else return res
+    (Result Safe _) -> return res
+    _               -> interpSolve' (n+1) cfg q csyms
 
 solve' :: (NFData a, Fixpoint a) => Solver a
 solve' cfg q = do
