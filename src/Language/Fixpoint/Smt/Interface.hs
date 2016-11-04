@@ -95,7 +95,7 @@ import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
 import           System.FilePath
-import           System.IO                (Handle, IOMode (..), hClose, hFlush, openFile)
+import           System.IO                (Handle, IOMode (..), hClose, hFlush, openFile, withFile)
 import           System.Process
 import qualified Data.Attoparsec.Text     as A
 import qualified Data.HashMap.Strict      as M
@@ -178,8 +178,8 @@ command me !cmd       = say cmd >> hear cmd
     hear (GetValue _) = smtRead me
     hear (Interpolate n _) = do
       -- write the interpolation query to interp.out
-      -- withFile "interp.out" WriteMode $ \handle -> do
-        -- hPutStrLnNow handle $ runSmt2 (smtenv me) cmd
+      withFile "interp.out" WriteMode (\handle ->
+        hPutStrLnNow handle $ Builder.toLazyText $ runSmt2 cmd)
 
       resp <- smtRead me
       case resp of
