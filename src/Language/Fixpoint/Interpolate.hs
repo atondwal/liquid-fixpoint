@@ -504,29 +504,14 @@ extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
--- manually run tree interpolation here in pieces
--- this is to prune the tree query, since many queries
--- have huge numbers of variables
--- the idea is to run DFS on the tree, computing interpolants for each
--- node one by one and then for each interpolation query discarding
--- binders that are redundant within one side of a cut
 genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> Interp -> IO CandSolutions
 genCandSolutions sinfo u dquery =
-  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty .
-  (extractSol usubs <$>) <$>
-  forM tqueries (\tquery ->
-    let formula = genQueryFormula tquery in
-    -- unintern symbols
-    let smap = M.toList $
-              foldr (\s acc -> uncurry M.insert (uninternSym s) acc) M.empty
-              (exprSyms formula) in
-    genTreeInterp tquery .
-    map (cleanSymbols smap) <$>
-    interpolation def sinfo formula)
-  where uninternSym s = (symbol $ symbolText s, s)
-        cleanSymbols  = flip $ foldr (uncurry renameExpr)
-        usubs         = Su $ M.fromList $ second EVar <$> M.toList u
-        tqueries      = expandTree dquery
+  -- FIXME: This `nub` might be slow
+  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
+  forM (expandTree dquery) (\tquery ->
+    extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
+    genTreeInterp tquery <$>
+    interpolation def sinfo (genQueryFormula tquery))
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc
@@ -545,12 +530,6 @@ exprToQual symsort e = (\p -> Q dummySymbol p e interpLoc) <$> permutations para
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
 sanitizeQualifiers quals = nub $ renameQualParams <$> filter validQual quals
 
-
--- generate qualifiers from candidate solutions
--- ss should contain the sorts for
--- * kvars
--- * created variables during unrolling
--- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
 extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
   where kquals (k,es) = let atoms = nub $ atomicExprs =<< es in
@@ -559,8 +538,6 @@ extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
                                      then POr atoms : atoms
                                      else atoms in
                         exprToQual (symSort k) =<< atomicExprs =<< expr
-        -- get atomic expressions from conjunctions and disjunctions
-        -- we want qualifiers to be simple (atomic) predicates
         symSort k = M.insert vvName (M.lookupDefault (error "exprToPred: no such KV")
                                                      (kv k) ss)
                                     ss
