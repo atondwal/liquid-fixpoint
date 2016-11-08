@@ -182,7 +182,6 @@ command me !cmd       = say cmd >> hear cmd
         Unsat -> smtPred n me
         Sat -> putStrLn "Not UNSAT." >> return Sat
         e -> error $ show e
- 
     hear _            = return Ok
 
 
@@ -198,7 +197,6 @@ smtRes me res = case A.eitherResult res of
     return r
 
 
--- smtParse me parserP = DT.traceShowId <$> smtReadRaw me >>= A.parseWith (smtReadRaw me) parserP >>= smtRes me
 smtParse me parserP = do
   t <- smtReadRaw me
   p <- A.parseWith (smtReadRaw me) parserP t
@@ -210,21 +208,6 @@ smtParse' me parserP = do
   p <- return $ A.parse parserP t'
   smtRes me p
 
-{-
-smtReadRawLines me = smtReadRawLines_ me []
-  where smtReadRawLines_ me acc = do
-          t <- smtReadRaw me
-          if t == T.empty then return acc else smtReadRawLines_ me (t:acc)
-
-smtParse' me parserP = do
-  ts <- smtReadRawLines me
-  putStrLn "Interpolants (RAW):"
-  forM ts Prelude.print
-  -- ps <- return $ A.parse parserP t
-  let ps = map (A.parse parserP) ts
-  forM ps (smtRes me)
--}
-
 smtRead :: Context -> IO Response
 smtRead me = {-# SCC "smtRead" #-} smtParse me responseP
 
@@ -232,17 +215,12 @@ smtPred :: Int -> Context -> IO Response
 smtPred n me = {-# SCC "smtPred" #-} do
   responses <- forM [1..n] $ \_ -> parseInterp
   return $ Interpolant $ concatMap getInterps responses
-  -- responses <- parseInterp
-  -- return $ Interpolant $ concatMap getInterps responses
   where parseInterp = do
-          -- ps <- smtParse me (Interpolant <$> map parseLisp' <$> predP)
-          p <- smtParse' me (Interpolant <$> (\e -> [e]) <$> parseLisp' <$> predP)
+          p <- smtParse' me (Interpolant <$> (\e -> [e]) <$> parseLisp <$> predP)
           return p
         getInterps (Interpolant e) = e
         getInterps _ = []
--- smtPred n me = {-# SCC "smtPred" #-} smtParse me (Interpolant <$> (\x -> [x]) <$> parseLisp' <$> predP)
 
--- space that 
 space2 c = isSpace c && not (A.isEndOfLine c)
 
 predP = {-# SCC "predP" #-}
@@ -250,7 +228,6 @@ predP = {-# SCC "predP" #-}
     <|> (Sym <$> symbolP)
 
 data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
--- type PorE = Either Expr Expr
 
 binOpStrings :: [T.Text]
 binOpStrings = [ "+", "-", "*", "/", "mod"]
@@ -273,8 +250,6 @@ strToRel "<" = Lt
 strToRel "<=" = Le
 -- Do I need Ne Une Ueq?
 strToRel _ = error "Rel not found"
-
-parseLisp' = parseLisp
 
 parseLisp :: Lisp -> Expr
 parseLisp (Sym s)
@@ -307,43 +282,6 @@ parseLisp l@(Lisp xs)
   where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
         -- this should not be called
         lispToFunc (Sym s)   = EVar s
-
-{-
-
-parseLisp' :: Lisp -> Expr
-parseLisp' = toPred
-  where toPred :: Lisp -> Expr
-        toPred x = case parseLisp x of
-                     Left p -> p
-                     Right e -> error $ "expected Pred, got Expr: " ++ show e
-        toExpr :: Lisp -> Expr
-        toExpr x = case parseLisp x of
-                     Left p -> error $ "expected Expr, got Pred: " ++ show p
-                     Right e -> e
-          | symbolText s == "true" = Left PTrue
-          | symbolText s == "false" = Left PFalse
-          | otherwise = Right $ EVar s
-        parseLisp (Lisp (Sym s:xs))
-          | symbolText s == "and" = Left $ PAnd $ L.map toPred xs
-          | symbolText s == "or" = Left $ POr $ L.map toPred xs
-        parseLisp (Lisp [Sym s,x])
-          | symbolText s == "not" = Left $ PNot $ toPred x
-          | symbolText s == "-" = Right $ ENeg $ toExpr x
-          | otherwise           = Right $ EVar s -- ELit (dummyLoc s) $ fromJust $ lookup s (lits fi)
-        parseLisp (Lisp [Sym s,x,y])
-          | symbolText s == "=>" = Left $ PImp (toPred x) (toPred y)
-          | symbolText s `elem` binOpStrings = Right $ EBin (strToOp $ symbolText s) (toExpr x) (toExpr y)
-          | symbolText s `elem` binRelStrings = Left $ PAtom (strToRel $ symbolText s) (toExpr x) (toExpr y)
-          | symbolText s == "=" = Left $ case (parseLisp x, parseLisp y) of
-                                    (Left p, Left q) -> PIff p q
-                                    (Right p, Right q) -> PAtom Eq p q
-                                    _ -> error $ "Can't compare `" ++ show x ++ "` with`" ++ show y ++ "`. Kind Error."
-        parseLisp (Lisp [Sym s, x, y, z])
-          | symbolText s == "ite" = Right $ EIte (toPred x) (toExpr y) (toExpr z)
-        -- parseLisp (Lisp (Sym s:xs)) = Right $ EApp (dummyLoc s) $ L.map toExpr xs
-        parseLisp x = error $ show x ++ "is Nonsense Lisp!"
-        -- PBexp? When do I know to read one of these in?
--}
 
 type SmtParser a = Parser T.Text a
 
