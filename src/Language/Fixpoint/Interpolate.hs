@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as M
 import Data.List (intercalate, nub, permutations)
 import Data.Maybe (fromMaybe, maybeToList, isNothing, catMaybes)
 import Data.Function ((&))
+import qualified Data.Set as Set
 
 import Control.Arrow ((&&&), (>>>), second)
 import Control.Monad.State
@@ -119,7 +120,12 @@ maxDisj = 3
 qarg = symbol "QARG"
 argName = symbol "ARG"
 
-
+ordNub :: (Ord a) => [a] -> [a]
+ordNub l = go Set.empty l
+  where
+    go _ [] = []
+    go s (x:xs) = if x `Set.member` s then go s xs
+                                      else x : go (Set.insert x s) xs
 substToList :: Subst -> [(Symbol, Expr)]
 substToList (Su map) = M.toList map
 
@@ -557,7 +563,7 @@ genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
     let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query in
     -- add created vars back to finfo
     let allvars = M.union ss ssyms in
-    let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) } in
+    let si' = sinfo { gLits = fromListSEnv (ordNub $ M.toList allvars) } in
     -- run tree interpolation to compute possible kvar solutions
     extractQualifiers allvars <$> genCandSolutions si' usubs diquery)
   where (ss, kcs, queries) = genUnrollInfo csyms sinfo
