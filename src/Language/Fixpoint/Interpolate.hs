@@ -172,7 +172,7 @@ toRuleOrQuery (symrhs,sortrhs) sinfo f c =
         -- with unrolling
         -- (2) filter out substitutions not of the form [x:=expr], where
         -- x is in in the WfC of a kvar (or in the "global" scope of
-        -- finfo gLits
+        -- sinfo gLits
         cleanSubs e s         = V.trans (subVisitor s) () () e
         cleanSubs' s _ e
           | PKVar k subs <- e =
@@ -384,7 +384,7 @@ updateUnrollSubs us = do
 
 getSubCount :: Symbol -> UnrollM Int
 getSubCount s = do
-  let spref = tidySymbol s
+  let spref = unSuffixSymbol s
   rm <- getRenameMap
   -- FIXME: CHECK IF s has number suffix
   return $ maybe 1 id $ M.lookup spref rm
@@ -405,7 +405,7 @@ newSub s s' = do
 
 renameSymbol :: Symbol -> UnrollM Symbol
 renameSymbol s = do
-  let spref = tidySymbol s
+  let spref = unSuffixSymbol s
   n <- getSubCount spref
   updateSubCount spref (n+1)
   -- FIXME: change this to intSymbol
@@ -709,7 +709,7 @@ genCandSolutions sinfo u dquery = do
     let formula = genQueryFormula tquery
     -- putStrLn "Tree Interp query:"
     -- putStrLn $ show formula
-    let smap = foldr (\s acc -> (uncurry M.insert) (s, s) acc) M.empty (exprSyms formula)
+    let smap = foldr (\s acc -> (uncurry M.insert) (uninternSym s) acc) M.empty (exprSyms formula)
     interps <- interpolation (def :: Config) sinfo formula
     -- unintern symbols
     let interps' = map (cleanSymbols smap) interps
@@ -723,6 +723,9 @@ genCandSolutions sinfo u dquery = do
   return cands'
   where uniqAdd a b = nub $ a ++ b
         cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
+        uninternSym s =
+          let uninterned = symbol $ encode $ symbolText s in
+          (uninterned, s)
 
 qarg = symbol "QARG"
         
@@ -819,6 +822,7 @@ defaultQualifiers = [trueQual, falseQual]
   where loc       = dummyPos "no location"
         trueQual  = Q dummySymbol [(symbol "x",FVar 0)] PTrue loc
         falseQual = Q dummySymbol [(symbol "x",FVar 0)] PFalse loc
+-}
 
 printKClauses kcs = forM_ (M.toList kcs) printKClause
   where printKClause (k, (rec, nrec)) =  do
@@ -854,7 +858,6 @@ printKClauses kcs = forM_ (M.toList kcs) printKClause
           putStr "subs: "
           print subs
           putStrLn $ "sym: " ++ show sym
--}
 
 {-
 rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Maybe Qualifier
@@ -870,44 +873,36 @@ rhsQual csyms (i,c) = case e of
 genQualifiers :: (NFData a, Fixpoint a) => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = do
   let (ss, kcs, queries) = genUnrollInfo csyms sinfo
-  {-
   putStrLn "BindEnv:"
-  putStrLn $ show $ bs finfo
+  putStrLn $ show $ bs sinfo
   putStrLn "Lits::"
-  putStrLn $ show $ gLits finfo
+  putStrLn $ show $ gLits sinfo
   putStrLn "KClauses:"
   printKClauses kcs
-  -}
   quals  <- forM queries $ \query -> do
     -- unroll
     let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
-    {-
     putStrLn "Interp query:"
-    putStrLn $ show $ genQueryFormula diquery
+    -- putStrLn $ show $ genQueryFormula diquery
     putStrLn "Created symbols:"
-    putStrLn $ show cs
+    -- putStrLn $ show cs
     putStrLn "usubs:"
     putStrLn $ show usubs
-    -}
 
-    -- add created vars back to finfo
-    -- let vars = toListSEnv (gLits finfo)
+    -- add created vars back to sinfo
+    -- let vars = toListSEnv (gLits sinfo)
     -- let allvars = M.union (M.fromList vars) cs
     let allvars = M.union ss cs
     let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) }
-    {-
     putStrLn "AFTER Lits:"
     print (gLits si')
     putStrLn "AFTER BindEnv:"
     print (bs si')
-    -}
 
     -- run tree interpolation to compute possible kvar solutions
     candSol <- genCandSolutions si' usubs diquery
-    {-
     putStrLn "candidate solutions:"
     putStrLn $ show candSol
-    -}
 
     -- extract qualifiers 
     return $ extractQualifiers allvars candSol
@@ -915,10 +910,10 @@ genQualifiers csyms sinfo n = do
   let rhsQuals = queryQuals ss queries
   let allquals = nub $ concat $ rhsQuals:quals
   -- let allquals2 = nub $ concat $ [rhsQuals]
-  -- putStrLn "RHSQUALS:"
-  -- forM rhsQuals print
-  -- putStrLn "INTERP QUALS:"
-  -- forM (concat quals) print
+  putStrLn "RHSQUALS:"
+  forM rhsQuals print
+  putStrLn "INTERP QUALS:"
+  forM (concat quals) print
   return $ nub $ allquals
   {-
   let rhsQuals = catMaybes $ rhsQual (snd<$>csyms) <$> M.toList (cm sinfo)

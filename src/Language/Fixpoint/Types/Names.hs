@@ -30,7 +30,7 @@ module Language.Fixpoint.Types.Names (
   , symbolText
   , symbolString
   -- , textSymbol
-  -- , encode
+  , encode
 
   -- Predicates
   , isPrefixOfSym
@@ -47,7 +47,7 @@ module Language.Fixpoint.Types.Names (
   , dropSym
   , headSym
   , lengthSym
-  -- , unSuffixSymbol
+  , unSuffixSymbol
 
   -- * Transforms
   , nonSymbol
