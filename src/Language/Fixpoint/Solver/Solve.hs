@@ -209,9 +209,14 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
+interpolation :: NFData a => Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
 ---------------------------------------------------------------------------
-interpolation cfg fi p = runSolverM cfg sI 0 s0 $ interpolationSolver fi p
+interpolation cfg fi p = deepseq p $
+                         deepseq fi $
+                         do print "Starting Interpolation"
+                            a <- runSolverM cfg sI 0 s0 $ interpolationSolver fi p
+                            print "Done Interpolating"
+                            return a
   where sI   = solverInfo cfg fi
         s0   = siSol  sI
 

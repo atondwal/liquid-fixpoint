@@ -5,9 +5,11 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
 
 module Language.Fixpoint.Interpolate ( genQualifiers ) where
 
+import GHC.Generics
 import qualified Data.HashMap.Strict as M
 import Data.List (intercalate, nub, permutations)
 import Data.Maybe (fromMaybe, maybeToList, isNothing, catMaybes)
@@ -23,10 +25,13 @@ import Language.Fixpoint.Types hiding (renameSymbol)
 import Language.Fixpoint.Solver.Solve (interpolation)
 import qualified Language.Fixpoint.Types.Visitor as V
 
+import Control.DeepSeq
+import Debug.Trace
 
 
 data AOTree b a = And b a [AOTree b a]
                 | Or b [AOTree b a]
+                deriving (Generic, NFData)
 
 instance (Show a, Show b) => Show (AOTree b a) where
   show (And b a children) = "And " ++ show b ++ " " ++ show a ++
@@ -510,14 +515,13 @@ extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
-genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> Interp -> IO CandSolutions
-genCandSolutions sinfo u dquery =
+genCandSolutions sinfo u dquery = deepseq (trace "SINFO" $!! sinfo) $
   -- FIXME: This `nub` might be slow
   foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
   forM (expandTree dquery) (\tquery ->
     extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
     genTreeInterp tquery <$>
-    interpolation def sinfo (genQueryFormula tquery))
+    ((interpolation def sinfo) $!! (trace "genQF" $!! genQueryFormula tquery)))
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc
@@ -556,14 +560,13 @@ queryQuals ss queries = sanitizeQualifiers $ do
   where queryHead (_, _, (e,_)) = e
         symSort (_,_,(_,s)) = M.insert vvName s ss
 
-genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
 genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
   forM queries (\query ->
     -- unroll
-    let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query in
+    let (diquery, ssyms, usubs) = trace "genQ" $!! genInterpQuery n (UI kcs ss M.empty) query in
     -- add created vars back to finfo
-    let allvars = M.union ss ssyms in
-    let si' = sinfo { gLits = fromListSEnv (ordNub $ M.toList allvars) } in
+    let allvars = trace "ALLVARS" $!! M.union ss ssyms in
+    let si' = sinfo { gLits = fromListSEnv $!! (ordNub $ M.toList $ traceShow (M.size allvars) allvars) } in
     -- run tree interpolation to compute possible kvar solutions
     extractQualifiers allvars <$> genCandSolutions si' usubs diquery)
   where (ss, kcs, queries) = genUnrollInfo csyms sinfo
