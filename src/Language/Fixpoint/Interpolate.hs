@@ -3,71 +3,91 @@
 -- | that can be used to solve constraint sets
 
 {-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
 
-module Language.Fixpoint.Interpolate ( genQualifiers ) where
+module Language.Fixpoint.Interpolate ( genQualifiers, imain ) where
 
-import GHC.Generics
+import System.Console.CmdArgs hiding (Loud)
 import qualified Data.HashMap.Strict as M
+-- import qualified Data.HashSet as S
 import Data.List (intercalate, nub, permutations)
-import Data.Maybe (fromMaybe, maybeToList, isNothing, catMaybes)
-import Data.Function ((&))
-import qualified Data.Set as Set
-
-import Control.Arrow ((&&&), (>>>), second)
+-- import Data.Maybe (catMaybes)
+-- import Text.Read (readMaybe)
+import Control.Monad
 import Control.Monad.State
 import Control.Monad.Reader
 
-import System.Console.CmdArgs (def)
+-- import Language.Fixpoint.Smt.Types
 import Language.Fixpoint.Types hiding (renameSymbol)
-import Language.Fixpoint.Solver.Solve (interpolation)
+import Language.Fixpoint.Types.Config
+import Language.Fixpoint.Solver.Solve
 import qualified Language.Fixpoint.Types.Visitor as V
 
 import Control.DeepSeq
-import Debug.Trace
-
 
 data AOTree b a = And b a [AOTree b a]
                 | Or b [AOTree b a]
-                deriving (Generic, NFData)
 
 instance (Show a, Show b) => Show (AOTree b a) where
-  show (And b a children) = "And " ++ show b ++ " " ++ show a ++
-                            " [" ++ intercalate "," (show <$> children) ++ "]"
-  show (Or b children) = "Or " ++ show b ++ " " ++
-                         " [" ++ intercalate "," (show <$> children) ++ "]"
+  show (And b a children) =
+    let showChildren = intercalate "," (map show children) in
+    "And " ++ (show b) ++ " " ++ (show a) ++ " [" ++ showChildren ++ "]"
+  show (Or b children) =
+    let showChildren = intercalate "," (map show children) in
+    "Or " ++ (show b) ++ " [" ++ showChildren ++ "]"
 
 instance (Eq a, Eq b) => Eq (AOTree b a) where
   (And x1 y1 c1) == (And x2 y2 c2)  = x1 == x2 && y1 == y2 && c1 == c2
   (Or x1 c1) == (Or x2 c2)          = x1 == x2 && c1 == c2
-  And{} == Or{}                     = False
-  Or{} == And{}                     = False
+  (And _ _ _) == (Or _ _)           = False
+  (Or _ _) == (And _ _ _)           = False
 
+-- this could be a functor except the mapping function "f"
+-- needs extra context (the extra b param)
 mapAOTree :: (b -> a -> c) -> AOTree b a -> AOTree b c
 mapAOTree f (And i n children) = And i (f i n) $ map (mapAOTree f) children
 mapAOTree f (Or i children) = Or i $ map (mapAOTree f) children
 
-
-
-instance Functor ((,,) a b) where
-  fmap f (a,b,c) = (a,b,f c)
-
-
-
 -- the corresponding HC head of a node (non-root nodes correspond to HC bodies)
 type HeadInfo = (KVar, Symbol)
-type Interp = AOTree (Maybe HeadInfo) Expr
+
+-- an interpolation query
+-- an And/Or tree corresponds to a disjunctive interpolant
+-- an And tree corresponds to a tree interpolant
+type InterpQuery = AOTree (Maybe HeadInfo) Expr
+
+-- a tree interpolant
+-- this should have the same structure as its corresponding tree interp query
+type TreeInterp = AOTree (Maybe HeadInfo) Expr
+{-
+showTreeInterp :: TreeInterp -> String
+showTreeInterp (And b a children) =
+  let showChildren = intercalate "," (map showTreeInterp children) in
+  "And " ++ (show b) ++ " " ++ (show $ smt2 a) ++ " [" ++ showChildren ++ "]"
+showTreeInterp (Or b children) =
+  let showChildren = intercalate "," (map showTreeInterp children) in
+  "Or " ++ (show b) ++ " [" ++ showChildren ++ "]"
+-}
+
+-- a set of candidate solutions
 type CandSolutions = M.HashMap KVar [Expr]
--- body, children, head (computed from SubC)
+
+-- body, children, head
+-- this is computed from SubC
 type ClauseChild = (KVar, Subst, Symbol)
-type Rule = (Expr, [ClauseChild], (KVar, Subst))
-type Query = (Expr, [ClauseChild], (Expr,Sort))
--- new substitutions generated from unrolling ( v |-> tmp_v )
+type ClauseInfo a = (Expr, [ClauseChild], a)
+type Rule = ClauseInfo (KVar, Subst)
+type ExprSort = (Expr,Sort)
+type Query = ClauseInfo ExprSort
+
+-- new substitutions generated from unrolling
+-- the Symbol at the value of a mapping corresponds
+-- to the original variable that the tmp var substituted
 type UnrollSubs = M.HashMap Symbol Symbol
+-- type SymbolMap  = M.HashMap Symbol Symbol
+
 -- mapping from kvars to rec/nonrec-clauses with head as the kvar
 type KClauses = M.HashMap KVar ([Rule], [Rule])
+-- sorts of symbols; this is used for 
 type SymSorts = M.HashMap Symbol Sort
 type ArgMap   = M.HashMap Symbol (Symbol, Maybe Symbol)
 data UnrollInfo = UI {
@@ -75,248 +95,219 @@ data UnrollInfo = UI {
                   , ss :: SymSorts
                   , argmap :: M.HashMap Symbol (Symbol, Maybe Symbol)
                   }
+
+-- for generating renamed symbols
 type RenameMap = M.HashMap Symbol Int
-data UnrollState = URS { createdSymbols :: SymSorts
-                       , renameMap :: RenameMap
-                       , unrollSubs :: UnrollSubs
-                       }
+
+-- created symbols, rename map, unroll subs
+type UnrollState = (SymSorts, RenameMap, UnrollSubs)
+type UnrollDepth = M.HashMap KVar Int
 type UnrollM a = ReaderT UnrollInfo (State UnrollState) a
 
--- UnrollInfo get/set
----------------------
-setKClauses kcs (UI _ ss am) = UI kcs ss am
-setArgMap argmap' uinfo = uinfo { argmap = argmap' }
-updateArgMap subs uinfo =
-  uinfo { argmap = foldr insertArg (argmap uinfo) $ substToList subs }
+-- HELPER FUNCTIONS
 
--- FIXME: this seems very slow... is it?
-insertArg (s,EVar v) am =
-  case M.keys $ M.filter ((== s).fst) am of
-    [] -> M.insert s (v,Nothing) am
-    xs -> foldr (`M.insert` (v,Nothing)) am xs
-insertArg _ _ = error "substitution should be a variable!"
+bindSym :: BindId -> BindEnv -> Symbol
+bindSym id env = fst $ lookupBindEnv id env
 
--- UnrollM get/set
-------------------
-getSymSort :: Symbol -> UnrollM (Maybe Sort)
-getSymSort s = do
-  ss <- ss <$> ask
-  case M.lookup s ss of
-    Just sort -> return (Just sort)
-    Nothing -> M.lookup s . createdSymbols <$> get
-getSubCount :: Symbol -> UnrollM Int
--- FIXME: CHECK IF s has number suffix
-getSubCount s = M.lookupDefault 1 (tidySymbol s) . renameMap <$> get
-
-updateRenameMap :: RenameMap -> UnrollM ()
-updateRenameMap rm = modify $ \x -> x {renameMap = rm}
-updateCreatedSymbols :: SymSorts -> UnrollM ()
-updateCreatedSymbols cs = modify $ \x -> x {createdSymbols = cs}
-updateUnrollSubs :: UnrollSubs -> UnrollM ()
-updateUnrollSubs us = modify $ \x -> x {unrollSubs = us}
-updateSubCount :: Symbol -> Int -> UnrollM ()
-updateSubCount s n = updateRenameMap =<< M.insert s n . renameMap <$> get
-
--- Misc functions
------------------
-
-interpLoc   = dummyPos "interpolated"
-maxDisj = 3
-qarg = symbol "QARG"
-argName = symbol "ARG"
-
-ordNub :: (Ord a) => [a] -> [a]
-ordNub l = go Set.empty l
-  where
-    go _ [] = []
-    go s (x:xs) = if x `Set.member` s then go s xs
-                                      else x : go (Set.insert x s) xs
 substToList :: Subst -> [(Symbol, Expr)]
 substToList (Su map) = M.toList map
 
-atomicExprs :: Expr -> [Expr]
-atomicExprs (PAnd ps) = ps >>= atomicExprs
-atomicExprs e         = [e]
-
-isExprSym (EVar s') s = s' == s
-isExprSym _ _         = False
-
-isKVar :: Expr -> Bool
-isKVar (PKVar _ _)    = True
-isKVar _              = False
-
-kenv :: SInfo a -> KVar -> [Symbol]
-kenv si k = map (fst . flip lookupBindEnv (bs si)) $
-              elemsIBindEnv . wenv =<<
-              maybeToList (M.lookup k $ ws si)
-
-exprSyms :: Expr -> [Symbol]
-exprSyms = nub . V.fold (dv { V.accExpr = getSymbol }) () []
-  where dv = V.defaultVisitor :: V.Visitor [Symbol] ()
-
-getSymbol _ (EVar s)       = [s]
-getSymbol _ (PKVar _ subs) = ks ++ (sexprs >>= exprSyms)
-  where (ks, sexprs) = unzip $ substToList subs
-getSymbol _ _              = []
-
-isNotFunc s = isNothing $ functionSort s
-
-validQual q = hasArgs q && nonTrivial q && nonVar q
--- qualifier is not a kvar or a regular var
--- shouln't need this... @TODO fix what breaks when we don't
-nonVar (Q _ _ (PKVar _ _) _) = False
-nonVar (Q _ _ (EVar _) _)    = False
-nonVar  Q{}                  = True
--- don't add true or false as qualifiers
-nonTrivial q
-  | Q _ _ (PAnd []) _ <- q  = False
-  | Q _ _ PTrue _ <- q      = False
-  | Q _ _ (POr []) _ <- q   = False
-  | Q _ _ PFalse _<- q      = False
-  | otherwise               = True
-hasArgs (Q _ (_:_) _ _) = True
-hasArgs (Q _ [] _ _)    = False
+-- like intSymbol, but without the separator
+-- numSymbol :: (Show a) => Symbol -> a -> Symbol
+-- numSymbol x i = x `mappendSym` (symbol $ show i)
 
 --------------------------------
 -- | PRELIMINARIES FOR UNROLLING
 --------------------------------
 
-getKVar :: Expr -> (KVar, Subst)
-getKVar (PKVar k s)   = (k, s)
-getKVar e             = error $ "expr " ++ show e ++ " is not a kvar"
+atomicExprs :: Expr -> [Expr]
+atomicExprs (PAnd ps) = concatMap atomicExprs ps
+-- atomicExprs (POr ps) = concatMap atomicExprs ps
+atomicExprs e         = [e]
 
-bindSym :: BindEnv -> BindId -> Symbol
-bindSym env id = fst $ lookupBindEnv id env
+toRuleOrQuery :: (Show b) => (Symbol,Sort) -> SInfo a -> (ExprSort -> b) -> SimpC a -> ClauseInfo b
+toRuleOrQuery (symrhs,sortrhs) sinfo f c =
+  let bids      = elemsIBindEnv $ senv c in
+  let bexprs    = map processExprs bids in
+  let bsyms     = map (bsym (bs sinfo)) bids in
+  let esyms     = zip bexprs bsyms in
+  let body      = concatMap (\(es,_) -> filter (not . isKVar) es) esyms in
+  let kvars     = concatMap getKVarSym esyms in
+  let res       = (PAnd body, kvars, f (rhs,sortrhs)) in
+  res
+  where globals               = map fst $ toListSEnv (gLits sinfo)
+        ce                    = (sid c, bs sinfo, senv c)
+        rhs                   =
+          let rsub = subst1 (crhs c) (symrhs, EVar vvName) in
+          cleanSubs rsub vvName
+        bsym be id            =
+          let s = bindSym id be in
+          if s == symrhs then vvName else s
+        processExprs          =
+          let h = map (flip subst1 (symrhs, EVar vvName)) in
+          let g = concatMap atomicExprs in
+          let f = bindExprs ce in
+          filter cleanExprs . h . g . f
+        -- only inlcude exprs that have content
+        -- (i.e., remove True and exprs of the form x == x
+        cleanExprs expr
+          | PTrue <- expr                 = False
+          | PAnd [] <- expr               = False
+          | PAtom Eq x y <- expr, x == y  = False
+          | otherwise                     = True
+        isKVar (PKVar _ _)    = True
+        isKVar _              = False
+        getKVarSym (es,s)     = map (packHead s) $ filter isKVar es
+        packHead s pk         =
+          let ks      = getKVar pk in
+          let subs'   = filterConSym (snd ks) s in
+          let subs''  = subsInScope subs' (fst ks) in
+          (fst ks, subs'', s)
+        getKVar (PKVar k s)   = (k, s)
+        getKVar e             = error $ "expr " ++ (show e) ++ " is not a kvar"
+        -- substitution sanitizer:
+        -- (1) filter out substitutions for [VV###:=s]; this is used by liquid
+        -- fixpoint to insert the actual variable of a constraint instead
+        -- of a generic "v". we erase these subs because they interfere
+        -- with unrolling
+        -- (2) filter out substitutions not of the form [x:=expr], where
+        -- x is in in the WfC of a kvar (or in the "global" scope of
+        -- finfo gLits
+        cleanSubs e s         = V.trans (subVisitor s) () () e
+        cleanSubs' s _ e
+          | PKVar k subs <- e =
+            let subs'   = filterConSym subs s in
+            let subs''  = subsInScope subs' k in
+            PKVar k subs''
+          | otherwise         = e
+        subVisitor s          = sv { V.txExpr = (cleanSubs' s) }
+        sv                    = V.defaultVisitor
+        -- sanitizer (1)
+        filterConSym subs s   = filterSubst (\_ e -> not $ isExprSym e s) subs
+        isExprSym (EVar s') s = s' == s
+        isExprSym _ _         = False
+        -- sanitizer (2)
+        kenv k                =
+          let wfc = M.lookup k (ws sinfo) in
+          let f2 = map fst . map (flip lookupBindEnv (bs sinfo)) in
+          let f1 = elemsIBindEnv . wenv in
+          let f = f2 . f1 in
+          maybe [] f wfc
+        subsInScope subs k    =
+          filterSubst (\s _ -> s `elem` kenv k || s `elem` globals) subs
 
-bsym symrhs s = if s == symrhs then vvName else s
-
-clauseInfo :: (Symbol,Sort) -> SInfo a -> SimpC a -> Query
-clauseInfo (symrhs,sortrhs) sinfo c = (PAnd body, kvars, (rhs,sortrhs))
-  where body     = filter (not . isKVar) . fst =<< bindings
-        kvars    = getKVarSym =<< bindings
-        rhs      = cleanSubs globals sinfo $ subst1 (crhs c) (symrhs, EVar vvName)
-
-        bindings :: [([Expr], Symbol)]
-        bindings = (filter cleanExprs . substVv . (atomicExprs =<<) . lookupBind
-                           &&& bsym symrhs . bindSym (bs sinfo)) <$>
-                   elemsIBindEnv (senv c)
-
-        lookupBind :: BindId -> [Expr]
-        lookupBind = bindExprs $ bs sinfo
-        substVv    = map (`subst1` (symrhs, EVar vvName))
-
-        globals           = fst <$> toListSEnv (gLits sinfo)
-        getKVarSym (es,s) = packHead s <$> filter isKVar es
-        packHead s pk     = (k, subsInScope globals sinfo (filterConSym e s) k, s)
-          where (k,e) = getKVar pk
-
-bindExprs :: BindEnv -> BindId -> [Expr]
-bindExprs be i = [p `subst1` (v, eVar x) | Reft (v, p) <- rs ]
+bindExprs (_,be,_) i = [p `subst1` (v, eVar x) | Reft (v, p) <- rs ]
   where
     (x, sr)          = lookupBindEnv i be
     rs               = reftConjuncts $ sr_reft sr
 
--- only inlcude exprs that have content
--- (i.e., remove True and exprs of the form x == x
-cleanExprs :: Expr -> Bool
-cleanExprs expr
-  | PTrue <- expr                 = False
-  | PAnd [] <- expr               = False
-  | PAtom Eq x y <- expr, x == y  = False
-  | otherwise                     = True
+toRule :: (Symbol,Sort) -> SInfo a -> SimpC a -> Rule
+toRule symsort sinfo c
+  | PKVar _ _ <- crhs c = toRuleOrQuery symsort sinfo getKVar c
+  | otherwise = error "constraint is not a rule"
+  where getKVar ((PKVar k subs),_) = (k,subs)
+        getKVar _               = error "rhs is not a kvar"
 
--- substitution sanitizer:
--- (1) filter out substitutions for [VV###:=s]; this is used by liquid
--- fixpoint to insert the actual variable of a constraint instead
--- of a generic "v". we erase these subs because they interfere
--- with unrolling
--- (2) filter out substitutions not of the form [x:=expr], where
--- x is in in the WfC of a kvar (or in the "global" scope of
--- finfo gLits
-cleanSubs globals si = V.trans (subVisitor vvName) () ()
-  where
-  subVisitor s          = V.defaultVisitor { V.txExpr = cleanSubs' s }
-  cleanSubs' s _ (PKVar k subs) = PKVar k $
-                    subsInScope globals si (filterConSym subs s) k
-  cleanSubs' _ _ e = e
-
--- sanitizer (1)
-filterConSym subs s   = filterSubst (\_ e -> not $ isExprSym e s) subs
-
--- sanitizer (2)
-subsInScope :: Foldable t => t Symbol -> SInfo a -> Subst -> KVar -> Subst
-subsInScope globals si subs k =
-  filterSubst (\s _ -> s `elem` kenv si k || s `elem` globals) subs
-
---  END substitution sanitizer
+toQuery :: (Symbol,Sort) -> SInfo a -> SimpC a -> Query
+toQuery symsort sinfo c
+  | PKVar _ _ <- crhs c = error "constraint is not a query"
+  | otherwise = toRuleOrQuery symsort sinfo id c
 
 isClauseRec :: [Rule] -> Rule -> Bool
-isClauseRec rs = \r@(_,_,(k,_)) -> k `elem` getChildK r []
-  where kmap :: M.HashMap KVar [Rule] -- memoization gives significant performance
-        kmap = foldl (\acc r@(_,_,(k,_)) -> M.insertWith (++) k [r] acc) M.empty rs
-
+isClauseRec rs r@(_,_,(k,_)) = k `elem` childks
+  where childks = getChildK r []
+        rulesWithHead k = filter (\(_,_,(k',_)) -> k' == k) rs
         getChildK (_,cs,_) seen =
           let cks     = map (\(k,_,_) -> k) cs in
-          let crules  = filter (`notElem` seen) cks >>= \r -> M.lookupDefault [] r kmap in
+          let cks'    = filter (not . flip elem seen) cks in
+          let crules  = concatMap rulesWithHead cks' in
           foldr getChildK (cks ++ seen) crules
-
+               
 genKClauses :: [Rule] -> KClauses
-genKClauses rules = foldr (addRule (isClauseRec rules)) M.empty rules
-
-addRule isRec r@(_,_,(h,_)) kmap
-      | isRec r = addRule' (insertRec r) h kmap
-      | otherwise           = addRule' (insertNRec r) h kmap
-
-insertRec r (rec,nrec)  = (r:rec,nrec)
-insertNRec r (rec,nrec) = (rec,r:nrec)
-
-addRule' f h kmap = M.insert h (f $ M.lookupDefault mempty h kmap) kmap
+genKClauses rules = foldr addRule M.empty rules
+  where insertRec r (rec,nrec)  = (r:rec,nrec)
+        insertNRec r (rec,nrec) = (rec,r:nrec)
+        addRule r@(_,_,(h,_)) kmap
+          | isClauseRec rules r = addRule' insertRec r h kmap
+          | otherwise           = addRule' insertNRec r h kmap
+        addRule' f r h kmap     =
+          let val = maybe (f r ([],[])) (f r) (M.lookup h kmap) in
+          M.insert h val kmap
 
 -- create a map of binding and kvar sorts
-symSorts :: SInfo a -> SymSorts
-symSorts sinfo = M.fromList $ bindsyms ++ wfsyms
-  where bindsyms = getBindSort <$> bindEnvToList (bs sinfo)
-        wfsyms = getKSort <$> M.elems (ws sinfo)
+extractSymSorts :: SInfo a -> SymSorts 
+extractSymSorts sinfo = 
+  let binds = bindEnvToList (bs sinfo) in
+  let wfs = M.elems (ws sinfo) in
+  let bsorts = map getBindSort binds in
+  let ksorts = map getKSort wfs in
+  M.fromList (bsorts ++ ksorts)
+  where getBindSort (_,s,RR sort _)         = (s,sort)
+        getKSort (WfC _ (_, sort, KV s) _)  = (s,sort)
 
-getBindSort (_,s,RR sort _)         = (s,sort)
-getKSort (WfC _ (_, sort, KV s) _)  = (s,sort)
 -- convert SInfo to data structures used for unrolling
-
--- A Query is the root of the unrolling tree: subtyes of the form  Gamma /\ k_1 /\ k_2 <: { v /= 0 }
--- A Rule is the rest of the nodes of the unrolling tree, of the form Gamma /\ k_3 <: k_2
---
--- the KClauses map kvars to (recursive, nonrec) rules that correspond to them. For example it would map k_2
--- to the latter rule.
-
 genUnrollInfo :: M.HashMap Integer (Symbol,Sort) -> SInfo a -> (SymSorts, KClauses, [Query])
-genUnrollInfo csyms sinfo = (sorts, genKClauses rules, queries)
-  where (rules, queries) = foldr addCon ([],[]) $ M.toList $ cm sinfo
-        sorts = M.fromList (toListSEnv $ gLits sinfo) `M.union` symSorts sinfo
-
-        addCon (i,c) (rules,queries)
-          | PKVar _ _ <- crhs c =
-              ((getKVar . fst <$> clauseInfo (symsort i) sinfo c):rules, queries)
-          | otherwise           =
-              (rules, clauseInfo (symsort i) sinfo c:queries)
-        symsort i = fromMaybe (dummyName,intSort) $ M.lookup i csyms
+genUnrollInfo csyms sinfo =
+  let (rules, queries) = foldr addCon ([],[]) $ M.toList $ cm sinfo in
+  let kcs = genKClauses rules in
+  let slits = M.fromList $ toListSEnv $ gLits sinfo in
+  let sorts = slits `M.union` extractSymSorts sinfo in
+  (sorts, kcs, queries)
+  where addCon (i,c) (rules,queries)
+          | PKVar _ _ <- crhs c = ((toRule (symsort i) sinfo c):rules, queries)
+          | otherwise           = (rules, (toQuery (symsort i) sinfo c):queries)
+        symsort i = maybe (dummyName,intSort) id $ M.lookup i csyms
 
 --------------
 -- | UNROLLING
 --------------
 
+exprSyms :: Expr -> [Symbol]
+exprSyms e  = nub $ V.fold symVisitor () [] e
+  where symVisitor :: V.Visitor [Symbol] ()
+        symVisitor                  = dv { V.accExpr = getSymbol }
+        dv                          = V.defaultVisitor :: V.Visitor [Symbol] ()
+        getSymbol _ (EVar s)        = [s]
+        getSymbol _ (PKVar _ subs)  =
+          let (ks, sexprs) = unzip $ substToList subs in
+          ks ++ concatMap exprSyms sexprs
+        getSymbol _ _               = []
+
+{-
+freeInExpr :: Symbol -> Expr -> Bool
+freeInExpr s e = not $ s `elem` (exprSyms e)
+
+-- rename a symbol while making sure it doesn't appear on a list of symbols
+-- the list of symbols is usually the list of bound syms in an expr
+renameSym :: Int -> Symbol -> Expr -> (Int, Symbol)
+renameSym n s e =
+  let s' = numSymbol s n in
+  let ss = exprSyms e in
+  if s' `elem` ss then renameSym (n+1) s ss else (n, s')
+-}
+
 -- rename instances of symbol in substitutions
 renameSubst :: Symbol -> Symbol -> Subst -> Subst
-renameSubst s s' subs = Su . M.fromList $ renameSub <$> substToList subs
-  where renameSub (sk,se) = (if sk == s then s' else sk, renameExpr s s' se)
+renameSubst s s' subs =
+  let slist  = substToList subs in
+  let slist' = map renameSub slist in
+  Su $ M.fromList slist'
+  where renameSub (sk,se) =
+          let sk' = if sk == s then s' else sk in
+          let se' = renameExpr s s' se in
+          (sk', se')
 
 -- rename all instances of symbol in body
 renameExpr :: Symbol -> Symbol -> Expr -> Expr
-renameExpr s s' = V.trans (dv { V.txExpr = rename }) () ()
+renameExpr s s' e = V.trans renameVisitor () () e
   where rename _ e@(EVar s'')
           | s == s''  = EVar s'
           | otherwise = e
-        rename _ (PKVar k subs) = PKVar k $ renameSubst s s' subs
+        rename _ (PKVar k subs) =
+          let subs'   = renameSubst s s' subs in
+          PKVar k subs'
         rename _ e    = e
+        renameVisitor = dv { V.txExpr = rename }
         dv            = V.defaultVisitor :: V.Visitor () ()
 
 renameClauseChild :: Symbol -> Symbol -> ClauseChild -> ClauseChild
@@ -333,128 +324,269 @@ renameClauses s s' (UI kcs ss am) = UI (M.fromList $ map renameK $ M.toList kcs)
           let cs' = map (renameClauseChild s s') cs in
           (b', cs', h)
 
+lget :: UnrollM UnrollState
+lget = lift get
+
+lput :: UnrollState -> UnrollM ()
+lput = lift . put
+
+getKClauses :: UnrollM KClauses
+getKClauses = kcs <$> ask
+
+setKClauses :: KClauses -> UnrollInfo -> UnrollInfo
+setKClauses kcs (UI _ ss am) = UI kcs ss am
+
+getSymSorts :: UnrollM SymSorts
+getSymSorts = ss <$> ask
+
+getArgMap :: UnrollM ArgMap
+getArgMap = argmap <$> ask
+
+-- get sort for a symbol (could be in uinfo or created symbols)
+getSymSort :: Symbol -> UnrollM (Maybe Sort)
+getSymSort s = do
+  ss <- getSymSorts
+  case M.lookup s ss of
+    Just sort -> return (Just sort)
+    Nothing -> do
+      cs <- getCreatedSymbols
+      return $ M.lookup s cs
+
+getRenameMap :: UnrollM RenameMap
+getRenameMap = do
+  (_, rm, _) <- get
+  return rm
+
+updateRenameMap :: RenameMap -> UnrollM ()
+updateRenameMap rm = do
+  (cs, _, us) <- lget
+  lput (cs, rm, us)
+
+getCreatedSymbols :: UnrollM SymSorts
+getCreatedSymbols = do
+  (cs, _, _) <- lget
+  return cs
+
+updateCreatedSymbols :: SymSorts -> UnrollM ()
+updateCreatedSymbols cs = do
+  (_, rm, us) <- lget
+  lput (cs, rm, us)
+
+getUnrollSubs :: UnrollM UnrollSubs
+getUnrollSubs = do
+  (_, _, us) <- lget
+  return us
+
+updateUnrollSubs :: UnrollSubs -> UnrollM ()
+updateUnrollSubs us = do
+  (cs, rm, _) <- lget
+  lput (cs, rm, us)
+
+getSubCount :: Symbol -> UnrollM Int
+getSubCount s = do
+  let spref = tidySymbol s
+  rm <- getRenameMap
+  -- FIXME: CHECK IF s has number suffix
+  return $ maybe 1 id $ M.lookup spref rm
+
+updateSubCount :: Symbol -> Int -> UnrollM ()
+updateSubCount s n = do
+  rm <- getRenameMap
+  let rm' = M.insert s n rm
+  updateRenameMap rm'
+
 -- inherit the orig symbol that the variable was substituted for
 newSub :: Symbol -> Symbol -> UnrollM ()
 newSub s s' = do
-  usubs <- unrollSubs <$> get
-  updateUnrollSubs $ M.insert s' (M.lookupDefault s s usubs) usubs
+  usubs <- getUnrollSubs
+  let orig = maybe s id (M.lookup s usubs)
+  let usubs' = M.insert s' orig usubs
+  updateUnrollSubs usubs'
 
 renameSymbol :: Symbol -> UnrollM Symbol
 renameSymbol s = do
   let spref = tidySymbol s
   n <- getSubCount spref
   updateSubCount spref (n+1)
+  -- FIXME: change this to intSymbol
   let s' = intSymbol spref n
-  cs <- createdSymbols <$> get
+  cs <- getCreatedSymbols
   msort <- getSymSort s
   -- if sort cannot be found, assume it's an int
-  let sort = fromMaybe (error $ "renameSymbol: Sort not found " ++ show s') msort
+  let sort = maybe intSort id msort
   updateCreatedSymbols (M.insert s' sort cs)
   return s'
 
+subSymbol = symbol "SUB"
+
+freshSubSymbol :: UnrollM Symbol
+freshSubSymbol = renameSymbol subSymbol
+
 generateHeadSubst :: ArgMap -> [(Symbol,Symbol)]
-generateHeadSubst am = catMaybes $ (\(a,b) -> (,a)<$>b) <$> M.elems am
+generateHeadSubst argmap = concatMap toHeadSubs $ M.elems argmap
+  where toHeadSubs (_,Nothing) = []
+        toHeadSubs (s,Just v)  = [(v,s)]
 
 -- update argmap information and return
 -- a new set of head substitutions
-updateHeadSubs :: Subst -> M.HashMap Symbol (Symbol, Maybe Symbol) -> ([(Symbol,Symbol)], ArgMap)
-updateHeadSubs hsubs am = (generateHeadSubst &&& id) (foldl updateHeadSub am $ substToList hsubs)
-
-updateHeadSub am (s,EVar v) =
-  case M.lookup s am of
-    Nothing -> am
-    Just (v',_) -> M.insert s (v',Just v) am
-updateHeadSub _ _ = error "head substitution must be a variable!"
+updateHeadSubs :: Subst -> UnrollM ([(Symbol,Symbol)], ArgMap)
+updateHeadSubs hsubs = do
+  argmap <- getArgMap
+  let slist = substToList hsubs
+  argmap' <- foldM updateHeadSub argmap slist
+  let subs = generateHeadSubst argmap'
+  return (subs, argmap')
+  where updateHeadSub argmap (s,EVar v) = do
+          case M.lookup s argmap of
+            Nothing -> return argmap
+            Just (v',_) -> return $ M.insert s (v',Just v) argmap
+        updateHeadSub _ _ = error "head substitution must be a variable!"
 
 applyHeadSubsBody :: [(Symbol,Symbol)] -> Expr -> Expr
 applyHeadSubsBody hsubs b = foldr (uncurry renameExpr) b hsubs
 
 applyHeadSubsChildren :: [(Symbol,Symbol)] -> [ClauseChild] -> [ClauseChild]
-applyHeadSubsChildren hsubs = map applyHeadSubsChild
-  where applyHeadSubsChild (ck, csubs, csyms) = (ck, csubs', csyms)
-           where csubs' = foldr (uncurry renameSubst) csubs hsubs
+applyHeadSubsChildren hsubs ccs = map applyHeadSubsChild ccs
+  where applyHeadSubsChild (ck, csubs, csyms) =
+          let csubs' = foldr (uncurry renameSubst) csubs hsubs in
+          (ck, csubs', csyms)
+          
+updateArgMap :: Subst -> UnrollInfo -> UnrollInfo
+updateArgMap subs uinfo =
+  let am = argmap uinfo in
+  let am' = foldr insertArg am $ substToList subs in
+  uinfo { argmap = am' }
+  where insertArg (s,EVar v) acc =
+          let subsyms = M.keys $ M.filter (\(s',_) -> s' == s) acc in
+          case subsyms of
+            [] -> M.insert s (v,Nothing) acc
+            xs -> foldr (\x acc2 -> M.insert x (v,Nothing) acc2) acc xs
+        insertArg _ _ = error "substitution should be a variable!"
 
--- apply pending substitutions
+-- apply pending substitutions 
 applySubst :: Subst -> UnrollM (KClauses, [Expr])
 applySubst subs = do
-  uinfo <- ask
-  (uinfo', es) <- foldM applySub1 (uinfo,[]) $ substToList subs
-  return (kcs uinfo', es)
+  kc <- getKClauses
+  foldM applySub1 (kc,[]) $ substToList subs
+  where applySub1 (kc',tmpexprs) (ssym,sexpr) = do
+          case sexpr of
+           -- if the substitution is symbol to symbol,
+           -- we don't introduce a new "tmp expr"
+            EVar ssym' -> do
+              tmp <- freshSubSymbol
+              ss <- getSymSorts 
+              am <- getArgMap
+              let uinfo'  = renameClauses ssym' tmp (UI kc' ss am)
+              let uinfo'' = renameClauses ssym ssym' (UI (kcs uinfo') ss am)
+              newSub ssym ssym'
+              newSub ssym' tmp
+              return (kcs uinfo'',tmpexprs)
 
--- FIXME: black magic
-applySub1 (ui,tmpexprs) (ssym,sexpr) =
-  case sexpr of
-    EVar ssym' -> do
-      tmp <- renameSymbol ssym
-      newSub ssym ssym'
-      newSub ssym' tmp
-      return (renameClauses ssym ssym' (renameClauses ssym' tmp ui), tmpexprs)
+            _ -> do
+              tmp <- freshSubSymbol
+              ss <- getSymSorts
+              am <- getArgMap
+              let tmpexpr = PAtom Eq (EVar tmp) sexpr
+              let uinfo'  = renameClauses ssym tmp (UI kc' ss am)
+              newSub ssym tmp
+              return (kcs uinfo', tmpexpr:tmpexprs)
 
-    _ -> do
-      tmp <- renameSymbol ssym
-      newSub ssym tmp
-      return (renameClauses ssym tmp ui, PAtom Eq (EVar tmp) sexpr:tmpexprs)
-
-type UnrollDepth = M.HashMap KVar Int
 -- generate disjunctive interpolation query
-unroll :: UnrollDepth -> HeadInfo -> UnrollM Interp
-unroll dmap (k,sym) = (kcs <$> ask >>=) $ M.lookup k >>> \case
-  Nothing -> return $ Or Nothing []
-  Just (crec, cnrec) ->
-    let depth = M.lookupDefault 0 k dmap in
-    let cs = if depth > 0 then crec ++ cnrec else cnrec in
-    let dmap' = M.insert k (depth-1) dmap in
+unroll :: UnrollDepth -> HeadInfo -> UnrollM InterpQuery
+unroll dmap (k,sym) = do
+  kc <- getKClauses
+  case M.lookup k kc of
+    Nothing -> return $ Or Nothing []
+    Just (crec, cnrec) -> do
+      let depth = maybe 0 id (M.lookup k dmap)
+      let rec = depth > 0
+      let cs = if not rec then cnrec else crec ++ cnrec
+      let dmap' = M.insert k (depth-1) dmap
 
-    -- generate children
-    Or (Just (k,sym)) <$> forM cs (\(b, c, (_,hsubs)) -> do
-      am <- argmap <$> ask
-      let (hsubs2, argmap') = updateHeadSubs hsubs am
-      -- rename body to prevent capture
-      sym' <- renameSymbol sym
-      let c' = renameClauseChild sym sym' <$> applyHeadSubsChildren hsubs2 c
-      -- apply argument i.e. [nu/x]
-      let b' = renameExpr vvName sym $ renameExpr sym sym' $ applyHeadSubsBody hsubs2 b
+      -- generate children
+      children <- forM cs $ \(b, c, (_,hsubs)) -> do
+        (hsubs2, argmap') <- updateHeadSubs hsubs
+        let b1 = applyHeadSubsBody hsubs2 b
+        let c1 = applyHeadSubsChildren hsubs2 c
 
-      local (renameClauses sym sym' . setArgMap argmap') $ do
-        (gchildren, gtmps) <- fmap unzip $ forM c' $ \(ck,csub,csym) ->
-           collect csub $ unroll dmap' (ck,if vvName == csym then sym else csym)
-        return $ And Nothing (PAnd $ b':concat gtmps) gchildren)
+        -- rename body to prevent capture
+        sym' <- renameSymbol sym
+        let b2 = renameExpr sym sym' b1
+        let c2 = map (renameClauseChild sym sym') c1
+
+        -- apply argument i.e. [nu/x]
+        let b3 = renameExpr vvName sym b2
+        
+        local (renameClauses sym sym' . setArgMap argmap') $ do
+          -- generate child subtree
+          ginfo <- forM c2 $ \(ck,csub,csym) -> do
+            -- if csym == VV, then it's the LHS of a constraint
+            -- and so csym = the symbol on the head (i.e., sym)
+            let csym' = if vvName == csym then sym else csym
+            (kc'', tmps) <- applySubst csub
+            local (updateArgMap csub . setKClauses kc'')$ do
+              gc <- unroll dmap' (ck,csym')
+              return (gc, tmps)
+          
+          let (gchildren, gtmps) = unzip ginfo
+
+          -- add substitution predicates to body
+          let b4 = PAnd $ b3:(concat gtmps)
+          return $ And Nothing b4 gchildren
+
+      return $ Or (Just (k,sym)) children
+
+  where setArgMap argmap' uinfo = uinfo { argmap = argmap' }
+
+-- we use this instead of vvName because liquid-fixpoint
+-- uses vvName internally, and if we use it here we get
+-- weird bugs
+argName = symbol "ARG"
 
 -- generate a disjunctive interpolation query for a query clause
-unrollQuery :: Int -> Query -> UnrollM Interp
+unrollQuery :: Int -> Query -> UnrollM InterpQuery
 unrollQuery n (b, c, (h,_)) = do
-  kc <- kcs <$> ask
-  let dmap = foldr (uncurry M.insert) M.empty $ (,n) <$> M.keys kc
+  kc <- getKClauses
+  let initDepths = map (\k -> (k,n)) $ M.keys kc
+  let dmap = foldr (uncurry M.insert) M.empty $ initDepths
 
   -- rename instances of VV in query, since it's treated specially
   -- in unrolling
   v <- renameSymbol argName
   newSub vvName v
-  let b' = renameExpr vvName v b
-  let c' = renameClauseChild vvName v <$> c
+  let b' = renameExpr vvName v b 
+  let c' = map (renameClauseChild vvName v) c
   let h' = renameExpr vvName v h
 
   -- generate child subtrees
-  (children, ctmps) <- fmap unzip $ forM c' $ \(ck,csub,csym) ->
-    -- if csym == VV, then it's the LHS of a constraint
-    -- and so csym = the symbol on the head (i.e., v)
-    collect csub $ unroll dmap (ck,if csym == vvName then v else csym)
-  -- add substitution predicates to body
-  return $ And Nothing (PAnd ([PNot h', b'] ++ concat ctmps)) children
-
-collect :: Subst -> UnrollM t -> UnrollM (t, [Expr])
-collect csub urm = do
+  cinfo <- forM c' $ \(ck,csub,csym) -> do
     (kc', tmps) <- applySubst csub
-    local (updateArgMap csub . setKClauses kc') $ (,tmps) <$> urm
+    local (updateArgMap csub . setKClauses kc') $ do
+      -- if csym == VV, then it's the LHS of a constraint
+      -- and so csym = the symbol on the head (i.e., v)
+      let csym' = if csym == vvName then v else csym
+      child <- unroll dmap (ck,csym')
+      return (child, tmps)
+
+  let (children, ctmps) = unzip cinfo
+  return $ And Nothing (PAnd ([PNot h', b'] ++ (concat ctmps))) children
+
+-- compute the initial rename map for a set of clauses
+-- we have to do this smartly; if there is a variable v101, then
+-- we have to map v |-> 102
+initRenameMap :: UnrollInfo -> RenameMap
+initRenameMap (UI _ ss _) = M.map (const 1) ss
 
 -- interface function that unwraps Unroll monad
-genInterpQuery :: Int -> UnrollInfo -> Query -> (Interp, SymSorts, UnrollSubs)
-genInterpQuery n (UI kcs ss am) query@(_,_,(_,argSort)) = (diquery, cs, us)
-  where
-  (diquery, URS cs _ us) = runState (runReaderT (unrollQuery n query)
-                             $ UI kcs ss' am) $ URS M.empty rm M.empty
-  rm = const 1 <$> ss
-  ss' = M.insert argName argSort ss
+genInterpQuery :: Int -> UnrollInfo -> Query -> (InterpQuery, SymSorts, UnrollSubs)
+genInterpQuery n uinfo@(UI kcs ss am) query@(_,_,(_,argSort)) = 
+  let rm = initRenameMap uinfo in
+  -- we have to insert the type of "VV" (the RHS of a query)
+  let ss' = M.insert argName argSort ss in
+  let ustate = (M.empty, rm, M.empty) in
+  let smonad = unrollQuery n query in
+  let (diquery, (cs,_,us)) = runState (runReaderT smonad (UI kcs ss' am)) ustate in
+  (diquery, cs, us)
 
 ----------------------------------------------------
 -- | DISJUNCTIVE INTERPOLATION TO TREE INTERPOLATION
@@ -462,9 +594,9 @@ genInterpQuery n (UI kcs ss am) query@(_,_,(_,argSort)) = (diquery, cs, us)
 
 -- remove OR nodes from AOTree by converting disjunctive interp query
 -- to a set of tree interp queries
-expandTree :: Interp -> [Interp]
+expandTree :: InterpQuery -> [InterpQuery]
 expandTree (And info root children) =
-  And info root <$> mapM expandTree children
+  map (And info root) (sequence $ map expandTree children)
 expandTree (Or info children) =
   children >>= expandOr info
   where expandOr info (And _ root children) =
@@ -473,102 +605,354 @@ expandTree (Or info children) =
 
 -- generate a tree interp query
 -- there shouldn't be an OR node processed in the tree
-genQueryFormula :: Interp -> Expr
+genQueryFormula :: InterpQuery -> Expr
 genQueryFormula (Or _ children) =
-  POr $ genQueryFormula <$> children
+  POr (map genQueryFormula children)
 genQueryFormula (And _ root children) =
-  PAnd $ root:(genQueryFormula' <$> children)
-  where genQueryFormula' c@And{} = Interp $ genQueryFormula c
-        genQueryFormula' c@Or{} = genQueryFormula c
+  PAnd $ root:(map genQueryFormula' children)
+  where genQueryFormula' c@(And _ _ _) = Interp $ genQueryFormula c
+        genQueryFormula' c@(Or _ _) = genQueryFormula c
 
 ----------------------------------------
 -- | TREE INTERPOLANTS TO KVAR SOLUTIONS
 ----------------------------------------
 
 popInterp :: State [Expr] Expr
-popInterp = state $ \(x:xs) -> (x,xs)
+popInterp = do
+  (x:xs) <- get
+  put xs
+  return x
 
 -- construct a tree interpolant from a list of interpolants
 -- returned by Z3
-genTreeInterp query = evalState (go query) . (++ [PFalse])
-  where go :: Interp -> State [Expr] Interp
-        go (And info _ children) = And info <$> popInterp <*> mapM go children
-           -- this is for tree interpolants, so we don't
-           -- do anything for OR nodes
-        go (Or info children) = Or info <$> mapM go children
+genTreeInterp :: InterpQuery -> State [Expr] TreeInterp
+genTreeInterp query
+  | And info _ [] <- query = do
+    interp <- popInterp
+    return (And info interp [])
+
+  | And info _ children <- query = do
+    ichildren <- forM children genTreeInterp
+    interp <- popInterp
+    return (And info interp ichildren)
+
+  -- this is for tree interpolants, so we don't
+  -- do anything for OR nodes
+  | Or info children <- query = do
+    ichildren <- forM children genTreeInterp
+    return (Or info ichildren)
+
+  | otherwise = return query
 
 -- map a tree interpolant to candidate solutions
 -- we do this by substituting the following at an interpolant:
 -- * the symbol at the head |--> v (or nu)
 -- * sub symbols (e.g. tmp) generated from unrolling |--> original symbol
-extractSol :: Subst -> Interp -> CandSolutions
-extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.empty
-  where subUnroll = subst usubs
-        subNu (Just (_, sym)) e = subst1 e (sym,EVar vvName)
+extractSol :: Subst -> TreeInterp -> CandSolutions
+extractSol usubs t =
+  let subtree = mapAOTree (\i e -> subUnroll i $ subNu i e) t in 
+  collectSol subtree M.empty
+  where subUnroll _ = (subst :: Subst -> Expr -> Expr) usubs
+        subNu (Just (_, sym)) e =
+          flip (subst1 :: Expr -> (Symbol,Expr) -> Expr) (sym,EVar vvName) e
         subNu Nothing e = e
-        collectSol (And Nothing _ children) m =
+        collectSol (And Nothing _ children) m = 
           foldr collectSol m children
         collectSol (And (Just (k,_)) v children) m =
-          let m' = M.insertWith (++) k [v] m in
+          let m' = M.insertWith (++) k [v] m in 
           foldr collectSol m' children
         -- this is supposed to be called on tree interps only,
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
-genCandSolutions sinfo u dquery = deepseq (trace "SINFO" $!! sinfo) $
-  -- FIXME: This `nub` might be slow
-  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
-  forM (expandTree dquery) (\tquery ->
-    extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
-    genTreeInterp tquery <$>
-    ((interpolation def sinfo) $!! (trace "genQF" $!! genQueryFormula tquery)))
+-- manually run tree interpolation here in pieces
+-- this is to prune the tree query, since many queries
+-- have huge numbers of variables
+-- the idea is to run DFS on the tree, computing interpolants for each
+-- node one by one and then for each interpolation query discarding
+-- binders that are redundant within one side of a cut
+{-
+select :: [a] -> [(a,[a])]
+select []     = []
+select (x:xs) = (x,xs):[(y,x:ys) | (y,ys) <- select xs]
 
+-- generate cuts from a tree interp query
+generateCuts :: InterpQuery -> [(InterpQuery, InterpQuery)]
+generateCuts query = generateCuts' Nothing query
+  where generateCuts' Nothing (And info node children) =
+          let childSelect = select children in
+          let childrenCuts = concatMap (childCuts info node) childSelect in
+          let nodeCuts = map (\(c,cs) -> (And info node cs, c)) childSelect in
+          nodeCuts ++ childrenCuts
+        generateCuts' (Just (And pinfo pnode pcs)) (And info node children) =
+          let childSelect = select children in
+          let childrenCuts = concatMap (childCuts info node) childSelect in
+          let nodeCuts = map (\(c,cs) -> (cparent (c,cs),c)) childSelect in
+          nodeCuts ++ childrenCuts
+          where cparent (_,cs) = And pinfo pnode ((And info node cs):pcs)
+        generateCuts _ _ = error "no Or nodes allowed for generating cuts"
+        childCuts info node (c,cs) = generateCuts' (Just $ And info node cs) c
+          
+treeInterpolation :: InterpQuery -> IO TreeInterp
+treeInterpolation query
+  | And _ node children <- query = do
+    forM children $ \child -> do
+-}
+
+genCandSolutions :: (NFData a, Fixpoint a) => SInfo a -> UnrollSubs -> InterpQuery -> IO CandSolutions
+genCandSolutions sinfo u dquery = do
+  -- convert disjunctive interp query to a set of tree interp queries
+  let tqueries = expandTree dquery
+  tinterps <- forM tqueries $ \tquery -> do
+    -- let sinfo = either die id $ sanitize $ convertFormat finfo
+    -- let sinfo = convertFormat finfo
+    let formula = genQueryFormula tquery
+    -- putStrLn "Tree Interp query:"
+    -- putStrLn $ show formula
+    let smap = foldr (\s acc -> (uncurry M.insert) (s, s) acc) M.empty (exprSyms formula)
+    interps <- interpolation (def :: Config) sinfo formula
+    -- unintern symbols
+    let interps' = map (cleanSymbols smap) interps
+    let tinterp = evalState (genTreeInterp tquery) $ interps' ++ [PFalse]
+    return tinterp
+
+  let usubs   = Su $ M.fromList $ map (\(x,orig) -> (x,EVar orig)) $ M.toList u
+  let cands   = map (extractSol usubs) tinterps 
+  let cands'  = foldr (M.unionWith (uniqAdd)) M.empty cands
+  -- let cands'' = M.fromList $ map (\(k,exprs) -> (k,map numberifyCand exprs)) cands'
+  return cands'
+  where uniqAdd a b = nub $ a ++ b
+        cleanSymbols smap e = foldr (uncurry renameExpr) e (M.toList smap)
+
+qarg = symbol "QARG"
+        
 renameQualParams :: Qualifier -> Qualifier
-renameQualParams (Q name params body loc) = Q name newParams newBody loc
-  where zipParam      = zip params $ intSymbol qarg <$> [1 .. length params]
-        newParams     = (\((_,sort),sym') -> (sym',sort)) <$> zipParam
-        newBody       = subst (mkSubst $ paramSubst <$> zipParam) body
-paramSubst ((sym,_), sym') = (sym, EVar sym')
+-- rename params so that redundant qualifiers may be discarded
+renameQualParams (Q name params body loc) =
+  let n = length params in
+  let renamedParams = map (intSymbol qarg) [1..n] in
+  let zipParam      = zip params renamedParams in
+  let newParams     = map (\((_,sort),sym') -> (sym',sort)) zipParam in
+  let subs          = mkSubst $ map (uncurry paramSubst) zipParam in
+  Q name newParams (subst subs body) loc
+  where paramSubst (sym,_) sym' = (sym, EVar sym')
 
-exprToQual :: M.HashMap Symbol Sort -> Expr -> [Qualifier]
-exprToQual symsort e = (\p -> Q dummySymbol p e interpLoc) <$> permutations params
-  where -- don't include uninterpreted functions as parameters!
-        params    = filter (isNotFunc . snd) $
-                      (id &&& lookupSymsort) <$> exprSyms e
-        lookupSymsort s = M.lookupDefault intSort s symsort
+exprToQual :: (Symbol -> Sort) -> Expr -> [Qualifier]
+exprToQual symsort e =
+  let syms        = exprSyms e in
+  let params      = map (\s -> (s,symsort s)) syms in
+  -- don't include uninterpreted functions as parameters!
+  let params'     = filter (not . isFunc . snd) params in
+  let params''    = paramSorts 0 M.empty params' in
+  -- let params''    = map (\(i,(p,s)) -> (p,realSort i s)) (zip [1..] params') in
+  let loc         = dummyPos "no location" in
+  let name        = dummySymbol in
+  -- trace ("PARAMS:" ++ show params') $ map (\p -> Q name p e loc) (permutations params'')
+  map (\p -> Q name p e loc) (permutations params'')
+  where -- convert tySort to a variable type
+        -- FIXME: Ask Jhala about this
+        -- realSort _ _          = FVar 0
+        -- realSort FNum      = FNum
+        -- realSort (FTC _)   = 
+        -- realSort x         = x
+        paramSorts _ _ []     = []
+        paramSorts i m ((p,s):pps) =
+          case M.lookup s m of
+            Nothing -> (p,FVar i):(paramSorts (i+1) (M.insert s i m) pps)
+            Just n -> (p,FVar n):(paramSorts i m pps)
+        isFunc s              = maybe False (const True) (functionSort s)
+        -- isFunc s          = False
 
 sanitizeQualifiers :: [Qualifier] -> [Qualifier]
-sanitizeQualifiers quals = nub $ renameQualParams <$> filter validQual quals
+sanitizeQualifiers quals = 
+  let validQuals = filter validQual quals in
+  let quals      = map renameQualParams validQuals in
+  nub $ quals
+  where validQual q = hasArgs q && nonTrivial q && nonVar q
+        -- qualifier is not a kvar or a regular var
+        nonVar (Q _ _ (PKVar _ _) _) = False
+        nonVar (Q _ _ (EVar _) _)    = False
+        nonVar (Q _ _ _ _)           = True
+        -- don't add true or false as qualifiers
+        nonTrivial q
+          | Q _ _ (PAnd []) _ <- q  = False
+          | Q _ _ PTrue _ <- q      = False
+          | Q _ _ (POr []) _ <- q   = False
+          | Q _ _ PFalse _<- q      = False
+          | otherwise               = True
+        hasArgs (Q _ (_:_) _ _) = True
+        hasArgs (Q _ [] _ _)    = False
 
+
+maxDisj = 3
+
+-- generate qualifiers from candidate solutions
+-- ss should contain the sorts for
+-- * kvars
+-- * created variables during unrolling
+-- * variables in finfo
 extractQualifiers :: SymSorts -> CandSolutions -> [Qualifier]
-extractQualifiers ss cs = sanitizeQualifiers $ kquals =<< M.toList cs
-  where kquals (k,es) = let atoms = nub $ atomicExprs =<< es in
-                         -- create disjunction of qualifiers (evil hack)
-                        let expr = if length atoms > 1 && length atoms <= maxDisj
-                                     then POr atoms : atoms
-                                     else atoms in
-                        exprToQual (symSort k) =<< atomicExprs =<< expr
-        symSort k = M.insert vvName (M.lookupDefault (error "exprToPred: no such KV")
-                                                     (kv k) ss)
-                                    ss
+extractQualifiers ss cs = sanitizeQualifiers $ concatMap kquals (M.toList cs)
+  where kquals (k,es) =
+          let atoms = nub $ concatMap atomicExprs (es :: [Expr]) in
+          -- create disjunction of qualifiers
+          let exprs = if length atoms > 1 && length atoms <= maxDisj
+                      then (POr atoms):atoms else atoms in
+          concatMap (concatMap (exprToQual (symSort k)). atomicExprs) exprs
+        -- get atomic expressions from conjunctions and disjunctions
+        -- we want qualifiers to be simple (atomic) predicates
+        ksym (KV k) = k
+        symSort k s =
+          let ksort = maybe intSort id (M.lookup (ksym k) ss) in
+          let ssort = maybe intSort id (M.lookup s ss) in
+          if s == vvName then ksort else ssort
 
 queryQuals :: SymSorts -> [Query] -> [Qualifier]
-queryQuals ss queries = sanitizeQualifiers $ do
-    query <- queries
-    e <- atomicExprs $ queryHead query
-    exprToQual (symSort query) e
+queryQuals ss queries =
+  sanitizeQualifiers $ concatMap (concatMap (exprToQual symSort) . atomicExprs . queryHead) queries
   where queryHead (_, _, (e,_)) = e
-        symSort (_,_,(_,s)) = M.insert vvName s ss
+        symSort s = maybe intSort id (M.lookup s ss)
 
-genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
-  forM queries (\query ->
+{-
+defaultQualifiers :: [Qualifier]
+defaultQualifiers = [trueQual, falseQual]
+  where loc       = dummyPos "no location"
+        trueQual  = Q dummySymbol [(symbol "x",FVar 0)] PTrue loc
+        falseQual = Q dummySymbol [(symbol "x",FVar 0)] PFalse loc
+
+printKClauses kcs = forM_ (M.toList kcs) printKClause
+  where printKClause (k, (rec, nrec)) =  do
+          putStrLn $ "Kvar: " ++ (show k)
+          putStrLn ""
+          putStrLn "Recursive clauses:"
+          forM_ rec $ \clause -> do
+            putStrLn "-------------------"
+            printClause clause
+            putStrLn "-------------------"
+          putStrLn ""
+          putStrLn "Nonrecursive clauses:"
+          forM_ nrec $ \clause -> do
+            putStrLn "-------------------"
+            printClause clause
+            putStrLn "-------------------"
+          putStrLn ""
+
+        printClause (body, children, head) = do
+          putStrLn "body:"
+          print body
+          putStrLn "head:"
+          print head
+          putStrLn "children:"
+          forM_ children $ \child -> do
+            putStrLn "-------------------"
+            printClauseChild child
+            putStrLn "-------------------"
+
+        printClauseChild (k, subs, sym) = do
+          putStrLn $ "clause child"
+          putStrLn $ "k:" ++ (show k)
+          putStr "subs: "
+          print subs
+          putStrLn $ "sym: " ++ show sym
+-}
+
+{-
+rhsQual :: M.HashMap Integer Sort -> (Integer, SimpC a) -> Maybe Qualifier
+rhsQual csyms (i,c) = case e of 
+                        PKVar _ _ -> Nothing
+                        _ -> Just $ Q name params (crhs c) loc
+  where params      = [(vvName, M.lookupDefault intSort i csyms)]
+        loc         = dummyPos "no location"
+        name        = dummySymbol
+        e           = crhs c
+-}
+
+genQualifiers :: (NFData a, Fixpoint a) => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
+genQualifiers csyms sinfo n = do
+  let (ss, kcs, queries) = genUnrollInfo csyms sinfo
+  {-
+  putStrLn "BindEnv:"
+  putStrLn $ show $ bs finfo
+  putStrLn "Lits::"
+  putStrLn $ show $ gLits finfo
+  putStrLn "KClauses:"
+  printKClauses kcs
+  -}
+  quals  <- forM queries $ \query -> do
     -- unroll
-    let (diquery, ssyms, usubs) = trace "genQ" $!! genInterpQuery n (UI kcs ss M.empty) query in
+    let (diquery, cs, usubs) = genInterpQuery n (UI kcs ss M.empty) query
+    {-
+    putStrLn "Interp query:"
+    putStrLn $ show $ genQueryFormula diquery
+    putStrLn "Created symbols:"
+    putStrLn $ show cs
+    putStrLn "usubs:"
+    putStrLn $ show usubs
+    -}
+
     -- add created vars back to finfo
-    let allvars = trace "ALLVARS" $!! M.union ss ssyms in
-    let si' = sinfo { gLits = fromListSEnv $!! (ordNub $ M.toList $ traceShow (M.size allvars) allvars) } in
+    -- let vars = toListSEnv (gLits finfo)
+    -- let allvars = M.union (M.fromList vars) cs
+    let allvars = M.union ss cs
+    let si' = sinfo { gLits = fromListSEnv (nub $ M.toList allvars) }
+    {-
+    putStrLn "AFTER Lits:"
+    print (gLits si')
+    putStrLn "AFTER BindEnv:"
+    print (bs si')
+    -}
+
     -- run tree interpolation to compute possible kvar solutions
-    extractQualifiers allvars <$> genCandSolutions si' usubs diquery)
-  where (ss, kcs, queries) = genUnrollInfo csyms sinfo
-        -- Ranjit's "seeding" trick
-        rhsQuals = queryQuals ss queries
+    candSol <- genCandSolutions si' usubs diquery
+    {-
+    putStrLn "candidate solutions:"
+    putStrLn $ show candSol
+    -}
+
+    -- extract qualifiers 
+    return $ extractQualifiers allvars candSol
+
+  let rhsQuals = queryQuals ss queries
+  let allquals = nub $ concat $ rhsQuals:quals
+  -- let allquals2 = nub $ concat $ [rhsQuals]
+  -- putStrLn "RHSQUALS:"
+  -- forM rhsQuals print
+  -- putStrLn "INTERP QUALS:"
+  -- forM (concat quals) print
+  return $ nub $ allquals
+  {-
+  let rhsQuals = catMaybes $ rhsQual (snd<$>csyms) <$> M.toList (cm sinfo)
+  return $ nub $ concat $ rhsQuals:quals
+  -}
+
+imain n = do
+  let ksym = symbol "k"
+  let ssym = symbol "s"
+  {-
+  let vsym = symbol "v"
+  let vars = [(ksym,intSort),(vvName,intSort),(ssym,intSort),
+              (vsym,intSort)]
+  -}
+  -- FInfo, used for generating SMT context (var declarations, etc.)
+
+  let int i = ECon (I i)
+  let ksum = KV (symbol "sum")
+  let k = EVar ksym
+  let s = EVar ssym
+  let v = EVar vvName
+  -- let v' = EVar vsym
+  let r1 = (PAnd [PAtom Le k (int 0),PAtom Eq v (int 0)], [], (ksum,Su M.empty))
+  let childr2 = [(ksum, Su $ M.fromList [(ksym,EBin Minus k (int 1))], ssym)]
+  let r2 = (PAnd [PAtom Gt k (int 0),PAtom Eq v (EBin Plus s k)], childr2, (ksum,Su M.empty))
+  let rules = [r1,r2]
+  let kcs = genKClauses rules
+  let query = (PTrue, [(ksum, Su $ M.empty, vvName)], (PAtom Ge v k, intSort))
+  let uinfo = UI kcs M.empty M.empty
+  let (diquery, _, _) = genInterpQuery n uinfo query
+  let tiqueries = expandTree diquery
+  forM tiqueries $ \tiquery -> do
+    putStrLn "tiquery:"
+    print tiquery
+    putStrLn "cuts:"
+    -- print $ generateCuts tiquery
+
