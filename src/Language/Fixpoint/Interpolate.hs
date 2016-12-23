@@ -1,7 +1,6 @@
 -- | This module uses Craig interpolation to compute qualifiers
   -- Q name (reverse params'') e loc
 -- | that can be used to solve constraint sets
-
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE LambdaCase #-}
@@ -20,7 +19,7 @@ import Control.Monad.Reader
 
 import System.Console.CmdArgs (def)
 import Language.Fixpoint.Types hiding (renameSymbol)
-import Language.Fixpoint.Solver.Solve (interpolation)
+import Language.Fixpoint.Solver.Solve (interpolation, solverInfo)
 import qualified Language.Fixpoint.Types.Visitor as V
 
 
@@ -517,7 +516,8 @@ genCandSolutions sinfo u dquery =
   forM (expandTree dquery) (\tquery ->
     extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
     genTreeInterp tquery <$>
-    interpolation def sinfo (genQueryFormula tquery))
+    interpolation def sI sinfo (genQueryFormula tquery))
+  where sI = solverInfo def sinfo
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc

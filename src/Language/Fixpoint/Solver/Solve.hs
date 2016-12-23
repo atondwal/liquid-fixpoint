@@ -9,6 +9,7 @@
 --------------------------------------------------------------------------------
 
 module Language.Fixpoint.Solver.Solve (solve, interpolation) where
+module Language.Fixpoint.Solver.Solve (solve, interpolation, gradualSolve, solverInfo) where
 
 import           Control.Monad (when, filterM)
 import           Control.Monad.State.Strict (lift)
@@ -356,10 +357,9 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> F.SInfo a -> F.Expr -> IO [F.Expr]
+interpolation :: Config -> SolverInfo a -> F.SInfo a -> F.Expr -> IO [F.Expr]
 ---------------------------------------------------------------------------
-interpolation cfg fi p = runSolverM cfg sI 0 $ interpolationSolver fi p
-  where sI   = solverInfo cfg fi
+interpolation cfg sI fi p = runSolverM cfg sI 0 $ interpolationSolver fi p
 
 {-
 donePhase' :: String -> SolveM ()
