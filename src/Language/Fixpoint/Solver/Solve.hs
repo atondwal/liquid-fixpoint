@@ -209,7 +209,7 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
 ---------------------------------------------------------------------------
-interpolation :: NFData a => Config -> SolverInfo a -> F.SInfo a -> F.Expr -> IO [F.Expr]
+interpolation :: Config -> SolverInfo a -> F.SInfo a -> F.Expr -> IO [F.Expr]
 ---------------------------------------------------------------------------
 interpolation cfg sI fi p = runSolverM cfg sI 0 s0 $ interpolationSolver fi p
   where s0   = siSol  sI

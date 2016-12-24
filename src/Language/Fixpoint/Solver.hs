@@ -96,7 +96,7 @@ interpSolve n cfg q = interpSolve' n cfg si4 cs
 interpSolve' n cfg q csyms = do
   putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
   interpQuals <- genQualifiers csyms q n
-  res <- Sol.solve cfg $!! q { quals = interpQuals }
+  res <- Sol.solve (cfg {eliminate = False}) $!! q { quals = interpQuals }
   case res of
     (Result Safe _) -> return res
     _               -> interpSolve' (n+1) cfg q csyms

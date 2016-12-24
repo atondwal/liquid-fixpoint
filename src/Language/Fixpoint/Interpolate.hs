@@ -397,7 +397,7 @@ unroll dmap (k,sym) = (kcs <$> ask >>=) $ M.lookup k >>> \case
   Nothing -> return $ Or Nothing []
   Just (crec, cnrec) ->
     let depth = M.lookupDefault 0 k dmap in
-    let cs = if depth > 0 then crec ++ cnrec else cnrec in
+    let cs = if depth > 0 then cnrec ++ crec else cnrec in
     let dmap' = M.insert k (depth-1) dmap in
 
     -- generate children
@@ -511,13 +511,16 @@ extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.
         collectSol (Or _ _) m = m
 
 genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> Interp -> IO CandSolutions
-genCandSolutions sinfo u dquery =
+genCandSolutions sinfo u dquery = do
   -- FIXME: This `nub` might be slow
-  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
-  forM (expandTree dquery) (\tquery ->
-    extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
-    genTreeInterp tquery <$>
-    interpolation def sI sinfo (genQueryFormula tquery))
+  print "Gen CandSols"
+  a <- foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
+    forM (expandTree dquery) (\tquery ->
+      extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
+      genTreeInterp tquery <$>
+      interpolation def sI sinfo (genQueryFormula tquery))
+  print "Gend CandSols"
+  return a
   where sI = solverInfo (def {eliminate = False}) sinfo
 
 renameQualParams :: Qualifier -> Qualifier
