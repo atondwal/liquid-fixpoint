@@ -20,7 +20,8 @@ import Control.Monad.Reader
 import System.Console.CmdArgs (def)
 import Language.Fixpoint.Types.Config (eliminate)
 import Language.Fixpoint.Types hiding (renameSymbol)
-import Language.Fixpoint.Solver.Solve (interpolation, solverInfo)
+import Language.Fixpoint.Solver.Solve (runInterpolation, solverInfo)
+import Language.Fixpoint.Solver.Monad (interpolationSolver, SolveM)
 import qualified Language.Fixpoint.Types.Visitor as V
 
 
@@ -510,18 +511,15 @@ extractSol usubs t = collectSol (mapAOTree (\i e -> subUnroll $ subNu i e) t) M.
         -- so we set a dummy value for OR nodes
         collectSol (Or _ _) m = m
 
-genCandSolutions :: Fixpoint a => SInfo a -> UnrollSubs -> Interp -> IO CandSolutions
-genCandSolutions sinfo u dquery = do
+genCandSolutions :: UnrollSubs -> Interp -> SolveM CandSolutions
+genCandSolutions u dquery =
   -- FIXME: This `nub` might be slow
-  print "Gen CandSols"
-  a <- foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
+  lift (putStr "genCandSolutions") >>
+  foldr (M.unionWith (nub & fmap.fmap $ (++))) M.empty <$>
     forM (expandTree dquery) (\tquery ->
       extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
       genTreeInterp tquery <$>
-      interpolation def sI sinfo (genQueryFormula tquery))
-  print "Gend CandSols"
-  return a
-  where sI = solverInfo (def {eliminate = False}) sinfo
+      interpolationSolver (genQueryFormula tquery))
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc
@@ -561,7 +559,8 @@ queryQuals ss queries = sanitizeQualifiers $ do
         symSort (_,_,(_,s)) = M.insert vvName s ss
 
 genQualifiers :: Fixpoint a => M.HashMap Integer (Symbol,Sort) -> SInfo a -> Int -> IO [Qualifier]
-genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
+genQualifiers csyms sinfo n =
+  nub . concat . (rhsQuals:) <$>
   forM queries (\query ->
     -- unroll
     let (diquery, ssyms, usubs) = genInterpQuery n (UI kcs ss M.empty) query in
@@ -569,7 +568,8 @@ genQualifiers csyms sinfo n = nub . concat . (rhsQuals:) <$>
     let allvars = M.union ss ssyms in
     let si' = sinfo { gLits = fromListSEnv (ordNub $ M.toList allvars) } in
     -- run tree interpolation to compute possible kvar solutions
-    extractQualifiers allvars <$> genCandSolutions si' usubs diquery)
+    runInterpolation def (solverInfo (def {eliminate = False}) si') $
+    extractQualifiers allvars <$> genCandSolutions usubs diquery)
   where (ss, kcs, queries) = genUnrollInfo csyms sinfo
         -- Ranjit's "seeding" trick
         rhsQuals = queryQuals ss queries

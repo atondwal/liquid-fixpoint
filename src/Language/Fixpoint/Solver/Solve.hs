@@ -7,7 +7,7 @@
 -- | Solve a system of horn-clause constraints ---------------------------------
 --------------------------------------------------------------------------------
 
-module Language.Fixpoint.Solver.Solve (solve, interpolation, gradualSolve, solverInfo) where
+module Language.Fixpoint.Solver.Solve (solve, runInterpolation, gradualSolve, solverInfo) where
 
 import           Control.Monad (when, filterM)
 import           Control.Monad.State.Strict (lift)
@@ -209,10 +209,9 @@ isValid p q = (not . null) <$> filterValid p [(q, ())]
 
 
 ---------------------------------------------------------------------------
-interpolation :: Config -> SolverInfo a -> F.SInfo a -> F.Expr -> IO [F.Expr]
+runInterpolation :: Config -> SolverInfo a -> SolveM b -> IO b
 ---------------------------------------------------------------------------
-interpolation cfg sI fi p = runSolverM cfg sI 0 s0 $ interpolationSolver fi p
-  where s0   = siSol  sI
+runInterpolation cfg sI = runSolverM cfg sI 0 $ siSol sI
 
 --------------------------------------------------------------------------------
 -- | RJ: @nikivazou please add some description here of what this does.

@@ -256,9 +256,9 @@ distinctLiterals fi  = [ es | (_, es) <- tess ]
     _notStr          = not . (F.strSort ==) . F.sr_sort . (`F.RR` F.trueReft)
 
 ---------------------------------------------------------------------------
-interpolationSolver :: F.SInfo a -> F.Expr -> SolveM [F.Expr]
+interpolationSolver :: F.Expr -> SolveM [F.Expr]
 ---------------------------------------------------------------------------
-interpolationSolver fi p = withContext $ \me -> smtDoInterpolate me fi p
+interpolationSolver p = lift (putStr "interp\n") >> withContext ( \me -> smtDoInterpolate me p )
 
 ---------------------------------------------------------------------------
 stats :: SolveM Stats

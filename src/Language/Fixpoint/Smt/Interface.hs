@@ -485,8 +485,8 @@ countInterp e = getSum $ execState (visit visitInterp () e) (Sum 0)
         visitInterp :: Visitor (Sum Int) ()
         visitInterp = (defaultVisitor :: Visitor (Sum Int) ()) { accExpr = incInterp } 
 
-smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
-smtDoInterpolate me _ p = do
+smtDoInterpolate :: Context -> Expr -> IO [Expr]
+smtDoInterpolate me p = do
   -- icontext <- makeZ3Context "interp.out" (toListSEnv $ lits sinfo)
   -- smtWrite icontext $ runSmt2 (smtenv icontext) p
 
