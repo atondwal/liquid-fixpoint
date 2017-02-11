@@ -710,7 +710,8 @@ genCandSolutions sinfo u dquery = do
     -- putStrLn "Tree Interp query:"
     -- putStrLn $ show formula
     let smap = foldr (\s acc -> (uncurry M.insert) (uninternSym s) acc) M.empty (exprSyms formula)
-    interps <- interpolation (def :: Config) sinfo formula
+    let sI = solverInfo (def {eliminate = False}) sinfo
+    interps <- interpolation (def :: Config) sI sinfo formula
     -- unintern symbols
     let interps' = map (cleanSymbols smap) interps
     let tinterp = evalState (genTreeInterp tquery) $ interps' ++ [PFalse]
