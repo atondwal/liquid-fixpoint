@@ -139,7 +139,6 @@ Library
                , fgl-visualize
                , dotgen
                , time
-               , extra
 
   if impl(ghc >= 7.10.2)
     Build-Depends: located-base

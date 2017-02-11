@@ -57,8 +57,6 @@ import qualified Data.HashMap.Strict as M
 
 import           Control.Exception.Base (bracket)
 
-import Debug.Trace (trace)
-
 --------------------------------------------------------------------------------
 -- | Solver Monadic API --------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -98,18 +96,11 @@ runSolverM :: Config -> SolverInfo b -> Int -> F.Solution -> SolveM a -> IO a
 --------------------------------------------------------------------------------
 runSolverM cfg sI _ s0 act =
   bracket acquire release $ \ctx -> do
-    res <- runStateT act' $ trace "tracing" (SS ctx be $ stats0 fi)
+    res <- runStateT act' (SS ctx be $ stats0 fi)
     smtWrite ctx "(exit)"
     return $ fst res
   where
-    act'     = do lift $ print "declaring"
-                  declareInitEnv
-                  lift $ print "declaring"
-                  declare xts ess p
-                  lift $ print "axioms"
-                  assumes (F.asserts fi)
-                  lift $ print "action"
-                  act
+    act'     = declareInitEnv >> declare xts ess p >> assumes (F.asserts fi) >> act
     acquire  = makeContextWithSEnv cfg file (F.fromListSEnv xts) -- env
     release  = cleanupContext
     ess      = distinctLiterals fi
@@ -235,13 +226,9 @@ declare :: [(F.Symbol, F.Sort)] -> [[F.Expr]] -> F.Pred -> SolveM ()
 --------------------------------------------------------------------------------
 declare xts' ess p = withContext $ \me -> do
   let xts      = filter (not . isThy . fst) xts'
-  print "xts"
   forM_ xts    $ uncurry $ smtDecl     me
-  print "smtDecl"
   forM_ ess    $           smtDistinct me
-  print "smtDistinct"
   _           <-           smtAssert   me p
-  print "smtAssert"
   return ()
   where
     isThy   = isJust . Thy.smt2Symbol
