@@ -486,7 +486,7 @@ popInterp = state $ \(x:xs) -> (x,xs)
 -- returned by Z3
 genTreeInterp query = evalState (go query) . (++ [PFalse])
   where go :: Interp -> State [Expr] Interp
-        go (And info _ children) = And info <$> popInterp <*> mapM go children
+        go (And info _ children) = flip (And info) <$> mapM go children <*> popInterp
            -- this is for tree interpolants, so we don't
            -- do anything for OR nodes
         go (Or info children) = Or info <$> mapM go children
