@@ -151,7 +151,7 @@ defConfig = Config {
   , eliminate        = None    &= help "Eliminate KVars [none = quals for all-kvars, cuts = quals for cut-kvars, all = eliminate all-kvars (TRUE for cuts)]"
   , elimBound        = Nothing &= name "elimBound"  &= help "(alpha) Maximum eliminate-chain depth"
   , elimStats        = False   &= help "(alpha) Print eliminate stats"
-  , interpolate = False &= help "(alpha) Extract qualifiers from interpolation"
+  , interpolate = True &= help "(alpha) Extract qualifiers from interpolation"
   , unrollDepth = 3     &= help "Unrolling depth for interpolation"
   , solverStats      = False   &= help "Print solver stats"
   , save             = False   &= help "Save Query as .fq and .bfq files"
