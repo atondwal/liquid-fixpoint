@@ -20,10 +20,11 @@ module Language.Fixpoint.Solver (
 
 import           Control.Concurrent
 import           Data.Binary
+import qualified Data.HashMap.Strict as M
 import           System.Exit                        (ExitCode (..))
 import           System.Console.CmdArgs.Verbosity   (whenNormal)
 import           Text.PrettyPrint.HughesPJ          (render)
-import           Control.Monad                      (when)
+import           Control.Monad                      (when, forM_)
 import           Control.Exception                  (catch)
 import           Language.Fixpoint.Solver.Validate  (sanitize)
 import           Language.Fixpoint.Solver.UniqifyBinds (renameAll)
@@ -39,6 +40,8 @@ import           Language.Fixpoint.Graph
 import           Language.Fixpoint.Parse            (rr')
 import           Language.Fixpoint.Types
 import           Language.Fixpoint.Minimize (minQuery, minQuals, minKvars)
+import           Language.Fixpoint.Interpolate (genQualifiers)
+import           Language.Fixpoint.Smt.Types
 import           Control.DeepSeq
 
 ---------------------------------------------------------------------------
@@ -52,6 +55,8 @@ solveFQ cfg = do
     let fi'     = ignoreQualifiers cfg' fi
     r          <- solve cfg' fi'
     let stat    = resStatus $!! r
+    putStrLn "solution:"
+    print $ resSolution r
     -- let str  = render $ resultDoc $!! (const () <$> stat)
     -- putStrLn "\n"
     whenNormal $ colorStrLn (colorResult stat) (statStr $!! stat)
@@ -73,12 +78,62 @@ ignoreQualifiers cfg fi
 solve :: (NFData a, Fixpoint a) => Solver a
 ---------------------------------------------------------------------------
 solve cfg q
-  | parts cfg    = partition  cfg        $!! q
-  | stats cfg    = statistics cfg        $!! q
-  | minimize cfg = minQuery   cfg solve' $!! q
-  | minimizeQs cfg = minQuals cfg solve' $!! q
-  | minimizeKs cfg = minKvars cfg solve' $!! q
-  | otherwise    = solve'     cfg        $!! q
+  | parts cfg      = partition  cfg        $!! q
+  | stats cfg      = statistics cfg        $!! q
+  | minimize cfg   = minQuery   cfg solve' $!! q
+  | minimizeQs cfg = minQuals cfg solve'   $!! q
+  | minimizeKs cfg = minKvars cfg solve'   $!! q
+  | interpolate cfg = interpSolve 0 cfg $!! q
+  | otherwise      = solve'     cfg        $!! q
+
+interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
+interpSolve n cfg q = do
+  -- minquals <- minimizeQuals cfg solve' $!! q
+  -- putStrLn "min quals:"
+  -- forM_ minquals print
+
+  let fi1 = q { quals = remakeQual <$> quals q }
+  -- fi2 <- minimizeCons cfg solve' fi1
+  let si0 = {-# SCC "convertFormat" #-} convertFormat fi1
+  let si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
+  -- let si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
+  let si' = {-# SCC "renameAll" #-} renameAll $!! si1
+
+  -- save renamed sinfo
+  -- mapM putStrLn $ lines $ render (toFixpoint cfg si')
+
+  -- (_, si') <- {-# SCC "elim" #-} elim cfg $!! si3
+  writeLoud $ "About to solve: \n" ++ render (toFixpoint cfg si')
+  
+  let csyms = M.map (\c -> (reftBind $ sr_reft $ srhs c, sr_sort $ srhs c)) (cm q)
+  putStrLn $ "Generating qualifiers with unrolling depth=" ++ show n
+  {-
+  putStrLn "BEFORE csyms:"
+  print csyms
+  putStrLn "BEFORE Lits:"
+  print (lits si')
+  putStrLn "BEFORE BindEnv:"
+  print (bs si')
+  -}
+  interpQuals <- genQualifiers csyms si' n
+  putStrLn "Computed qualifiers:"
+  forM_ interpQuals (putStrLn . show . smt2 . qBody)
+  -- let q' = q { quals = remakeQual <$> interpQuals }
+  let q' = q { quals = interpQuals }
+  res <- solve' cfg q'
+  case res of
+    (Result Safe _) -> do
+      -- minquals' <- minimizeQuals cfg solve' $!! q'
+      -- putStrLn "min interp quals:"
+      -- forM_ minquals' print
+
+      -- putStrLn "Solution:"
+      -- print sol
+      return res 
+    _               -> do
+      if n < unrollDepth cfg
+        then interpSolve (n+1) cfg q
+        else return res
 
 solve' :: (NFData a, Fixpoint a) => Solver a
 solve' cfg q = do
@@ -183,7 +238,7 @@ solveNative' !cfg !fi0 = do
   --let stat = resStatus res
   saveSolution cfg res
   -- when (save cfg) $ saveSolution cfg
-  -- writeLoud $ "\nSolution:\n"  ++ showpp (resSolution res)
+  writeLoud $ "\nSolution:\n"  ++ showpp (resSolution res)
   -- colorStrLn (colorResult stat) (show stat)
   return res
 

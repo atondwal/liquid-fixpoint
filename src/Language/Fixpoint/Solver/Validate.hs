@@ -28,8 +28,10 @@ import qualified Data.Text                                         as T
 import           Data.Maybe          (isNothing, mapMaybe)
 import           Control.Monad       ((>=>))
 import           Text.PrettyPrint.HughesPJ
+import           Debug.Trace
 
 type ValidateM a = Either E.Error a
+
 
 --------------------------------------------------------------------------------
 sanitize :: F.SInfo a -> ValidateM (F.SInfo a)
@@ -228,7 +230,7 @@ defuncSort t            = t
 compact :: [(F.Symbol, F.Sort)] -> Either E.Error [(F.Symbol, F.Sort)]
 compact xts
   | null bad  = Right [(x, t) | (x, [t]) <- ok ]
-  | otherwise = Left $ dupBindErrors bad'
+  | otherwise = trace ("COMPACT: \n" ++ show xts) $ Left $ dupBindErrors bad'
   where
     bad'      = [(x, (, []) <$> ts) | (x, ts) <- bad]
     (bad, ok) = L.partition multiSorted . binds $ xts

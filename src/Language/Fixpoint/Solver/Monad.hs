@@ -22,6 +22,10 @@ module Language.Fixpoint.Solver.Monad
          -- * Debug
        , Stats
        , tickIter
+
+         -- * Interpolation
+       , interpolationSolver
+
        , stats
        , numIter
        )
@@ -87,9 +91,9 @@ instance F.PTable Stats where
                         ]
 
 --------------------------------------------------------------------------------
-runSolverM :: Config -> SolverInfo b -> Int -> F.Solution -> SolveM a -> IO a
+runSolverM :: Config -> SolverInfo b -> Int -> SolveM a -> IO a
 --------------------------------------------------------------------------------
-runSolverM cfg sI _ _ act =
+runSolverM cfg sI _ act =
   bracket acquire release $ \ctx -> do
     res <- runStateT act' (SS ctx be $ stats0 fi)
     smtWrite ctx "(exit)"
@@ -244,6 +248,11 @@ distinctLiterals fi  = [ es | (_, es) <- tess ]
                                                 , notFun t                            ]
     notFun           = not . F.isFunctionSortedReft . (`F.RR` F.trueReft)
     _notStr          = not . (F.strSort ==) . F.sr_sort . (`F.RR` F.trueReft)
+
+---------------------------------------------------------------------------
+interpolationSolver :: F.SInfo a -> F.Expr -> SolveM [F.Expr]
+---------------------------------------------------------------------------
+interpolationSolver fi p = withContext $ \me -> smtDoInterpolate me fi p
 
 ---------------------------------------------------------------------------
 stats :: SolveM Stats

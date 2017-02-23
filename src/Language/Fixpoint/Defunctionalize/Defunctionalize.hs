@@ -561,3 +561,4 @@ mapExpr' f = go
     go (PExist bs e)   = f $ PExist bs $ go e
     go e@(PKVar _ _ )  = f e
     go e@PGrad         = f e
+    go (Interp e)      = f $ Interp $ go e
