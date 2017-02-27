@@ -27,6 +27,8 @@ unitTests
     , testGroup "elim-pos2"  <$> dirTests elimCmd   "tests/elim"   []             ExitSuccess
     , testGroup "elim-neg"   <$> dirTests elimCmd   "tests/neg"    []             (ExitFailure 1)
     , testGroup "elim-crash" <$> dirTests elimCmd   "tests/crash"  []             (ExitFailure 2)
+    , testGroup "interp-pos" <$> dirTests interpCmd "tests/interp"   []           ExitSuccess
+    , testGroup "interp-neg" <$> dirTests interpCmd "tests/interp-neg"   []           (ExitFailure 124)
    ]
 
 skipNativePos :: [FilePath]
@@ -78,6 +80,8 @@ nativeCmd bin dir file = printf "cd %s && %s %s" dir bin file
 elimCmd :: TestCmd
 elimCmd bin dir file = printf "cd %s && %s --eliminate=some %s" dir bin file
 
+interpCmd :: TestCmd
+interpCmd bin dir file = printf "cd %s && timeout 60s %s -i %s" dir bin file
 
 
 
