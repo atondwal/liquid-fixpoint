@@ -81,6 +81,7 @@ import           Language.Fixpoint.Types.Sorts
 import           Language.Fixpoint.Types.Refinements
 import           Language.Fixpoint.Types.Substitutions
 import           Language.Fixpoint.Types.Environments
+import           Language.Fixpoint.Types.Definitions
 import qualified Language.Fixpoint.Utils.Files as Files
 
 import           Language.Fixpoint.Misc
@@ -420,8 +421,9 @@ fi :: [SubC a]
    -> Bool
    -> Bool
    -> [Triggered Expr]
+   -> M.HashMap Symbol Definition
    -> GInfo SubC a
-fi cs ws binds ls ds ks qs bi aHO aHOq es 
+fi cs ws binds ls ds ks qs bi aHO aHOq es dds
   = FI { cm       = M.fromList $ addIds cs
        , ws       = M.fromListWith err [(k, w) | w <- ws, let (_, _, k) = wrft w]
        , bs       = binds
@@ -432,6 +434,7 @@ fi cs ws binds ls ds ks qs bi aHO aHOq es
        , bindInfo = bi
        , hoInfo   = HOI aHO aHOq
        , asserts  = es
+       , defines  = dds
        }
   where
     --TODO handle duplicates gracefully instead (merge envs by intersect?)
@@ -467,6 +470,7 @@ data GInfo c a =
      , bindInfo :: !(M.HashMap BindId a)      -- ^ Metadata about binders
      , hoInfo   :: !HOInfo                    -- ^ Higher Order info
      , asserts  :: ![Triggered Expr]
+     , defines  :: !(M.HashMap Symbol Definition)
      }
   deriving (Eq, Show, Functor, Generic)
 
@@ -478,7 +482,7 @@ instance Monoid HOInfo where
                       }
 
 instance Monoid (GInfo c a) where
-  mempty        = FI M.empty mempty mempty mempty mempty mempty mempty mempty mempty mempty
+  mempty        = FI M.empty mempty mempty mempty mempty mempty mempty mempty mempty mempty mempty
   mappend i1 i2 = FI { cm       = mappend (cm i1)       (cm i2)
                      , ws       = mappend (ws i1)       (ws i2)
                      , bs       = mappend (bs i1)       (bs i2)
@@ -490,6 +494,7 @@ instance Monoid (GInfo c a) where
                      , bindInfo = mappend (bindInfo i1) (bindInfo i2)
                      , hoInfo   = mappend (hoInfo i1)   (hoInfo i2)
                      , asserts  = mappend (asserts i1)  (asserts i2)
+                     , defines  = mappend (defines i1)  (defines i2)
                      }
 
 instance PTable (SInfo a) where
