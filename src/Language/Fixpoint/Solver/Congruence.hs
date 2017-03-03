@@ -5,8 +5,10 @@ module Language.Fixpoint.Solver.Congruence (
 
 import Language.Fixpoint.Types
 import Language.Fixpoint.Smt.Types
+import Language.Fixpoint.Types.Visitor
 import Language.Fixpoint.Smt.Interface (checkValidWithContext, smtAssert)
 
+import           Data.Maybe
 import           Control.Monad
 import qualified Data.HashMap.Strict       as M
 
@@ -26,3 +28,8 @@ expand ctx (Dfn _ xs pes) es = map (sub . snd) <$>
                            filterM (checkValidWithContext ctx [] PTrue . sub . fst)
                            pes
   where sub = subst (Su $ M.fromList (zip xs es))
+
+subExprs :: M.HashMap Symbol Definition -> Expr -> [(Symbol,[Expr])]
+subExprs m e = filter (isJust . flip M.lookup m . fst) $
+               map (\(EVar f, es) -> (f,es)) $
+               splitEApp <$> eapps e
