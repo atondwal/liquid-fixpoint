@@ -26,10 +26,11 @@ instance B.Binary Definition
 instance NFData   Definition
 
 {-@ Lazy subExprs @-}
-subExprs :: M.HashMap Symbol Definition -> Expr -> [(Symbol,Expr)]
-subExprs m (EApp (EVar f) e)
-  | Just _ <- M.lookup f m
-  = (f,e):subExprs m e
+subExprs :: M.HashMap Symbol Definition -> Expr -> [(Symbol,[Expr])]
+subExprs m e@(EApp _ _)
+  | (EVar f, es) <- splitEApp e
+  , Just _ <- M.lookup f m
+  = (f,es):(subExprs m =<< es)
 subExprs m (ELam _ e)      = subExprs m e
 subExprs m (ECst e _)      = subExprs m e
 subExprs m (EApp e1 e2)    = subExprs m e1 <> subExprs m e2
