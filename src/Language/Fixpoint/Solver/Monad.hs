@@ -37,12 +37,14 @@ import qualified Language.Fixpoint.Types   as F
 import qualified Language.Fixpoint.Types.Solutions as F
 import           Language.Fixpoint.Types   (pprint)
 -- import qualified Language.Fixpoint.Types.Errors  as E
+import           Language.Fixpoint.Types.Visitor as V
 import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Smt.Types (tsInterp)
 import           Language.Fixpoint.Smt.Serialize ()
 import           Language.Fixpoint.Types.PrettyPrint ()
 import           Language.Fixpoint.Smt.Interface
 import           Language.Fixpoint.Solver.Sanitize
+import           Language.Fixpoint.Solver.Congruence
 import           Language.Fixpoint.SortCheck
 import           Language.Fixpoint.Graph.Types (SolverInfo (..))
 -- import           Language.Fixpoint.Solver.Solution
@@ -97,7 +99,10 @@ runSolverM cfg sI _ act =
     return $ fst res
   where
     s0 ctx   = SS ctx be (stats0 fi)
-    act'     = declare initEnv lts {- ess -} >> assumesAxioms (F.asserts fi) >> act
+    act'     = do declare initEnv lts {- ess -}
+                  saturateAll (F.defines fi)
+                  assumesAxioms (F.asserts fi)
+                  act
     release  = cleanupContext
     acquire  = makeContextWithSEnv cfg file initEnv
     initEnv  = symbolEnv   cfg fi
@@ -238,6 +243,13 @@ symKind x = case M.lookup x Thy.theorySymbols of
 
 assumesAxioms :: [F.Triggered F.Expr] -> SolveM ()
 assumesAxioms es = withContext $ \me -> forM_  es $ smtAssertAxiom me
+
+saturateAll :: M.HashMap F.Symbol F.Definition -> SolveM ()
+saturateAll dfns = do bs <- getBinds
+                      let ps = filter (null . V.kvars) $
+                               (\(_,_,sr)-> F.expr sr) <$>
+                               F.bindEnvToList (F.soeBinds bs)
+                      withContext $ \me -> void $ sequence $ saturate me dfns <$> ps
 
 -- assumes :: [F.Expr] -> SolveM ()
 -- assumes es = withContext $ \me -> forM_  es $ smtAssert me

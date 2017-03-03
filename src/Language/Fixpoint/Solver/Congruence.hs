@@ -13,23 +13,28 @@ import           Control.Monad
 import qualified Data.HashMap.Strict       as M
 
 saturate :: Context -> M.HashMap Symbol Definition -> Pred -> IO ()
-saturate ctx m p = smtAssert ctx p >> go (subExprs m p)
+-- TODO bring in the other binders
+saturate ctx m p = go (subExprs m p)
   where {-@ Lazy go @-} -- Terminates b/c reft logic is strongly normalizing
         go ((f,es):wkl)
            | Just defn <- M.lookup f m
-           = do newes <- expand ctx defn es
+           = do newes <- expand p ctx defn es
                 mapM_ (smtAssert ctx . EEq (eApps (EVar f) es)) newes
                 go $ wkl++(subExprs m =<< newes)
         go [] = return ()
         go _  = error "Function definition not found. This should never happen! Email Anish?"
 
-expand :: Context -> Definition -> [Expr] -> IO [Expr]
-expand ctx (Dfn _ xs pes) es = map (sub . snd) <$>
-                           filterM (checkValidWithContext ctx [] PTrue . sub . fst)
+expand :: Expr -> Context -> Definition -> [Expr] -> IO [Expr]
+expand p ctx (Dfn _ xs pes) es = map (sub . snd) <$>
+                           filterM (checkValidWithContext ctx [] p . sub . fst)
                            pes
   where sub = subst (Su $ M.fromList (zip xs es))
 
 subExprs :: M.HashMap Symbol Definition -> Expr -> [(Symbol,[Expr])]
 subExprs m e = filter (isJust . flip M.lookup m . fst) $
-               map (\(EVar f, es) -> (f,es)) $
+               unsymb =<<
                splitEApp <$> eapps e
+
+--- TODO lambda literal a la:  literals 02,04,05, hex.ts, sets
+unsymb (EVar f, es) = [(f,es)]
+unsymb _ = []
