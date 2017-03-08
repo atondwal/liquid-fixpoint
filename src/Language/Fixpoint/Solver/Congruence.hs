@@ -35,6 +35,6 @@ subExprs m e = filter (isJust . flip M.lookup m . fst) $
                unsymb =<<
                splitEApp <$> eapps e
 
---- TODO lambda literal a la:  literals 02,04,05, hex.ts, sets
 unsymb (EVar f, es) = [(f,es)]
-unsymb _ = []
+unsymb (ECst _ _,_) = [] -- Z3 builtins
+unsymb _ = error "Applying something that's not a function?"
