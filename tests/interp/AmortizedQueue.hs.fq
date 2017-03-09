@@ -1,0 +1,4594 @@
+qualif Fst(v : @(1), y : @(0)): ((v = (fst y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 30, column 8)
+qualif Snd(v : @(1), y : @(0)): ((v = (snd y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 31, column 8)
+qualif Auto(v##16 : int): ((v##16 >= 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 21)
+qualif Auto(v##16 : int, q : (LazyQueue.SList  a_aAk)): ((v##16 = (size q))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 21)
+qualif Auto(v##0 : (LazyQueue.SList  a_aNx)): (((size v##0) = 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 36, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  a_aKJ), xs : (LazyQueue.SList  a_aKJ)): (((size v##0) = ((size xs) + 1))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 39, column 1)
+qualif Auto(r##0 : (LazyQueue.SList  a_aQl), l : (LazyQueue.SList  a_aQl)): (((size r##0) <= ((size l) + 1))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 75, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  a_aNo), l : (LazyQueue.SList  a_aNo)): (((size v##0) = (1 + (size l)))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 80, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  a_aNo), l : (LazyQueue.SList  a_aNo), r : (LazyQueue.SList  a_aNo), a : (LazyQueue.SList  a_aNo)): (((size v##0) = (((size l) + (size r)) + (size a)))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 80, column 1)
+qualif Auto(v##1 : [Char]): (false) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 85, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  a_aKn)): (((size v##0) > 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 42, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  a_aKn), xs : (LazyQueue.SList  a_aKn)): (((size v##0) = ((size xs) - 1))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 42, column 1)
+qualif Auto(v##0 : (LazyQueue.SList  t_aBt)): (((size v##0) > 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 46, column 1)
+qualif Auto(v##16 : int): ((v##16 >= 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 21)
+qualif Auto(v##16 : int, lq$recSel : (LazyQueue.SList  a_alQ)): ((v##16 = (size lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 21)
+qualif Auto(v##0 : [a_alQ], lq$recSel : (LazyQueue.SList  a_alQ)): (((len v##0) = (size lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 14, column 21)
+qualif Auto(v##0 : [a_alQ], lq$recSel : (LazyQueue.SList  a_alQ)): ((v##0 = (elems lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 14, column 21)
+qualif Auto(VV : (LazyQueue.SList  a_alP), lq$recSel : (LazyQueue.Queue  a_alP)): ((VV = (left lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 54, column 21)
+qualif Auto(v##0 : (LazyQueue.SList  a_alP), lq$recSel : (LazyQueue.Queue  a_alP)): (((size v##0) <= (size (left lq$recSel)))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 55, column 21)
+qualif Auto(v##0 : (LazyQueue.SList  a_alP), lq$recSel : (LazyQueue.Queue  a_alP)): ((v##0 = (right lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 55, column 21)
+qualif Auto(VV : int): ((VV >= 0)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 16)
+qualif Auto(VV : [a_alQ], size##LazyQueue.SL##rlB : int): (((len VV) = size##LazyQueue.SL##rlB)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 16)
+qualif Auto(VV : (LazyQueue.SList  a_alQ), elems##LazyQueue.SL##rlB : [a_alQ]): (((elems VV) = elems##LazyQueue.SL##rlB)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 16)
+qualif Auto(VV : (LazyQueue.SList  a_alQ), size##LazyQueue.SL##rlB : int): (((size VV) = size##LazyQueue.SL##rlB)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 13, column 16)
+qualif Auto(VV : (LazyQueue.SList  a_alP), left##LazyQueue.Q##rlx : (LazyQueue.SList  a_alP)): (((size VV) <= (size left##LazyQueue.Q##rlx))) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 54, column 16)
+qualif Auto(VV : (LazyQueue.Queue  a_alP), right##LazyQueue.Q##rlx : (LazyQueue.SList  a_alP)): (((right VV) = right##LazyQueue.Q##rlx)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 54, column 16)
+qualif Auto(VV : (LazyQueue.Queue  a_alP), left##LazyQueue.Q##rlx : (LazyQueue.SList  a_alP)): (((left VV) = left##LazyQueue.Q##rlx)) // "/home/atondwal/src/liquidhaskell/tests/pos/AmortizedQueue.hs" (line 54, column 16)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) > 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 13, column 8)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) = 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 14, column 8)
+qualif ListZ(v : [@(0)]): (((len v) = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 16, column 8)
+qualif ListZ(v : [@(0)]): (((len v) >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 17, column 8)
+qualif ListZ(v : [@(0)]): (((len v) > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 18, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 20, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) >= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 21, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) > (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 22, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) <= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 23, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) < (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 24, column 8)
+qualif EqLen(v : int, xs : [@(0)]): ((v = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 26, column 8)
+qualif LenEq(v : [@(0)], x : int): ((x = (len v))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 27, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x + 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 28, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x - 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 29, column 8)
+qualif LenAcc(v : int, xs : [@(0)], n : int): ((v = ((len xs) + n))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 30, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 3, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 4, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 5, column 8)
+qualif Bot(v : bool): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 6, column 8)
+qualif Bot(v : int): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 7, column 8)
+qualif CmpZ(v : @(0)): ((v < 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 9, column 8)
+qualif CmpZ(v : @(0)): ((v <= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 10, column 8)
+qualif CmpZ(v : @(0)): ((v > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 11, column 8)
+qualif CmpZ(v : @(0)): ((v >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 12, column 8)
+qualif CmpZ(v : @(0)): ((v = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 13, column 8)
+qualif CmpZ(v : @(0)): ((v != 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 14, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v < x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 16, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v <= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 17, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v > x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 18, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v >= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 19, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v = x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 20, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v != x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 21, column 8)
+qualif One(v : int): ((v = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 28, column 8)
+qualif True1(v : GHC.Types.Bool): ((Prop v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 29, column 8)
+qualif False1(v : GHC.Types.Bool): ((~ ((Prop v)))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 30, column 8)
+qualif Papp(v : @(0), p : (Pred  @(0))): ((papp1 p v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 34, column 8)
+qualif Papp2(v : @(1), x : @(0), p : (Pred  @(1)  @(0))): ((papp2 p v x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 37, column 8)
+qualif Papp3(v : @(2), x : @(0), y : @(1), p : (Pred  @(2)  @(0)  @(1))): ((papp3 p v x y)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 39, column 8)
+
+
+
+
+constant runFun : (func(2, [(Arrow  @(0)  @(1)); @(0); @(1)]))
+constant addrLen : (func(0, [Str; int]))
+constant papp5 : (func(10, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4));
+                            @(5);
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            bool]))
+constant x_Tuple21 : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant GHC.Types.False##68 : (GHC.Types.Bool)
+constant x_Tuple65 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(4)]))
+constant x_Tuple55 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(4)]))
+constant GHC.Types.$58$$35$$35$64 : (func(1, [@(0);
+                                              [@(0)];
+                                              [@(0)]]))
+constant x_Tuple33 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(2)]))
+constant lit$never : (Str)
+constant x_Tuple77 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(6)]))
+constant papp3 : (func(6, [(Pred  @(0)  @(1)  @(2));
+                           @(3);
+                           @(4);
+                           @(5);
+                           bool]))
+constant GHC.Types.True##6u : (GHC.Types.Bool)
+constant x_Tuple63 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(2)]))
+constant x_Tuple41 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(0)]))
+constant GHC.Types.LT##6S : (GHC.Types.Ordering)
+constant elems : (func(1, [(LazyQueue.SList  @(0)); [@(0)]]))
+constant LazyQueue.SL##rlB : (func(1, [int;
+                                       [@(0)];
+                                       (LazyQueue.SList  @(0))]))
+constant papp4 : (func(8, [(Pred  @(0)  @(1)  @(2)  @(3));
+                           @(4);
+                           @(5);
+                           @(6);
+                           @(7);
+                           bool]))
+constant x_Tuple64 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(3)]))
+constant size : (func(1, [(LazyQueue.SList  @(0)); int]))
+constant GHC.Types.GT##6W : (GHC.Types.Ordering)
+constant GHC.Types.I###6c : (func(0, [int; int]))
+constant autolen : (func(1, [@(0); int]))
+constant x_Tuple52 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(1)]))
+constant head : (func(1, [[@(0)]; @(0)]))
+constant left : (func(1, [(LazyQueue.Queue  @(0));
+                          (LazyQueue.SList  @(0))]))
+constant null : (func(1, [[@(0)]; bool]))
+constant papp2 : (func(4, [(Pred  @(0)  @(1)); @(2); @(3); bool]))
+constant x_Tuple62 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(1)]))
+constant GHC.Classes.$fEqInt##roB : ((GHC.Classes.Eq  int))
+constant fromJust : (func(1, [(GHC.Base.Maybe  @(0)); @(0)]))
+constant LazyQueue.Q##rlx : (func(1, [(LazyQueue.SList  @(0));
+                                      (LazyQueue.SList  @(0));
+                                      (LazyQueue.Queue  @(0))]))
+constant papp7 : (func(14, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            @(12);
+                            @(13);
+                            bool]))
+constant x_Tuple53 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(2)]))
+constant x_Tuple71 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(0)]))
+constant x_Tuple74 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(3)]))
+constant len : (func(2, [(@(0)  @(1)); int]))
+constant papp6 : (func(12, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            bool]))
+constant x_Tuple22 : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant x_Tuple66 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(5)]))
+constant x_Tuple44 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(3)]))
+constant strLen : (func(0, [[Char]; int]))
+constant GHC.Types.$91$$93$$35$$35$6m : (func(1, [[@(0)]]))
+constant x_Tuple72 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(1)]))
+constant isJust : (func(1, [(GHC.Base.Maybe  @(0)); bool]))
+constant Prop : (func(0, [GHC.Types.Bool; bool]))
+constant x_Tuple31 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(0)]))
+constant x_Tuple75 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(4)]))
+constant papp1 : (func(2, [(Pred  @(0)); @(1); bool]))
+constant x_Tuple61 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(0)]))
+constant x_Tuple43 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(2)]))
+constant right : (func(1, [(LazyQueue.Queue  @(0));
+                           (LazyQueue.SList  @(0))]))
+constant tail : (func(1, [[@(0)]; [@(0)]]))
+constant GHC.Types.EQ##6U : (GHC.Types.Ordering)
+constant x_Tuple51 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(0)]))
+constant x_Tuple73 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(2)]))
+constant x_Tuple54 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(3)]))
+constant GHC.Classes.$fOrdInt##rnf : ((GHC.Classes.Ord  int))
+constant cmp : (func(0, [GHC.Types.Ordering; GHC.Types.Ordering]))
+constant x_Tuple32 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(1)]))
+constant x_Tuple76 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(5)]))
+constant GHC.Num.$fNumInt##rm3 : ((GHC.Num.Num  int))
+constant snd : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant fst : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant x_Tuple42 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(1)]))
+constant GHC.Prim.void###0l : (GHC.Prim.Void#)
+
+
+distinct GHC.Types.False##68 : (GHC.Types.Bool)
+distinct lit$never : (Str)
+distinct GHC.Types.True##6u : (GHC.Types.Bool)
+distinct GHC.Types.LT##6S : (GHC.Types.Ordering)
+distinct LazyQueue.SL##rlB : (func(1, [int;
+                                       [@(0)];
+                                       (LazyQueue.SList  @(0))]))
+distinct GHC.Types.GT##6W : (GHC.Types.Ordering)
+distinct LazyQueue.Q##rlx : (func(1, [(LazyQueue.SList  @(0));
+                                      (LazyQueue.SList  @(0));
+                                      (LazyQueue.Queue  @(0))]))
+distinct GHC.Types.EQ##6U : (GHC.Types.Ordering)
+
+
+bind 0 GHC.Prim.void###0l : {VV##211 : GHC.Prim.Void# | []}
+bind 1 GHC.Types.False##68 : {VV##215 : GHC.Types.Bool | []}
+bind 2 GHC.Types.$91$$93$$35$$35$6m : {VV : func(1, [[@(0)]]) | []}
+bind 3 GHC.Types.True##6u : {VV##218 : GHC.Types.Bool | []}
+bind 4 GHC.Num.$fNumInt##rm3 : {VV##221 : (GHC.Num.Num  int) | []}
+bind 5 GHC.Classes.$fOrdInt##rnf : {VV##222 : (GHC.Classes.Ord  int) | []}
+bind 6 GHC.Classes.$fEqInt##roB : {VV##223 : (GHC.Classes.Eq  int) | []}
+bind 7 GHC.Types.EQ##6U : {VV##226 : GHC.Types.Ordering | [(VV##226 = GHC.Types.EQ##6U)]}
+bind 8 GHC.Types.LT##6S : {VV##227 : GHC.Types.Ordering | [(VV##227 = GHC.Types.LT##6S)]}
+bind 9 GHC.Types.GT##6W : {VV##228 : GHC.Types.Ordering | [(VV##228 = GHC.Types.GT##6W)]}
+bind 10 GHC.Types.True##6u : {v##4 : GHC.Types.Bool | [(Prop v##4)]}
+bind 11 GHC.Types.False##68 : {v##5 : GHC.Types.Bool | [(~ ((Prop v##5)))]}
+bind 12 GHC.Types.False##68 : {v##5 : GHC.Types.Bool | [(~ ((Prop v##5)))]}
+bind 13 GHC.Types.$91$$93$$35$$35$6m : {VV : func(1, [[@(0)]]) | []}
+bind 14 GHC.Types.True##6u : {v##4 : GHC.Types.Bool | [(Prop v##4)]}
+bind 15 x##aA8 : {v##1 : [Char] | [false]}
+bind 16 ds_dRr : {v##0 : (LazyQueue.SList  t_aBt) | [((size v##0) > 0)]}
+bind 17 lq_anf$##1677724942##dRU : {lq_tmp$x##276 : (LazyQueue.SList  t_aBt) | [((size lq_tmp$x##276) > 0);
+                                                                                (lq_tmp$x##276 = ds_dRr)]}
+bind 18 lq_anf$##1677724942##dRU : {lq_tmp$x##278 : (LazyQueue.SList  t_aBt) | [((size lq_tmp$x##278) > 0);
+                                                                                (lq_tmp$x##278 = ds_dRr)]}
+bind 19 ds_dRs : {lq_tmp$x##289 : int | [(lq_tmp$x##289 >= 0)]}
+bind 20 ds_dRt : {lq_tmp$x##291 : [t_aBt] | [((len lq_tmp$x##291) = ds_dRs);
+                                             ((len lq_tmp$x##291) >= 0)]}
+bind 21 lq_anf$##1677724942##dRU : {lq_tmp$x##278 : (LazyQueue.SList  t_aBt) | [((size lq_tmp$x##278) > 0);
+                                                                                (lq_tmp$x##278 = ds_dRr);
+                                                                                ((elems lq_tmp$x##278) = ds_dRt);
+                                                                                ((size lq_tmp$x##278) = ds_dRs);
+                                                                                (lq_tmp$x##278 = (LazyQueue.SL##rlB ds_dRs ds_dRt));
+                                                                                ((elems lq_tmp$x##278) = ds_dRt);
+                                                                                ((size lq_tmp$x##278) = ds_dRs)]}
+bind 22 lq_anf$##1677724943##dRV : {lq_tmp$x##300 : [t_aBt] | [((len lq_tmp$x##300) = ds_dRs);
+                                                               ((len lq_tmp$x##300) >= 0);
+                                                               (lq_tmp$x##300 = ds_dRt);
+                                                               ((len lq_tmp$x##300) >= 0)]}
+bind 23 lq_anf$##1677724943##dRV : {lq_tmp$x##304 : [t_aBt] | [((len lq_tmp$x##304) = ds_dRs);
+                                                               ((len lq_tmp$x##304) >= 0);
+                                                               (lq_tmp$x##304 = ds_dRt);
+                                                               ((len lq_tmp$x##304) >= 0);
+                                                               ((len lq_tmp$x##304) >= 0)]}
+bind 24 lq_anf$##1677724943##dRV : {lq_tmp$x##304 : [t_aBt] | [((len lq_tmp$x##304) = ds_dRs);
+                                                               ((len lq_tmp$x##304) >= 0);
+                                                               (lq_tmp$x##304 = ds_dRt);
+                                                               ((len lq_tmp$x##304) >= 0);
+                                                               ((len lq_tmp$x##304) = 0);
+                                                               ((null lq_tmp$x##304) <=> true);
+                                                               (lq_tmp$x##304 = GHC.Types.$91$$93$$35$$35$6m);
+                                                               ((len lq_tmp$x##304) = 0);
+                                                               ((null lq_tmp$x##304) <=> true);
+                                                               ((len lq_tmp$x##304) >= 0)]}
+bind 25 ds_dRw : {VV##313 : GHC.Prim.Void# | [$k_##314]}
+bind 26 lq_anf$##1677724944##dRW : {lq_tmp$x##320 : Str | [(lq_tmp$x##320 = lit$never)]}
+bind 27 lq_anf$##1677724945##dRX : {lq_tmp$x##326 : [Char] | [(lq_tmp$x##326 ~~ lq_anf$##1677724944##dRW);
+                                                              ((len lq_tmp$x##326) = (strLen lq_anf$##1677724944##dRW));
+                                                              ((len lq_tmp$x##326) >= 0)]}
+bind 28 lq_anf$##1677724943##dRV : {lq_tmp$x##350 : [t_aBt] | [((len lq_tmp$x##350) = ds_dRs);
+                                                               ((len lq_tmp$x##350) >= 0);
+                                                               (lq_tmp$x##350 = ds_dRt);
+                                                               ((len lq_tmp$x##350) >= 0);
+                                                               ((len lq_tmp$x##350) >= 0)]}
+bind 29 x##an2 : {VV : t_aBt | []}
+bind 30 ds_dRu : {lq_tmp$x##364 : [t_aBt] | [((len lq_tmp$x##364) >= 0)]}
+bind 31 lq_anf$##1677724943##dRV : {lq_tmp$x##350 : [t_aBt] | [((len lq_tmp$x##350) = ds_dRs);
+                                                               ((len lq_tmp$x##350) >= 0);
+                                                               (lq_tmp$x##350 = ds_dRt);
+                                                               ((len lq_tmp$x##350) >= 0);
+                                                               ((len lq_tmp$x##350) = (1 + (len ds_dRu)));
+                                                               ((null lq_tmp$x##350) <=> false);
+                                                               ((tail lq_tmp$x##350) = ds_dRu);
+                                                               ((head lq_tmp$x##350) = x##an2);
+                                                               (lq_tmp$x##350 = (GHC.Types.$58$$35$$35$64 x##an2 ds_dRu));
+                                                               ((len lq_tmp$x##350) = (1 + (len ds_dRu)));
+                                                               ((null lq_tmp$x##350) <=> false);
+                                                               ((tail lq_tmp$x##350) = ds_dRu);
+                                                               ((head lq_tmp$x##350) = x##an2);
+                                                               ((len lq_tmp$x##350) >= 0)]}
+bind 32 ds_dRx : {v##0 : (LazyQueue.SList  a_aKn) | [((size v##0) > 0)]}
+bind 33 lq_anf$##1677724946##dRY : {lq_tmp$x##379 : (LazyQueue.SList  a_aKn) | [((size lq_tmp$x##379) > 0);
+                                                                                (lq_tmp$x##379 = ds_dRx)]}
+bind 34 lq_anf$##1677724946##dRY : {lq_tmp$x##381 : (LazyQueue.SList  a_aKn) | [((size lq_tmp$x##381) > 0);
+                                                                                (lq_tmp$x##381 = ds_dRx)]}
+bind 35 n##an0 : {lq_tmp$x##392 : int | [(lq_tmp$x##392 >= 0)]}
+bind 36 ds_dRy : {lq_tmp$x##394 : [a_aKn] | [((len lq_tmp$x##394) = n##an0);
+                                             ((len lq_tmp$x##394) >= 0)]}
+bind 37 lq_anf$##1677724946##dRY : {lq_tmp$x##381 : (LazyQueue.SList  a_aKn) | [((size lq_tmp$x##381) > 0);
+                                                                                (lq_tmp$x##381 = ds_dRx);
+                                                                                ((elems lq_tmp$x##381) = ds_dRy);
+                                                                                ((size lq_tmp$x##381) = n##an0);
+                                                                                (lq_tmp$x##381 = (LazyQueue.SL##rlB n##an0 ds_dRy));
+                                                                                ((elems lq_tmp$x##381) = ds_dRy);
+                                                                                ((size lq_tmp$x##381) = n##an0)]}
+bind 38 lq_anf$##1677724947##dRZ : {lq_tmp$x##403 : [a_aKn] | [((len lq_tmp$x##403) = n##an0);
+                                                               ((len lq_tmp$x##403) >= 0);
+                                                               (lq_tmp$x##403 = ds_dRy);
+                                                               ((len lq_tmp$x##403) >= 0)]}
+bind 39 lq_anf$##1677724947##dRZ : {lq_tmp$x##407 : [a_aKn] | [((len lq_tmp$x##407) = n##an0);
+                                                               ((len lq_tmp$x##407) >= 0);
+                                                               (lq_tmp$x##407 = ds_dRy);
+                                                               ((len lq_tmp$x##407) >= 0);
+                                                               ((len lq_tmp$x##407) >= 0)]}
+bind 40 lq_anf$##1677724947##dRZ : {lq_tmp$x##407 : [a_aKn] | [((len lq_tmp$x##407) = n##an0);
+                                                               ((len lq_tmp$x##407) >= 0);
+                                                               (lq_tmp$x##407 = ds_dRy);
+                                                               ((len lq_tmp$x##407) >= 0);
+                                                               ((len lq_tmp$x##407) = 0);
+                                                               ((null lq_tmp$x##407) <=> true);
+                                                               (lq_tmp$x##407 = GHC.Types.$91$$93$$35$$35$6m);
+                                                               ((len lq_tmp$x##407) = 0);
+                                                               ((null lq_tmp$x##407) <=> true);
+                                                               ((len lq_tmp$x##407) >= 0)]}
+bind 41 ds_dRB : {VV##416 : GHC.Prim.Void# | [$k_##417]}
+bind 42 lq_anf$##1677724948##dS0 : {lq_tmp$x##426 : Str | [(lq_tmp$x##426 = lit$never)]}
+bind 43 lq_anf$##1677724949##dS1 : {lq_tmp$x##432 : [Char] | [(lq_tmp$x##432 ~~ lq_anf$##1677724948##dS0);
+                                                              ((len lq_tmp$x##432) = (strLen lq_anf$##1677724948##dS0));
+                                                              ((len lq_tmp$x##432) >= 0)]}
+bind 44 lq_anf$##1677724947##dRZ : {lq_tmp$x##460 : [a_aKn] | [((len lq_tmp$x##460) = n##an0);
+                                                               ((len lq_tmp$x##460) >= 0);
+                                                               (lq_tmp$x##460 = ds_dRy);
+                                                               ((len lq_tmp$x##460) >= 0);
+                                                               ((len lq_tmp$x##460) >= 0)]}
+bind 45 ds_dRz : {VV : a_aKn | []}
+bind 46 xs##an1 : {lq_tmp$x##474 : [a_aKn] | [((len lq_tmp$x##474) >= 0)]}
+bind 47 lq_anf$##1677724947##dRZ : {lq_tmp$x##460 : [a_aKn] | [((len lq_tmp$x##460) = n##an0);
+                                                               ((len lq_tmp$x##460) >= 0);
+                                                               (lq_tmp$x##460 = ds_dRy);
+                                                               ((len lq_tmp$x##460) >= 0);
+                                                               ((len lq_tmp$x##460) = (1 + (len xs##an1)));
+                                                               ((null lq_tmp$x##460) <=> false);
+                                                               ((tail lq_tmp$x##460) = xs##an1);
+                                                               ((head lq_tmp$x##460) = ds_dRz);
+                                                               (lq_tmp$x##460 = (GHC.Types.$58$$35$$35$64 ds_dRz xs##an1));
+                                                               ((len lq_tmp$x##460) = (1 + (len xs##an1)));
+                                                               ((null lq_tmp$x##460) <=> false);
+                                                               ((tail lq_tmp$x##460) = xs##an1);
+                                                               ((head lq_tmp$x##460) = ds_dRz);
+                                                               ((len lq_tmp$x##460) >= 0)]}
+bind 48 lq_anf$##1677724950##dS2 : {lq_tmp$x##484 : int | [(lq_tmp$x##484 = (1  :  int))]}
+bind 49 lq_anf$##1677724951##dS3 : {lq_tmp$x##497 : int | [(lq_tmp$x##497 = (n##an0 - lq_anf$##1677724950##dS2))]}
+bind 50 x##alZ : {VV : a_aKJ | []}
+bind 51 ds_dRC : {VV##528 : (LazyQueue.SList  a_aKJ) | []}
+bind 52 lq_anf$##1677724952##dS4 : {lq_tmp$x##529 : (LazyQueue.SList  a_aKJ) | [(lq_tmp$x##529 = ds_dRC)]}
+bind 53 lq_anf$##1677724952##dS4 : {lq_tmp$x##531 : (LazyQueue.SList  a_aKJ) | [(lq_tmp$x##531 = ds_dRC)]}
+bind 54 n##am0 : {lq_tmp$x##542 : int | [(lq_tmp$x##542 >= 0)]}
+bind 55 xs##am1 : {lq_tmp$x##544 : [a_aKJ] | [((len lq_tmp$x##544) = n##am0);
+                                              ((len lq_tmp$x##544) >= 0)]}
+bind 56 lq_anf$##1677724952##dS4 : {lq_tmp$x##531 : (LazyQueue.SList  a_aKJ) | [(lq_tmp$x##531 = ds_dRC);
+                                                                                ((elems lq_tmp$x##531) = xs##am1);
+                                                                                ((size lq_tmp$x##531) = n##am0);
+                                                                                (lq_tmp$x##531 = (LazyQueue.SL##rlB n##am0 xs##am1));
+                                                                                ((elems lq_tmp$x##531) = xs##am1);
+                                                                                ((size lq_tmp$x##531) = n##am0)]}
+bind 57 lq_anf$##1677724953##dS5 : {lq_tmp$x##553 : int | [(lq_tmp$x##553 = (1  :  int))]}
+bind 58 lq_anf$##1677724954##dS6 : {lq_tmp$x##566 : int | [(lq_tmp$x##566 = (n##am0 + lq_anf$##1677724953##dS5))]}
+bind 59 lq_tmp$x##589 : {VV : a_aKJ | []}
+bind 60 lq_anf$##1677724955##dS7 : {lq_tmp$x##575 : [a_aKJ] | [((len lq_tmp$x##575) = (1 + (len xs##am1)));
+                                                               ((null lq_tmp$x##575) <=> false);
+                                                               ((tail lq_tmp$x##575) = xs##am1);
+                                                               ((head lq_tmp$x##575) = x##alZ);
+                                                               ((len lq_tmp$x##575) >= 0)]}
+bind 61 lq_anf$##1677724956##dS8 : {lq_tmp$x##624 : int | [(lq_tmp$x##624 = (0  :  int))]}
+bind 62 lq_tmp$x##638 : {VV : a_aNx | []}
+bind 63 lq_anf$##1677724957##dS9 : {lq_tmp$x##630 : [a_aNx] | [((len lq_tmp$x##630) = 0);
+                                                               ((null lq_tmp$x##630) <=> true);
+                                                               ((len lq_tmp$x##630) >= 0)]}
+bind 64 LazyQueue.nil##rlE : {VV : func(1, [(LazyQueue.SList  @(0))]) | []}
+bind 65 lq_anf$##1677724958##dSa : {lq_tmp$x##659 : (LazyQueue.SList  a_aNK) | [((size lq_tmp$x##659) = 0)]}
+bind 66 lq_anf$##1677724959##dSb : {lq_tmp$x##664 : (LazyQueue.SList  a_aNK) | [((size lq_tmp$x##664) = 0)]}
+bind 67 LazyQueue.emp##rlI : {VV : func(1, [(LazyQueue.Queue  @(0))]) | []}
+bind 68 ds_dRl : {VV##688 : (LazyQueue.Queue  a_aAN) | []}
+bind 69 lq_anf$##1677724962##dSe : {lq_tmp$x##689 : (LazyQueue.Queue  a_aAN) | [(lq_tmp$x##689 = ds_dRl)]}
+bind 70 lq_anf$##1677724962##dSe : {lq_tmp$x##691 : (LazyQueue.Queue  a_aAN) | [(lq_tmp$x##691 = ds_dRl)]}
+bind 71 l##an3 : {lq_tmp$x##699 : (LazyQueue.SList  a_aAN) | []}
+bind 72 r##an4 : {lq_tmp$x##700 : (LazyQueue.SList  a_aAN) | [((size lq_tmp$x##700) <= (size l##an3))]}
+bind 73 lq_anf$##1677724962##dSe : {lq_tmp$x##691 : (LazyQueue.Queue  a_aAN) | [(lq_tmp$x##691 = ds_dRl);
+                                                                                ((right lq_tmp$x##691) = r##an4);
+                                                                                ((left lq_tmp$x##691) = l##an3);
+                                                                                (lq_tmp$x##691 = (LazyQueue.Q##rlx l##an3 r##an4));
+                                                                                ((right lq_tmp$x##691) = r##an4);
+                                                                                ((left lq_tmp$x##691) = l##an3)]}
+bind 74 lq_anf$##1677724963##dSf : {lq_tmp$x##709 : int | [(lq_tmp$x##709 >= 0);
+                                                           (lq_tmp$x##709 = (size l##an3))]}
+bind 75 lq_anf$##1677724964##dSg : {lq_tmp$x##718 : int | [(lq_tmp$x##718 >= 0);
+                                                           (lq_tmp$x##718 = (size r##an4))]}
+bind 76 l##aA5 : {VV##744 : (LazyQueue.SList  a_aNo) | []}
+bind 77 r##aA6 : {v##0 : (LazyQueue.SList  a_aNo) | [((size v##0) = (1 + (size l##aA5)))]}
+bind 78 a##aA7 : {VV##746 : (LazyQueue.SList  a_aNo) | []}
+bind 79 lq_anf$##1677724965##dSh : {lq_tmp$x##748 : int | [(lq_tmp$x##748 >= 0);
+                                                           (lq_tmp$x##748 = (size l##aA5))]}
+bind 80 lq_anf$##1677724966##dSi : {lq_tmp$x##757 : int | [(lq_tmp$x##757 = (0  :  int))]}
+bind 81 lq_anf$##1677724967##dSj : {lq_tmp$x##763 : GHC.Types.Bool | [((Prop lq_tmp$x##763) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi))]}
+bind 82 lq_anf$##1677724968##dSk : {lq_tmp$x##779 : GHC.Types.Bool | [((Prop lq_tmp$x##779) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi));
+                                                                      (lq_tmp$x##779 = lq_anf$##1677724967##dSj)]}
+bind 83 lq_anf$##1677724968##dSk : {lq_tmp$x##781 : GHC.Types.Bool | [((Prop lq_tmp$x##781) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi));
+                                                                      (lq_tmp$x##781 = lq_anf$##1677724967##dSj)]}
+bind 84 lq_anf$##1677724968##dSk : {lq_tmp$x##781 : GHC.Types.Bool | [((Prop lq_tmp$x##781) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi));
+                                                                      (lq_tmp$x##781 = lq_anf$##1677724967##dSj);
+                                                                      (~ ((Prop lq_tmp$x##781)));
+                                                                      (~ ((Prop lq_tmp$x##781)));
+                                                                      (~ ((Prop lq_tmp$x##781)))]}
+bind 85 ds_dRE : {VV##786 : GHC.Prim.Void# | [$k_##787]}
+bind 86 lq_anf$##1677724969##dSl : {VV##799 : a_aNo | [$k_##800[lq_tmp$x##798:=l##aA5]]}
+bind 87 lq_anf$##1677724970##dSm : {lq_tmp$x##805 : (LazyQueue.SList  a_aNo) | [((size lq_tmp$x##805) = ((size l##aA5) - 1))]}
+bind 88 lq_anf$##1677724971##dSn : {lq_tmp$x##814 : (LazyQueue.SList  a_aNo) | [((size lq_tmp$x##814) = ((size r##aA6) - 1))]}
+bind 89 lq_anf$##1677724972##dSo : {VV##825 : a_aNo | [$k_##826[lq_tmp$x##824:=r##aA6]]}
+bind 90 lq_anf$##1677724973##dSp : {lq_tmp$x##831 : (LazyQueue.SList  a_aNo) | [((size lq_tmp$x##831) = ((size a##aA7) + 1))]}
+bind 91 lq_anf$##1677724974##dSq : {lq_tmp$x##844 : (LazyQueue.SList  a_aNo) | [((size lq_tmp$x##844) = (((size lq_anf$##1677724970##dSm) + (size lq_anf$##1677724971##dSn)) + (size lq_anf$##1677724973##dSp)))]}
+bind 92 lq_anf$##1677724968##dSk : {lq_tmp$x##869 : GHC.Types.Bool | [((Prop lq_tmp$x##869) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi));
+                                                                      (lq_tmp$x##869 = lq_anf$##1677724967##dSj)]}
+bind 93 lq_anf$##1677724968##dSk : {lq_tmp$x##869 : GHC.Types.Bool | [((Prop lq_tmp$x##869) <=> (lq_anf$##1677724965##dSh = lq_anf$##1677724966##dSi));
+                                                                      (lq_tmp$x##869 = lq_anf$##1677724967##dSj);
+                                                                      (Prop lq_tmp$x##869);
+                                                                      (Prop lq_tmp$x##869);
+                                                                      (Prop lq_tmp$x##869)]}
+bind 94 lq_anf$##1677724975##dSr : {VV##877 : a_aNo | [$k_##878[lq_tmp$x##876:=r##aA6]]}
+bind 95 l##an8 : {VV##915 : (LazyQueue.SList  a_aQl) | []}
+bind 96 r##an9 : {r##0 : (LazyQueue.SList  a_aQl) | [((size r##0) <= ((size l##an8) + 1))]}
+bind 97 lq_anf$##1677724976##dSs : {lq_tmp$x##918 : int | [(lq_tmp$x##918 >= 0);
+                                                           (lq_tmp$x##918 = (size r##an9))]}
+bind 98 lq_anf$##1677724977##dSt : {lq_tmp$x##927 : int | [(lq_tmp$x##927 >= 0);
+                                                           (lq_tmp$x##927 = (size l##an8))]}
+bind 99 lq_anf$##1677724978##dSu : {lq_tmp$x##936 : GHC.Types.Bool | [((Prop lq_tmp$x##936) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt))]}
+bind 100 lq_anf$##1677724979##dSv : {lq_tmp$x##952 : GHC.Types.Bool | [((Prop lq_tmp$x##952) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt));
+                                                                       (lq_tmp$x##952 = lq_anf$##1677724978##dSu)]}
+bind 101 lq_anf$##1677724979##dSv : {lq_tmp$x##954 : GHC.Types.Bool | [((Prop lq_tmp$x##954) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt));
+                                                                       (lq_tmp$x##954 = lq_anf$##1677724978##dSu)]}
+bind 102 lq_anf$##1677724979##dSv : {lq_tmp$x##954 : GHC.Types.Bool | [((Prop lq_tmp$x##954) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt));
+                                                                       (lq_tmp$x##954 = lq_anf$##1677724978##dSu);
+                                                                       (~ ((Prop lq_tmp$x##954)));
+                                                                       (~ ((Prop lq_tmp$x##954)));
+                                                                       (~ ((Prop lq_tmp$x##954)))]}
+bind 103 ds_dRG : {VV##959 : GHC.Prim.Void# | [$k_##960]}
+bind 104 lq_anf$##1677724980##dSw : {lq_tmp$x##969 : (LazyQueue.SList  a_aQl) | [((size lq_tmp$x##969) = 0)]}
+bind 105 lq_anf$##1677724981##dSx : {lq_tmp$x##977 : (LazyQueue.SList  a_aQl) | [((size lq_tmp$x##977) = (((size l##an8) + (size r##an9)) + (size lq_anf$##1677724980##dSw)))]}
+bind 106 lq_anf$##1677724982##dSy : {lq_tmp$x##991 : (LazyQueue.SList  a_aQl) | [((size lq_tmp$x##991) = 0)]}
+bind 107 lq_anf$##1677724979##dSv : {lq_tmp$x##1009 : GHC.Types.Bool | [((Prop lq_tmp$x##1009) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt));
+                                                                        (lq_tmp$x##1009 = lq_anf$##1677724978##dSu)]}
+bind 108 lq_anf$##1677724979##dSv : {lq_tmp$x##1009 : GHC.Types.Bool | [((Prop lq_tmp$x##1009) <=> (lq_anf$##1677724976##dSs <= lq_anf$##1677724977##dSt));
+                                                                        (lq_tmp$x##1009 = lq_anf$##1677724978##dSu);
+                                                                        (Prop lq_tmp$x##1009);
+                                                                        (Prop lq_tmp$x##1009);
+                                                                        (Prop lq_tmp$x##1009)]}
+bind 109 e##an5 : {VV : a_aQB | []}
+bind 110 ds_dRH : {VV##1041 : (LazyQueue.Queue  a_aQB) | []}
+bind 111 lq_anf$##1677724983##dSz : {lq_tmp$x##1042 : (LazyQueue.Queue  a_aQB) | [(lq_tmp$x##1042 = ds_dRH)]}
+bind 112 lq_anf$##1677724983##dSz : {lq_tmp$x##1044 : (LazyQueue.Queue  a_aQB) | [(lq_tmp$x##1044 = ds_dRH)]}
+bind 113 l##an6 : {lq_tmp$x##1052 : (LazyQueue.SList  a_aQB) | []}
+bind 114 r##an7 : {lq_tmp$x##1053 : (LazyQueue.SList  a_aQB) | [((size lq_tmp$x##1053) <= (size l##an6))]}
+bind 115 lq_anf$##1677724983##dSz : {lq_tmp$x##1044 : (LazyQueue.Queue  a_aQB) | [(lq_tmp$x##1044 = ds_dRH);
+                                                                                  ((right lq_tmp$x##1044) = r##an7);
+                                                                                  ((left lq_tmp$x##1044) = l##an6);
+                                                                                  (lq_tmp$x##1044 = (LazyQueue.Q##rlx l##an6 r##an7));
+                                                                                  ((right lq_tmp$x##1044) = r##an7);
+                                                                                  ((left lq_tmp$x##1044) = l##an6)]}
+bind 116 lq_anf$##1677724984##dSA : {lq_tmp$x##1062 : (LazyQueue.SList  a_aQB) | [((size lq_tmp$x##1062) = ((size r##an7) + 1))]}
+bind 117 e##an5 : {VV : a_aQB | []}
+bind 118 VV##1091 : {VV##1091 : (LazyQueue.Queue  a_aQB) | []}
+bind 119 lq_tmp$x##1084 : {VV##1093 : (LazyQueue.Queue  a_aQB) | []}
+bind 120 VV##1094 : {VV##1094 : (LazyQueue.Queue  a_aQB) | []}
+bind 121 VV##1096 : {VV##1096 : (LazyQueue.Queue  a_aQB) | []}
+bind 122 ds_dRH : {VV##1098 : (LazyQueue.Queue  a_aQB) | []}
+bind 123 VV##1099 : {VV##1099 : (LazyQueue.Queue  a_aQB) | []}
+bind 124 VV##1101 : {VV##1101 : (LazyQueue.Queue  a_aQB) | []}
+bind 125 VV##1103 : {VV##1103 : (LazyQueue.SList  a_aQB) | [((size VV##1103) = ((size r##an7) + 1));
+                                                            (VV##1103 = lq_anf$##1677724984##dSA)]}
+bind 126 VV##1105 : {VV##1105 : (LazyQueue.SList  a_aQB) | [(VV##1105 = l##an6)]}
+bind 127 VV##1107 : {VV##1107 : (LazyQueue.SList  a_aQB) | [((size VV##1107) <= (size l##an6));
+                                                            (VV##1107 = r##an7)]}
+bind 128 VV##1109 : {VV##1109 : (LazyQueue.SList  a_aQl) | []}
+bind 129 l##an8 : {VV##1111 : (LazyQueue.SList  a_aQl) | []}
+bind 130 VV##1112 : {VV##1112 : (LazyQueue.SList  a_aQl) | []}
+bind 131 lq_tmp$x##1032 : {r##0 : (LazyQueue.SList  a_aQl) | []}
+bind 132 VV##1115 : {VV##1115 : (LazyQueue.Queue  a_aQl) | []}
+bind 133 VV##1117 : {VV##1117 : (LazyQueue.SList  a_aQl) | []}
+bind 134 r##an9 : {r##0 : (LazyQueue.SList  a_aQl) | []}
+bind 135 VV##1120 : {VV##1120 : (LazyQueue.Queue  a_aQl) | []}
+bind 136 VV##1122 : {VV##1122 : (LazyQueue.Queue  a_aQl) | [((right VV##1122) = r##an9);
+                                                            ((left VV##1122) = l##an8)]}
+bind 137 VV##1124 : {VV##1124 : (LazyQueue.SList  a_aQl) | [((size VV##1124) <= ((size l##an8) + 1));
+                                                            (VV##1124 = r##an9)]}
+bind 138 VV##1126 : {VV##1126 : (LazyQueue.SList  a_aQl) | [(VV##1126 = l##an8)]}
+bind 139 VV##1128 : {VV##1128 : (LazyQueue.Queue  a_aQl) | [$k_##967[ds_dRG:=GHC.Prim.void###0l][VV##966:=VV##1128]]}
+bind 140 VV##1130 : {VV##1130 : GHC.Prim.Void# | [(VV##1130 = GHC.Prim.void###0l)]}
+bind 141 VV##1132 : {VV##1132 : (LazyQueue.Queue  a_aQl) | [((right VV##1132) = lq_anf$##1677724982##dSy);
+                                                            ((left VV##1132) = lq_anf$##1677724981##dSx)]}
+bind 142 VV##1134 : {VV##1134 : (LazyQueue.SList  a_aQl) | [((size VV##1134) = 0);
+                                                            (VV##1134 = lq_anf$##1677724982##dSy)]}
+bind 143 VV##1136 : {VV##1136 : (LazyQueue.SList  a_aQl) | [((size VV##1136) = (((size l##an8) + (size r##an9)) + (size lq_anf$##1677724980##dSw)));
+                                                            (VV##1136 = lq_anf$##1677724981##dSx)]}
+bind 144 VV##1138 : {VV##1138 : (LazyQueue.SList  a_aQl) | [((size VV##1138) = 0);
+                                                            (VV##1138 = lq_anf$##1677724980##dSw)]}
+bind 145 VV##1140 : {VV##1140 : (LazyQueue.SList  a_aQl) | [((size VV##1140) <= ((size l##an8) + 1));
+                                                            (VV##1140 = r##an9)]}
+bind 146 VV##1142 : {VV##1142 : (LazyQueue.SList  a_aQl) | [(VV##1142 = l##an8)]}
+bind 147 VV##1144 : {VV##1144 : int | [(VV##1144 >= 0);
+                                       (VV##1144 = (size l##an8));
+                                       (VV##1144 = lq_anf$##1677724977##dSt)]}
+bind 148 VV##1146 : {VV##1146 : int | [(VV##1146 >= 0);
+                                       (VV##1146 = (size r##an9));
+                                       (VV##1146 = lq_anf$##1677724976##dSs)]}
+bind 149 VV##1148 : {VV##1148 : (LazyQueue.SList  a_aQl) | [(VV##1148 = l##an8)]}
+bind 150 VV##1150 : {VV##1150 : (LazyQueue.SList  a_aQl) | [((size VV##1150) <= ((size l##an8) + 1));
+                                                            (VV##1150 = r##an9)]}
+bind 151 VV##1152 : {VV##1152 : (LazyQueue.SList  a_aNo) | []}
+bind 152 l##aA5 : {VV##1154 : (LazyQueue.SList  a_aNo) | []}
+bind 153 VV##1155 : {VV##1155 : (LazyQueue.SList  a_aNo) | []}
+bind 154 lq_tmp$x##905 : {v##0 : (LazyQueue.SList  a_aNo) | []}
+bind 155 VV##1158 : {VV##1158 : (LazyQueue.SList  a_aNo) | []}
+bind 156 lq_tmp$x##908 : {VV##1160 : (LazyQueue.SList  a_aNo) | []}
+bind 157 VV##1161 : {VV##1161 : (LazyQueue.SList  a_aNo) | []}
+bind 158 VV##1163 : {VV##1163 : (LazyQueue.SList  a_aNo) | []}
+bind 159 r##aA6 : {v##0 : (LazyQueue.SList  a_aNo) | []}
+bind 160 VV##1166 : {VV##1166 : (LazyQueue.SList  a_aNo) | []}
+bind 161 lq_tmp$x##898 : {VV##1168 : (LazyQueue.SList  a_aNo) | []}
+bind 162 VV##1169 : {VV##1169 : (LazyQueue.SList  a_aNo) | []}
+bind 163 VV##1171 : {VV##1171 : (LazyQueue.SList  a_aNo) | []}
+bind 164 a##aA7 : {VV##1173 : (LazyQueue.SList  a_aNo) | []}
+bind 165 VV##1174 : {VV##1174 : (LazyQueue.SList  a_aNo) | []}
+bind 166 VV##1176 : {VV##1176 : (LazyQueue.SList  a_aNo) | [((size VV##1176) = ((size a##aA7) + 1))]}
+bind 167 VV##1178 : {VV##1178 : (LazyQueue.SList  a_aNo) | [(VV##1178 = a##aA7)]}
+bind 168 VV##1180 : {VV##1180 : (LazyQueue.SList  a_aNo) | [((size VV##1180) = (1 + (size l##aA5)));
+                                                            (VV##1180 = r##aA6)]}
+bind 169 VV##1182 : {VV##1182 : (LazyQueue.SList  a_aNo) | [$k_##794[ds_dRE:=GHC.Prim.void###0l][VV##793:=VV##1182]]}
+bind 170 VV##1184 : {VV##1184 : GHC.Prim.Void# | [(VV##1184 = GHC.Prim.void###0l)]}
+bind 171 VV##1186 : {VV##1186 : (LazyQueue.SList  a_aNo) | [((size VV##1186) = ((size lq_anf$##1677724974##dSq) + 1))]}
+bind 172 VV##1188 : {VV##1188 : (LazyQueue.SList  a_aNo) | [((size VV##1188) = (((size lq_anf$##1677724970##dSm) + (size lq_anf$##1677724971##dSn)) + (size lq_anf$##1677724973##dSp)));
+                                                            (VV##1188 = lq_anf$##1677724974##dSq)]}
+bind 173 VV##1190 : {VV##1190 : (LazyQueue.SList  a_aNo) | [((size VV##1190) = ((size a##aA7) + 1));
+                                                            (VV##1190 = lq_anf$##1677724973##dSp)]}
+bind 174 VV##1192 : {VV##1192 : (LazyQueue.SList  a_aNo) | [((size VV##1192) = ((size r##aA6) - 1));
+                                                            (VV##1192 = lq_anf$##1677724971##dSn)]}
+bind 175 VV##1194 : {VV##1194 : (LazyQueue.SList  a_aNo) | [((size VV##1194) = ((size l##aA5) - 1));
+                                                            (VV##1194 = lq_anf$##1677724970##dSm)]}
+bind 176 VV##1196 : {VV##1196 : (LazyQueue.SList  a_aNo) | [(VV##1196 = a##aA7)]}
+bind 177 VV##1198 : {VV##1198 : (LazyQueue.SList  a_aNo) | [((size VV##1198) = (1 + (size l##aA5)));
+                                                            (VV##1198 = r##aA6)]}
+bind 178 VV##1200 : {VV##1200 : (LazyQueue.SList  a_aNo) | [((size VV##1200) = (1 + (size l##aA5)));
+                                                            (VV##1200 = r##aA6)]}
+bind 179 VV##1202 : {VV##1202 : (LazyQueue.SList  a_aNo) | [(VV##1202 = l##aA5)]}
+bind 180 VV##1204 : {VV##1204 : (LazyQueue.SList  a_aNo) | [(VV##1204 = l##aA5)]}
+bind 181 VV##1206 : {VV##1206 : int | [(VV##1206 = (0  :  int));
+                                       (VV##1206 = lq_anf$##1677724966##dSi)]}
+bind 182 VV##1208 : {VV##1208 : int | [(VV##1208 >= 0);
+                                       (VV##1208 = (size l##aA5));
+                                       (VV##1208 = lq_anf$##1677724965##dSh)]}
+bind 183 VV##1210 : {VV##1210 : int | [(VV##1210 = 0)]}
+bind 184 VV##1212 : {VV##1212 : (LazyQueue.SList  a_aNo) | [(VV##1212 = l##aA5)]}
+bind 185 VV##1214 : {VV##1214 : (LazyQueue.Queue  a_aAN) | []}
+bind 186 ds_dRl : {VV##1216 : (LazyQueue.Queue  a_aAN) | []}
+bind 187 VV##1217 : {VV##1217 : int | []}
+bind 188 VV##1219 : {VV##1219 : int | [(VV##1219 = (lq_anf$##1677724963##dSf + lq_anf$##1677724964##dSg))]}
+bind 189 VV##1221 : {VV##1221 : int | [(VV##1221 >= 0);
+                                       (VV##1221 = (size r##an4));
+                                       (VV##1221 = lq_anf$##1677724964##dSg)]}
+bind 190 VV##1223 : {VV##1223 : int | [(VV##1223 >= 0);
+                                       (VV##1223 = (size l##an3));
+                                       (VV##1223 = lq_anf$##1677724963##dSf)]}
+bind 191 VV##1225 : {VV##1225 : (LazyQueue.SList  a_aAN) | [((size VV##1225) <= (size l##an3));
+                                                            (VV##1225 = r##an4)]}
+bind 192 VV##1227 : {VV##1227 : (LazyQueue.SList  a_aAN) | [(VV##1227 = l##an3)]}
+bind 193 VV##1229 : {VV##1229 : (LazyQueue.Queue  a_aNK) | [((right VV##1229) = lq_anf$##1677724959##dSb);
+                                                            ((left VV##1229) = lq_anf$##1677724958##dSa)]}
+bind 194 VV##1231 : {VV##1231 : (LazyQueue.SList  a_aNK) | [((size VV##1231) = 0);
+                                                            (VV##1231 = lq_anf$##1677724959##dSb)]}
+bind 195 VV##1233 : {VV##1233 : (LazyQueue.SList  a_aNK) | [((size VV##1233) = 0);
+                                                            (VV##1233 = lq_anf$##1677724958##dSa)]}
+bind 196 VV##1235 : {VV##1235 : (LazyQueue.SList  a_aNx) | [((elems VV##1235) = lq_anf$##1677724957##dS9);
+                                                            ((size VV##1235) = lq_anf$##1677724956##dS8)]}
+bind 197 VV##1237 : {VV##1237 : [a_aNx] | [((len VV##1237) = 0);
+                                           ((null VV##1237) <=> true);
+                                           ((len VV##1237) >= 0);
+                                           (VV##1237 = lq_anf$##1677724957##dS9);
+                                           ((len VV##1237) >= 0)]}
+bind 198 lq_tmp$x##650 : {VV : a_aNx | []}
+bind 199 VV##1240 : {VV##1240 : int | [(VV##1240 = (0  :  int));
+                                       (VV##1240 = lq_anf$##1677724956##dS8)]}
+bind 200 VV##1242 : {VV##1242 : int | [(VV##1242 = 0)]}
+bind 201 x##alZ : {VV : a_aKJ | []}
+bind 202 VV##1245 : {VV##1245 : (LazyQueue.SList  a_aKJ) | []}
+bind 203 lq_tmp$x##617 : {VV##1247 : (LazyQueue.SList  a_aKJ) | []}
+bind 204 VV##1248 : {VV##1248 : (LazyQueue.SList  a_aKJ) | []}
+bind 205 VV##1250 : {VV##1250 : (LazyQueue.SList  a_aKJ) | []}
+bind 206 ds_dRC : {VV##1252 : (LazyQueue.SList  a_aKJ) | []}
+bind 207 VV##1253 : {VV##1253 : (LazyQueue.SList  a_aKJ) | []}
+bind 208 VV##1255 : {VV##1255 : (LazyQueue.SList  a_aKJ) | [((elems VV##1255) = lq_anf$##1677724955##dS7);
+                                                            ((size VV##1255) = lq_anf$##1677724954##dS6)]}
+bind 209 VV##1257 : {VV##1257 : [a_aKJ] | [((len VV##1257) = (1 + (len xs##am1)));
+                                           ((null VV##1257) <=> false);
+                                           ((tail VV##1257) = xs##am1);
+                                           ((head VV##1257) = x##alZ);
+                                           ((len VV##1257) >= 0);
+                                           (VV##1257 = lq_anf$##1677724955##dS7);
+                                           ((len VV##1257) >= 0)]}
+bind 210 lq_tmp$x##604 : {VV : a_aKJ | []}
+bind 211 VV##1260 : {VV##1260 : int | [(VV##1260 = (n##am0 + lq_anf$##1677724953##dS5));
+                                       (VV##1260 = lq_anf$##1677724954##dS6)]}
+bind 212 VV##1262 : {VV##1262 : [a_aKJ] | [((len VV##1262) = n##am0);
+                                           ((len VV##1262) >= 0);
+                                           (VV##1262 = xs##am1);
+                                           ((len VV##1262) >= 0)]}
+bind 213 lq_tmp$x##581 : {VV : a_aKJ | []}
+bind 214 VV##1265 : {VV##1265 : int | [(VV##1265 = (1  :  int));
+                                       (VV##1265 = lq_anf$##1677724953##dS5)]}
+bind 215 VV##1267 : {VV##1267 : int | [(VV##1267 >= 0);
+                                       (VV##1267 = n##am0)]}
+bind 216 VV##1269 : {VV##1269 : int | [(VV##1269 = 1)]}
+bind 217 VV##1271 : {VV##1271 : (LazyQueue.SList  a_aKn) | []}
+bind 218 ds_dRx : {v##0 : (LazyQueue.SList  a_aKn) | []}
+bind 219 VV##1274 : {VV##1274 : (LazyQueue.SList  a_aKn) | []}
+bind 220 VV##1276 : {VV##1276 : (LazyQueue.SList  a_aKn) | [((elems VV##1276) = xs##an1);
+                                                            ((size VV##1276) = lq_anf$##1677724951##dS3)]}
+bind 221 VV##1278 : {VV##1278 : [a_aKn] | [((len VV##1278) >= 0);
+                                           (VV##1278 = xs##an1);
+                                           ((len VV##1278) >= 0)]}
+bind 222 lq_tmp$x##512 : {VV : a_aKn | []}
+bind 223 VV##1281 : {VV##1281 : int | [(VV##1281 = (n##an0 - lq_anf$##1677724950##dS2));
+                                       (VV##1281 = lq_anf$##1677724951##dS3)]}
+bind 224 VV##1283 : {VV##1283 : int | [(VV##1283 = (1  :  int));
+                                       (VV##1283 = lq_anf$##1677724950##dS2)]}
+bind 225 VV##1285 : {VV##1285 : int | [(VV##1285 >= 0);
+                                       (VV##1285 = n##an0)]}
+bind 226 VV##1287 : {VV##1287 : int | [(VV##1287 = 1)]}
+bind 227 VV##1289 : {VV##1289 : (LazyQueue.SList  a_aKn) | [$k_##424[VV##423:=VV##1289][ds_dRB:=GHC.Prim.void###0l]]}
+bind 228 VV##1291 : {VV##1291 : GHC.Prim.Void# | [(VV##1291 = GHC.Prim.void###0l)]}
+bind 229 VV##1293 : {VV##1293 : (LazyQueue.SList  a_aKn) | [$k_##450[lq_tmp$x##444:=lq_anf$##1677724949##dS1][VV##449:=VV##1293][lq_tmp$x##452:=VV##1293]]}
+bind 230 VV##1295 : {VV##1295 : [Char] | [(VV##1295 ~~ lq_anf$##1677724948##dS0);
+                                          ((len VV##1295) = (strLen lq_anf$##1677724948##dS0));
+                                          ((len VV##1295) >= 0);
+                                          (VV##1295 = lq_anf$##1677724949##dS1);
+                                          ((len VV##1295) >= 0)]}
+bind 231 VV##1297 : {VV##1297 : Char | []}
+bind 232 lq_tmp$x##445 : {VV##1299 : Char | []}
+bind 233 VV##1300 : {VV##1300 : Char | []}
+bind 234 VV##1302 : {VV##1302 : Str | [(VV##1302 = lit$never);
+                                       (VV##1302 = lq_anf$##1677724948##dS0)]}
+bind 235 VV##1304 : {VV##1304 : (LazyQueue.SList  t_aBt) | []}
+bind 236 ds_dRr : {v##0 : (LazyQueue.SList  t_aBt) | []}
+bind 237 VV##1307 : {VV##1307 : GHC.Prim.Void# | [(VV##1307 = GHC.Prim.void###0l)]}
+bind 238 VV##1309 : {VV##1309 : [Char] | [(VV##1309 ~~ lq_anf$##1677724944##dRW);
+                                          ((len VV##1309) = (strLen lq_anf$##1677724944##dRW));
+                                          ((len VV##1309) >= 0);
+                                          (VV##1309 = lq_anf$##1677724945##dRX);
+                                          ((len VV##1309) >= 0)]}
+bind 239 VV##1311 : {VV##1311 : Char | []}
+bind 240 lq_tmp$x##339 : {VV##1313 : Char | []}
+bind 241 VV##1314 : {VV##1314 : Char | []}
+bind 242 VV##1316 : {VV##1316 : Str | [(VV##1316 = lit$never);
+                                       (VV##1316 = lq_anf$##1677724944##dRW)]}
+bind 243 VV##1318 : {VV##1318 : [Char] | [((len VV##1318) >= 0)]}
+bind 244 VV##1320 : {VV##1320 : Char | []}
+bind 245 lq_tmp$x##251 : {VV##1322 : Char | []}
+bind 246 VV##1323 : {VV##1323 : Char | []}
+bind 247 x##aA8 : {v##1 : [Char] | [((len v##1) >= 0)]}
+bind 248 VV##1326 : {VV##1326 : [Char] | [false]}
+bind 249 VV##1328 : {VV##1328 : Char | []}
+bind 250 lq_tmp$x##260 : {VV##1330 : Char | []}
+bind 251 VV##1331 : {VV##1331 : Char | []}
+bind 252 VV##959 : {VV##959 : GHC.Prim.Void# | [$k_##960]}
+bind 253 VV##966 : {VV##966 : (LazyQueue.Queue  a_aQl) | [$k_##967]}
+bind 254 VV##943 : {VV##943 : int | [$k_##944]}
+bind 255 VV##786 : {VV##786 : GHC.Prim.Void# | [$k_##787]}
+bind 256 VV##793 : {VV##793 : (LazyQueue.SList  a_aNo) | [$k_##794]}
+bind 257 VV##770 : {VV##770 : int | [$k_##771]}
+bind 258 VV##416 : {VV##416 : GHC.Prim.Void# | [$k_##417]}
+bind 259 VV##449 : {VV##449 : (LazyQueue.SList  a_aKn) | [$k_##450]}
+bind 260 VV##423 : {VV##423 : (LazyQueue.SList  a_aKn) | [$k_##424]}
+bind 261 VV##313 : {VV##313 : GHC.Prim.Void# | [$k_##314]}
+
+
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104]
+  lhs {VV##F##16 : (LazyQueue.SList  a_aQl) | [((size VV##F##16) <= ((size l##an8) + 1));
+                                               (VV##F##16 = r##an9)]}
+  rhs {VV##F##16 : (LazyQueue.SList  a_aQl) | [((size VV##F##16) = (1 + (size l##an8)))]}
+  id 16 tag [11]
+  // META constraint id 16 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       91;
+       172]
+  lhs {VV##F##32 : a_aNo | [$k_##852[lq_tmp$x##850:=lq_anf$##1677724973##dSp][lq_tmp$x##848:=lq_anf$##1677724970##dSm][lq_tmp$x##867:=VV##1188][lq_tmp$x##849:=lq_anf$##1677724971##dSn][lq_tmp$x##844:=VV##1188][VV##851:=VV##F##32][VV##F:=VV##F##32]]}
+  rhs {VV##F##32 : a_aNo | [$k_##865[lq_tmp$x##862:=lq_anf$##1677724969##dSl][VV##864:=VV##F##32][VV##F:=VV##F##32][lq_tmp$x##858:=VV##1188]]}
+  id 32 tag [10]
+  // META constraint id 32 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80]
+  lhs {VV##F##48 : int | [(VV##F##48 = (0  :  int));
+                          (VV##F##48 = lq_anf$##1677724966##dSi)]}
+  rhs {VV##F##48 : int | [$k_##771[lq_tmp$x##767:=GHC.Classes.$fEqInt##roB][lq_tmp$x##768:=lq_anf$##1677724965##dSh][lq_tmp$x##773:=VV##F##48][VV##770:=VV##F##48][VV##F:=VV##F##48][VV##1206:=VV##F##48]]}
+  id 48 tag [10]
+  // META constraint id 48 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       212]
+  lhs {VV##F##64 : a_aKJ | []}
+  rhs {VV##F##64 : a_aKJ | [$k_##584[VV##583:=VV##F##64][lq_tmp$x##573:=VV##1262][lq_tmp$x##579:=x##alZ][VV##F:=VV##F##64]]}
+  id 64 tag [4]
+  // META constraint id 64 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115;
+       116]
+  lhs {VV##F##1 : (LazyQueue.SList  a_aQB) | [((size VV##F##1) = ((size r##an7) + 1));
+                                              (VV##F##1 = lq_anf$##1677724984##dSA)]}
+  rhs {VV##F##1 : (LazyQueue.SList  a_aQB) | [((size VV##F##1) <= ((size l##an6) + 1))]}
+  id 1 tag [12]
+  // META constraint id 1 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       145]
+  lhs {VV##F##17 : a_aQl | []}
+  rhs {VV##F##17 : a_aQl | [$k_##985[lq_tmp$x##981:=l##an8][VV##F:=VV##F##17][VV##984:=VV##F##17][lq_tmp$x##975:=VV##1140]]}
+  id 17 tag [11]
+  // META constraint id 17 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       91]
+  lhs {VV##F##33 : a_aNo | [$k_##800[VV##F:=VV##F##33][VV##799:=VV##F##33][lq_tmp$x##798:=l##aA5];
+                            (VV##F##33 = lq_anf$##1677724969##dSl)]}
+  rhs {VV##F##33 : a_aNo | [$k_##865[VV##864:=VV##F##33][VV##F:=VV##F##33]]}
+  id 33 tag [10]
+  // META constraint id 33 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80]
+  lhs {VV##F##49 : int | [(VV##F##49 >= 0);
+                          (VV##F##49 = (size l##aA5));
+                          (VV##F##49 = lq_anf$##1677724965##dSh)]}
+  rhs {VV##F##49 : int | [$k_##771[lq_tmp$x##767:=GHC.Classes.$fEqInt##roB][lq_tmp$x##773:=VV##F##49][VV##1208:=VV##F##49][VV##770:=VV##F##49][VV##F:=VV##F##49]]}
+  id 49 tag [10]
+  // META constraint id 49 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       212]
+  lhs {VV##F##65 : a_aKJ | []}
+  rhs {VV##F##65 : a_aKJ | [$k_##587[lq_tmp$x##589:=x##alZ][VV##586:=VV##F##65][VV##583:=VV##F##65][lq_tmp$x##573:=VV##1262][lq_tmp$x##579:=x##alZ][VV##F:=VV##F##65]]}
+  id 65 tag [4]
+  // META constraint id 65 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115;
+       116;
+       125]
+  lhs {VV##F##2 : a_aQB | [$k_##1068[lq_tmp$x##1062:=VV##1103][lq_tmp$x##1066:=r##an7][lq_tmp$x##1065:=e##an5][VV##1067:=VV##F##2][lq_tmp$x##1083:=VV##1103][VV##F:=VV##F##2]]}
+  rhs {VV##F##2 : a_aQB | [$k_##1080[lq_tmp$x##1073:=VV##1103][lq_tmp$x##1077:=l##an6][VV##1079:=VV##F##2][VV##F:=VV##F##2]]}
+  id 2 tag [12]
+  // META constraint id 2 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       146]
+  lhs {VV##F##18 : a_aQl | []}
+  rhs {VV##F##18 : a_aQl | [$k_##985[VV##F:=VV##F##18][VV##984:=VV##F##18][lq_tmp$x##974:=VV##1142]]}
+  id 18 tag [11]
+  // META constraint id 18 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       173]
+  lhs {VV##F##34 : a_aNo | [$k_##837[lq_tmp$x##834:=lq_anf$##1677724972##dSo][lq_tmp$x##835:=a##aA7][lq_tmp$x##856:=VV##1190][lq_tmp$x##831:=VV##1190][VV##836:=VV##F##34][VV##F:=VV##F##34]]}
+  rhs {VV##F##34 : a_aNo | [$k_##852[lq_tmp$x##848:=lq_anf$##1677724970##dSm][lq_tmp$x##849:=lq_anf$##1677724971##dSn][VV##851:=VV##F##34][lq_tmp$x##843:=VV##1190][VV##F:=VV##F##34]]}
+  id 34 tag [10]
+  // META constraint id 34 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       184]
+  lhs {VV##F##50 : a_aNo | []}
+  rhs {VV##F##50 : a_aNo | [$k_##752[VV##751:=VV##F##50][VV##F:=VV##F##50][lq_tmp$x##747:=VV##1212]]}
+  id 50 tag [10]
+  // META constraint id 50 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       212;
+       213]
+  lhs {VV##F##66 : a_aKJ | []}
+  rhs {VV##F##66 : a_aKJ | [$k_##587[lq_tmp$x##589:=lq_tmp$x##581][VV##586:=VV##F##66][VV##583:=VV##F##66][lq_tmp$x##573:=VV##1262][lq_tmp$x##579:=x##alZ][VV##F:=VV##F##66]]}
+  id 66 tag [4]
+  // META constraint id 66 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115;
+       116;
+       126]
+  lhs {VV##F##3 : a_aQB | []}
+  rhs {VV##F##3 : a_aQB | [$k_##1080[VV##1079:=VV##F##3][VV##F:=VV##F##3][lq_tmp$x##1072:=VV##1105]]}
+  id 3 tag [12]
+  // META constraint id 3 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98]
+  lhs {VV##F##19 : int | [(VV##F##19 >= 0);
+                          (VV##F##19 = (size l##an8));
+                          (VV##F##19 = lq_anf$##1677724977##dSt)]}
+  rhs {VV##F##19 : int | [$k_##944[lq_tmp$x##940:=GHC.Classes.$fOrdInt##rnf][lq_tmp$x##946:=VV##F##19][VV##1144:=VV##F##19][lq_tmp$x##941:=lq_anf$##1677724976##dSs][VV##943:=VV##F##19][VV##F:=VV##F##19]]}
+  id 19 tag [11]
+  // META constraint id 19 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90]
+  lhs {VV##F##35 : (LazyQueue.SList  a_aNo) | [((size VV##F##35) = ((size r##aA6) - 1));
+                                               (VV##F##35 = lq_anf$##1677724971##dSn)]}
+  rhs {VV##F##35 : (LazyQueue.SList  a_aNo) | [((size VV##F##35) = (1 + (size lq_anf$##1677724970##dSm)))]}
+  id 35 tag [10]
+  // META constraint id 35 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       68;
+       69;
+       70;
+       71;
+       72;
+       73;
+       74;
+       191]
+  lhs {VV##F##51 : a_aAN | []}
+  rhs {VV##F##51 : a_aAN | [$k_##722[VV##721:=VV##F##51][VV##F:=VV##F##51][lq_tmp$x##717:=VV##1225]]}
+  id 51 tag [9]
+  // META constraint id 51 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58]
+  lhs {VV##F##67 : a_aKJ | [(VV##F##67 = x##alZ)]}
+  rhs {VV##F##67 : a_aKJ | [$k_##584[VV##583:=VV##F##67][VV##F:=VV##F##67]]}
+  id 67 tag [4]
+  // META constraint id 67 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115;
+       127]
+  lhs {VV##F##4 : a_aQB | []}
+  rhs {VV##F##4 : a_aQB | [$k_##1068[lq_tmp$x##1065:=e##an5][VV##1067:=VV##F##4][VV##F:=VV##F##4][lq_tmp$x##1061:=VV##1107]]}
+  id 4 tag [12]
+  // META constraint id 4 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98]
+  lhs {VV##F##20 : int | [(VV##F##20 >= 0);
+                          (VV##F##20 = (size r##an9));
+                          (VV##F##20 = lq_anf$##1677724976##dSs)]}
+  rhs {VV##F##20 : int | [$k_##944[lq_tmp$x##940:=GHC.Classes.$fOrdInt##rnf][lq_tmp$x##946:=VV##F##20][VV##1146:=VV##F##20][VV##943:=VV##F##20][VV##F:=VV##F##20]]}
+  id 20 tag [11]
+  // META constraint id 20 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       174]
+  lhs {VV##F##36 : a_aNo | [$k_##818[lq_tmp$x##855:=VV##1192][lq_tmp$x##816:=r##aA6][VV##817:=VV##F##36][lq_tmp$x##814:=VV##1192][VV##F:=VV##F##36]]}
+  rhs {VV##F##36 : a_aNo | [$k_##852[lq_tmp$x##848:=lq_anf$##1677724970##dSm][VV##851:=VV##F##36][lq_tmp$x##842:=VV##1192][VV##F:=VV##F##36]]}
+  id 36 tag [10]
+  // META constraint id 36 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       68;
+       69;
+       70;
+       71;
+       72;
+       73;
+       192]
+  lhs {VV##F##52 : a_aAN | []}
+  rhs {VV##F##52 : a_aAN | [$k_##713[lq_tmp$x##708:=VV##1227][VV##712:=VV##F##52][VV##F:=VV##F##52]]}
+  id 52 tag [9]
+  // META constraint id 52 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       44;
+       45;
+       46;
+       47;
+       48;
+       49]
+  lhs {VV##F##68 : (LazyQueue.SList  a_aKn) | [((elems VV##F##68) = xs##an1);
+                                               ((size VV##F##68) = lq_anf$##1677724951##dS3)]}
+  rhs {VV##F##68 : (LazyQueue.SList  a_aKn) | [((size VV##F##68) = ((size ds_dRx) - 1))]}
+  id 68 tag [3]
+  // META constraint id 68 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115]
+  lhs {VV##F##5 : a_aQB | [(VV##F##5 = e##an5)]}
+  rhs {VV##F##5 : a_aQB | [$k_##1068[VV##1067:=VV##F##5][VV##F:=VV##F##5]]}
+  id 5 tag [12]
+  // META constraint id 5 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       149]
+  lhs {VV##F##21 : a_aQl | []}
+  rhs {VV##F##21 : a_aQl | [$k_##931[VV##930:=VV##F##21][lq_tmp$x##926:=VV##1148][VV##F:=VV##F##21]]}
+  id 21 tag [11]
+  // META constraint id 21 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       175]
+  lhs {VV##F##37 : a_aNo | [$k_##809[lq_tmp$x##805:=VV##1194][lq_tmp$x##854:=VV##1194][lq_tmp$x##807:=l##aA5][VV##808:=VV##F##37][VV##F:=VV##F##37]]}
+  rhs {VV##F##37 : a_aNo | [$k_##852[lq_tmp$x##841:=VV##1194][VV##851:=VV##F##37][VV##F:=VV##F##37]]}
+  id 37 tag [10]
+  // META constraint id 37 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 64; 65; 66]
+  lhs {VV##F##53 : (LazyQueue.SList  a_aNK) | [((size VV##F##53) = 0);
+                                               (VV##F##53 = lq_anf$##1677724959##dSb)]}
+  rhs {VV##F##53 : (LazyQueue.SList  a_aNK) | [((size VV##F##53) <= (size lq_anf$##1677724958##dSa))]}
+  id 53 tag [6]
+  // META constraint id 53 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       44;
+       45;
+       46;
+       47;
+       48;
+       49]
+  lhs {VV##F##69 : [a_aKn] | [((len VV##F##69) >= 0);
+                              (VV##F##69 = xs##an1);
+                              ((len VV##F##69) >= 0)]}
+  rhs {VV##F##69 : [a_aKn] | [((len VV##F##69) = lq_anf$##1677724951##dS3)]}
+  id 69 tag [3]
+  // META constraint id 69 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       107;
+       108]
+  lhs {VV##F##6 : (LazyQueue.SList  a_aQl) | [((size VV##F##6) <= ((size l##an8) + 1));
+                                              (VV##F##6 = r##an9)]}
+  rhs {VV##F##6 : (LazyQueue.SList  a_aQl) | [((size VV##F##6) <= (size l##an8))]}
+  id 6 tag [11]
+  // META constraint id 6 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       150]
+  lhs {VV##F##22 : a_aQl | []}
+  rhs {VV##F##22 : a_aQl | [$k_##922[lq_tmp$x##917:=VV##1150][VV##F:=VV##F##22][VV##921:=VV##F##22]]}
+  id 22 tag [11]
+  // META constraint id 22 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       176]
+  lhs {VV##F##38 : a_aNo | []}
+  rhs {VV##F##38 : a_aNo | [$k_##837[lq_tmp$x##834:=lq_anf$##1677724972##dSo][lq_tmp$x##830:=VV##1196][VV##836:=VV##F##38][VV##F:=VV##F##38]]}
+  id 38 tag [10]
+  // META constraint id 38 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       65;
+       66;
+       194]
+  lhs {VV##F##54 : a_aNK | [$k_##666[VV##665:=VV##F##54][lq_tmp$x##680:=VV##1231][lq_tmp$x##664:=VV##1231][VV##F:=VV##F##54]]}
+  rhs {VV##F##54 : a_aNK | [$k_##677[VV##676:=VV##F##54][lq_tmp$x##674:=lq_anf$##1677724958##dSa][lq_tmp$x##670:=VV##1231][VV##F:=VV##F##54]]}
+  id 54 tag [6]
+  // META constraint id 54 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       44;
+       45;
+       46;
+       47;
+       48;
+       49;
+       221]
+  lhs {VV##F##70 : a_aKn | []}
+  rhs {VV##F##70 : a_aKn | [$k_##514[lq_tmp$x##505:=VV##1278][VV##513:=VV##F##70][lq_tmp$x##510:=lq_anf$##1677724951##dS3][VV##F:=VV##F##70]]}
+  id 70 tag [3]
+  // META constraint id 70 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       107;
+       108;
+       137]
+  lhs {VV##F##7 : a_aQl | []}
+  rhs {VV##F##7 : a_aQl | [$k_##1022[VV##1021:=VV##F##7][lq_tmp$x##1015:=VV##1124][VV##F:=VV##F##7][lq_tmp$x##1019:=l##an8]]}
+  id 7 tag [11]
+  // META constraint id 7 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93;
+       94]
+  lhs {VV##F##23 : (LazyQueue.SList  a_aNo) | [((size VV##F##23) = ((size a##aA7) + 1))]}
+  rhs {VV##F##23 : (LazyQueue.SList  a_aNo) | [((size VV##F##23) = (((size l##aA5) + (size r##aA6)) + (size a##aA7)))]}
+  id 23 tag [10]
+  // META constraint id 23 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89]
+  lhs {VV##F##39 : a_aNo | [$k_##826[VV##825:=VV##F##39][VV##F:=VV##F##39][lq_tmp$x##824:=r##aA6];
+                            (VV##F##39 = lq_anf$##1677724972##dSo)]}
+  rhs {VV##F##39 : a_aNo | [$k_##837[VV##836:=VV##F##39][VV##F:=VV##F##39]]}
+  id 39 tag [10]
+  // META constraint id 39 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       65;
+       66;
+       195]
+  lhs {VV##F##55 : a_aNK | [$k_##661[VV##660:=VV##F##55][VV##F:=VV##F##55][lq_tmp$x##659:=VV##1233][lq_tmp$x##679:=VV##1233]]}
+  rhs {VV##F##55 : a_aNK | [$k_##677[lq_tmp$x##669:=VV##1233][VV##676:=VV##F##55][VV##F:=VV##F##55]]}
+  id 55 tag [6]
+  // META constraint id 55 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       44;
+       45;
+       46;
+       47;
+       48;
+       49]
+  lhs {VV##F##71 : int | [(VV##F##71 = (n##an0 - lq_anf$##1677724950##dS2));
+                          (VV##F##71 = lq_anf$##1677724951##dS3)]}
+  rhs {VV##F##71 : int | [(VV##F##71 >= 0)]}
+  id 71 tag [3]
+  // META constraint id 71 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       107;
+       108;
+       138]
+  lhs {VV##F##8 : a_aQl | []}
+  rhs {VV##F##8 : a_aQl | [$k_##1022[lq_tmp$x##1014:=VV##1126][VV##1021:=VV##F##8][VV##F:=VV##F##8]]}
+  id 8 tag [11]
+  // META constraint id 8 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93;
+       94;
+       167]
+  lhs {VV##F##24 : a_aNo | []}
+  rhs {VV##F##24 : a_aNo | [$k_##889[lq_tmp$x##882:=VV##1178][VV##888:=VV##F##24][lq_tmp$x##886:=lq_anf$##1677724975##dSr][VV##F:=VV##F##24]]}
+  id 24 tag [10]
+  // META constraint id 24 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88]
+  lhs {VV##F##40 : (LazyQueue.SList  a_aNo) | [((size VV##F##40) = (1 + (size l##aA5)));
+                                               (VV##F##40 = r##aA6)]}
+  rhs {VV##F##40 : (LazyQueue.SList  a_aNo) | [((size VV##F##40) > 0)]}
+  id 40 tag [10]
+  // META constraint id 40 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 63]
+  lhs {VV##F##56 : (LazyQueue.SList  a_aNx) | [((elems VV##F##56) = lq_anf$##1677724957##dS9);
+                                               ((size VV##F##56) = lq_anf$##1677724956##dS8)]}
+  rhs {VV##F##56 : (LazyQueue.SList  a_aNx) | [((size VV##F##56) = 0)]}
+  id 56 tag [5]
+  // META constraint id 56 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40]
+  lhs {VV##F##72 : (LazyQueue.SList  a_aKn) | [$k_##424[VV##1289:=VV##F##72][VV##423:=VV##F##72][ds_dRB:=GHC.Prim.void###0l][VV##F:=VV##F##72]]}
+  rhs {VV##F##72 : (LazyQueue.SList  a_aKn) | [((size VV##F##72) = ((size ds_dRx) - 1))]}
+  id 72 tag [3]
+  // META constraint id 72 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102]
+  lhs {VV##F##9 : GHC.Prim.Void# | [(VV##F##9 = GHC.Prim.void###0l)]}
+  rhs {VV##F##9 : GHC.Prim.Void# | [$k_##960[VV##1130:=VV##F##9][VV##F:=VV##F##9][VV##959:=VV##F##9]]}
+  id 9 tag [11]
+  // META constraint id 9 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93;
+       94]
+  lhs {VV##F##25 : a_aNo | [$k_##878[lq_tmp$x##876:=r##aA6][VV##877:=VV##F##25][VV##F:=VV##F##25];
+                            (VV##F##25 = lq_anf$##1677724975##dSr)]}
+  rhs {VV##F##25 : a_aNo | [$k_##889[VV##888:=VV##F##25][VV##F:=VV##F##25]]}
+  id 25 tag [10]
+  // META constraint id 25 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       177]
+  lhs {VV##F##41 : a_aNo | []}
+  rhs {VV##F##41 : a_aNo | [$k_##826[lq_tmp$x##822:=VV##1198][VV##825:=VV##F##41][VV##F:=VV##F##41]]}
+  id 41 tag [10]
+  // META constraint id 41 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 63]
+  lhs {VV##F##57 : [a_aNx] | [((len VV##F##57) = 0);
+                              ((null VV##F##57) <=> true);
+                              ((len VV##F##57) >= 0);
+                              (VV##F##57 = lq_anf$##1677724957##dS9);
+                              ((len VV##F##57) >= 0)]}
+  rhs {VV##F##57 : [a_aNx] | [((len VV##F##57) = lq_anf$##1677724956##dS8)]}
+  id 57 tag [5]
+  // META constraint id 57 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40]
+  lhs {VV##F##73 : GHC.Prim.Void# | [(VV##F##73 = GHC.Prim.void###0l)]}
+  rhs {VV##F##73 : GHC.Prim.Void# | [$k_##417[VV##416:=VV##F##73][VV##F:=VV##F##73][VV##1291:=VV##F##73]]}
+  id 73 tag [3]
+  // META constraint id 73 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106]
+  lhs {VV##F##10 : (LazyQueue.Queue  a_aQl) | [((right VV##F##10) = lq_anf$##1677724982##dSy);
+                                               ((left VV##F##10) = lq_anf$##1677724981##dSx)]}
+  rhs {VV##F##10 : (LazyQueue.Queue  a_aQl) | [$k_##967[VV##966:=VV##F##10][VV##F:=VV##F##10][VV##1132:=VV##F##10]]}
+  id 10 tag [11]
+  // META constraint id 10 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93]
+  lhs {VV##F##26 : (LazyQueue.SList  a_aNo) | [((size VV##F##26) = (1 + (size l##aA5)));
+                                               (VV##F##26 = r##aA6)]}
+  rhs {VV##F##26 : (LazyQueue.SList  a_aNo) | [((size VV##F##26) > 0)]}
+  id 26 tag [10]
+  // META constraint id 26 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87]
+  lhs {VV##F##42 : (LazyQueue.SList  a_aNo) | [((size VV##F##42) = (1 + (size l##aA5)));
+                                               (VV##F##42 = r##aA6)]}
+  rhs {VV##F##42 : (LazyQueue.SList  a_aNo) | [((size VV##F##42) > 0)]}
+  id 42 tag [10]
+  // META constraint id 42 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 63; 197]
+  lhs {VV##F##58 : a_aNx | [$k_##633[lq_tmp$x##630:=VV##1237][VV##632:=VV##F##58][VV##F:=VV##F##58][lq_tmp$x##656:=VV##1237]]}
+  rhs {VV##F##58 : a_aNx | [$k_##652[lq_tmp$x##648:=lq_anf$##1677724956##dS8][lq_tmp$x##643:=VV##1237][VV##F:=VV##F##58][VV##651:=VV##F##58]]}
+  id 58 tag [5]
+  // META constraint id 58 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       42;
+       43]
+  lhs {VV##F##74 : (LazyQueue.SList  a_aKn) | [$k_##450[lq_tmp$x##444:=lq_anf$##1677724949##dS1][VV##449:=VV##F##74][lq_tmp$x##452:=VV##F##74][VV##F:=VV##F##74][VV##1293:=VV##F##74]]}
+  rhs {VV##F##74 : (LazyQueue.SList  a_aKn) | [$k_##424[VV##423:=VV##F##74][VV##F:=VV##F##74][VV##1293:=VV##F##74]]}
+  id 74 tag [3]
+  // META constraint id 74 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106;
+       141]
+  lhs {VV##F##11 : a_aQl | [$k_##1004[lq_tmp$x##1001:=lq_anf$##1677724981##dSx][VV##F:=VV##F##11][VV##1003:=VV##F##11][lq_tmp$x##1002:=lq_anf$##1677724982##dSy][lq_tmp$x##998:=VV##1132]]}
+  rhs {VV##F##11 : a_aQl | [$k_##964[VV##966:=VV##1132][VV##963:=VV##F##11][VV##F:=VV##F##11]]}
+  id 11 tag [11]
+  // META constraint id 11 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93;
+       168]
+  lhs {VV##F##27 : a_aNo | []}
+  rhs {VV##F##27 : a_aNo | [$k_##878[VV##877:=VV##F##27][VV##F:=VV##F##27][lq_tmp$x##874:=VV##1180]]}
+  id 27 tag [10]
+  // META constraint id 27 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       178]
+  lhs {VV##F##43 : a_aNo | []}
+  rhs {VV##F##43 : a_aNo | [$k_##818[lq_tmp$x##813:=VV##1200][VV##817:=VV##F##43][VV##F:=VV##F##43]]}
+  id 43 tag [10]
+  // META constraint id 43 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 63]
+  lhs {VV##F##59 : int | [(VV##F##59 = (0  :  int));
+                          (VV##F##59 = lq_anf$##1677724956##dS8)]}
+  rhs {VV##F##59 : int | [(VV##F##59 >= 0)]}
+  id 59 tag [5]
+  // META constraint id 59 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       42;
+       43;
+       229]
+  lhs {VV##F##75 : a_aKn | [$k_##447[lq_tmp$x##444:=lq_anf$##1677724949##dS1][VV##449:=VV##1293][VV##446:=VV##F##75][lq_tmp$x##452:=VV##1293][VV##F:=VV##F##75]]}
+  rhs {VV##F##75 : a_aKn | [$k_##421[VV##420:=VV##F##75][VV##423:=VV##1293][VV##F:=VV##F##75]]}
+  id 75 tag [3]
+  // META constraint id 75 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106]
+  lhs {VV##F##12 : (LazyQueue.SList  a_aQl) | [((size VV##F##12) = 0);
+                                               (VV##F##12 = lq_anf$##1677724982##dSy)]}
+  rhs {VV##F##12 : (LazyQueue.SList  a_aQl) | [((size VV##F##12) <= (size lq_anf$##1677724981##dSx))]}
+  id 12 tag [11]
+  // META constraint id 12 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84]
+  lhs {VV##F##28 : (LazyQueue.SList  a_aNo) | [$k_##794[ds_dRE:=GHC.Prim.void###0l][VV##793:=VV##F##28][VV##F:=VV##F##28][VV##1182:=VV##F##28]]}
+  rhs {VV##F##28 : (LazyQueue.SList  a_aNo) | [((size VV##F##28) = (((size l##aA5) + (size r##aA6)) + (size a##aA7)))]}
+  id 28 tag [10]
+  // META constraint id 28 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86]
+  lhs {VV##F##44 : (LazyQueue.SList  a_aNo) | [(VV##F##44 = l##aA5)]}
+  rhs {VV##F##44 : (LazyQueue.SList  a_aNo) | [((size VV##F##44) > 0)]}
+  id 44 tag [10]
+  // META constraint id 44 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       60]
+  lhs {VV##F##60 : (LazyQueue.SList  a_aKJ) | [((elems VV##F##60) = lq_anf$##1677724955##dS7);
+                                               ((size VV##F##60) = lq_anf$##1677724954##dS6)]}
+  rhs {VV##F##60 : (LazyQueue.SList  a_aKJ) | [((size VV##F##60) = ((size ds_dRC) + 1))]}
+  id 60 tag [4]
+  // META constraint id 60 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       42;
+       43]
+  lhs {VV##F##76 : [Char] | [(VV##F##76 ~~ lq_anf$##1677724948##dS0);
+                             ((len VV##F##76) = (strLen lq_anf$##1677724948##dS0));
+                             ((len VV##F##76) >= 0);
+                             (VV##F##76 = lq_anf$##1677724949##dS1);
+                             ((len VV##F##76) >= 0)]}
+  rhs {VV##F##76 : [Char] | [false]}
+  id 76 tag [3]
+  // META constraint id 76 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106;
+       142]
+  lhs {VV##F##13 : a_aQl | [$k_##993[lq_tmp$x##1007:=VV##1134][VV##992:=VV##F##13][lq_tmp$x##991:=VV##1134][VV##F:=VV##F##13]]}
+  rhs {VV##F##13 : a_aQl | [$k_##1004[lq_tmp$x##1001:=lq_anf$##1677724981##dSx][VV##F:=VV##F##13][VV##1003:=VV##F##13][lq_tmp$x##997:=VV##1134]]}
+  id 13 tag [11]
+  // META constraint id 13 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84]
+  lhs {VV##F##29 : GHC.Prim.Void# | [(VV##F##29 = GHC.Prim.void###0l)]}
+  rhs {VV##F##29 : GHC.Prim.Void# | [$k_##787[VV##1184:=VV##F##29][VV##F:=VV##F##29][VV##786:=VV##F##29]]}
+  id 29 tag [10]
+  // META constraint id 29 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       179]
+  lhs {VV##F##45 : a_aNo | []}
+  rhs {VV##F##45 : a_aNo | [$k_##809[lq_tmp$x##804:=VV##1202][VV##808:=VV##F##45][VV##F:=VV##F##45]]}
+  id 45 tag [10]
+  // META constraint id 45 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       60]
+  lhs {VV##F##61 : [a_aKJ] | [((len VV##F##61) = (1 + (len xs##am1)));
+                              ((null VV##F##61) <=> false);
+                              ((tail VV##F##61) = xs##am1);
+                              ((head VV##F##61) = x##alZ);
+                              ((len VV##F##61) >= 0);
+                              (VV##F##61 = lq_anf$##1677724955##dS7);
+                              ((len VV##F##61) >= 0)]}
+  rhs {VV##F##61 : [a_aKJ] | [((len VV##F##61) = lq_anf$##1677724954##dS6)]}
+  id 61 tag [4]
+  // META constraint id 61 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24]
+  lhs {VV##F##77 : GHC.Prim.Void# | [(VV##F##77 = GHC.Prim.void###0l)]}
+  rhs {VV##F##77 : GHC.Prim.Void# | [$k_##314[VV##313:=VV##F##77][VV##1307:=VV##F##77][VV##F:=VV##F##77]]}
+  id 77 tag [2]
+  // META constraint id 77 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106;
+       143]
+  lhs {VV##F##14 : a_aQl | [$k_##985[lq_tmp$x##983:=lq_anf$##1677724980##dSw][lq_tmp$x##1006:=VV##1136][lq_tmp$x##982:=r##an9][lq_tmp$x##981:=l##an8][VV##F:=VV##F##14][VV##984:=VV##F##14][lq_tmp$x##977:=VV##1136]]}
+  rhs {VV##F##14 : a_aQl | [$k_##1004[lq_tmp$x##996:=VV##1136][VV##F:=VV##F##14][VV##1003:=VV##F##14]]}
+  id 14 tag [11]
+  // META constraint id 14 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       91]
+  lhs {VV##F##30 : (LazyQueue.SList  a_aNo) | [((size VV##F##30) = ((size lq_anf$##1677724974##dSq) + 1))]}
+  rhs {VV##F##30 : (LazyQueue.SList  a_aNo) | [$k_##794[VV##1186:=VV##F##30][VV##793:=VV##F##30][VV##F:=VV##F##30]]}
+  id 30 tag [10]
+  // META constraint id 30 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85]
+  lhs {VV##F##46 : (LazyQueue.SList  a_aNo) | [(VV##F##46 = l##aA5)]}
+  rhs {VV##F##46 : (LazyQueue.SList  a_aNo) | [((size VV##F##46) > 0)]}
+  id 46 tag [10]
+  // META constraint id 46 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       60;
+       209]
+  lhs {VV##F##62 : a_aKJ | [$k_##584[lq_tmp$x##580:=xs##am1][lq_tmp$x##575:=VV##1257][VV##583:=VV##F##62][lq_tmp$x##610:=VV##1257][lq_tmp$x##579:=x##alZ][VV##F:=VV##F##62]]}
+  rhs {VV##F##62 : a_aKJ | [$k_##606[VV##605:=VV##F##62][lq_tmp$x##597:=VV##1257][VV##F:=VV##F##62][lq_tmp$x##602:=lq_anf$##1677724954##dS6]]}
+  id 62 tag [4]
+  // META constraint id 62 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24;
+       25;
+       26;
+       27]
+  lhs {VV##F##78 : t_aBt | [$k_##341[lq_tmp$x##338:=lq_anf$##1677724945##dRX][VV##340:=VV##F##78][VV##F:=VV##F##78]]}
+  rhs {VV##F##78 : t_aBt | [$k_##318[VV##317:=VV##F##78][VV##F:=VV##F##78]]}
+  id 78 tag [2]
+  // META constraint id 78 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       144]
+  lhs {VV##F##15 : a_aQl | [$k_##971[lq_tmp$x##989:=VV##1138][VV##970:=VV##F##15][lq_tmp$x##969:=VV##1138][VV##F:=VV##F##15]]}
+  rhs {VV##F##15 : a_aQl | [$k_##985[lq_tmp$x##982:=r##an9][lq_tmp$x##981:=l##an8][VV##F:=VV##F##15][lq_tmp$x##976:=VV##1138][VV##984:=VV##F##15]]}
+  id 15 tag [11]
+  // META constraint id 15 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       91;
+       171]
+  lhs {VV##F##31 : a_aNo | [$k_##865[lq_tmp$x##863:=lq_anf$##1677724974##dSq][lq_tmp$x##862:=lq_anf$##1677724969##dSl][VV##864:=VV##F##31][VV##F:=VV##F##31][lq_tmp$x##859:=VV##1186]]}
+  rhs {VV##F##31 : a_aNo | [$k_##791[VV##793:=VV##1186][VV##790:=VV##F##31][VV##F:=VV##F##31]]}
+  id 31 tag [10]
+  // META constraint id 31 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       180]
+  lhs {VV##F##47 : a_aNo | []}
+  rhs {VV##F##47 : a_aNo | [$k_##800[VV##F:=VV##F##47][VV##799:=VV##F##47][lq_tmp$x##796:=VV##1204]]}
+  id 47 tag [10]
+  // META constraint id 47 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       60]
+  lhs {VV##F##63 : int | [(VV##F##63 = (n##am0 + lq_anf$##1677724953##dS5));
+                          (VV##F##63 = lq_anf$##1677724954##dS6)]}
+  rhs {VV##F##63 : int | [(VV##F##63 >= 0)]}
+  id 63 tag [4]
+  // META constraint id 63 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24;
+       25;
+       26;
+       27]
+  lhs {VV##F##79 : [Char] | [(VV##F##79 ~~ lq_anf$##1677724944##dRW);
+                             ((len VV##F##79) = (strLen lq_anf$##1677724944##dRW));
+                             ((len VV##F##79) >= 0);
+                             (VV##F##79 = lq_anf$##1677724945##dRX);
+                             ((len VV##F##79) >= 0)]}
+  rhs {VV##F##79 : [Char] | [false]}
+  id 79 tag [2]
+  // META constraint id 79 : ()
+
+
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103]
+  reft {VV##966 : (LazyQueue.Queue  a_aQl) | [$k_##967]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85]
+  reft {VV##799 : a_aNo | [$k_##800]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84]
+  reft {VV##786 : GHC.Prim.Void# | [$k_##787]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       44;
+       45;
+       46;
+       47;
+       48;
+       49]
+  reft {VV##513 : a_aKn | [$k_##514]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78]
+  reft {VV##751 : a_aNo | [$k_##752]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97]
+  reft {VV##930 : a_aQl | [$k_##931]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 64; 65; 66]
+  reft {VV##676 : a_aNK | [$k_##677]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24]
+  reft {VV##313 : GHC.Prim.Void# | [$k_##314]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61]
+  reft {VV##632 : a_aNx | [$k_##633]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80]
+  reft {VV##770 : int | [$k_##771]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96]
+  reft {VV##921 : a_aQl | [$k_##922]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98]
+  reft {VV##943 : int | [$k_##944]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93;
+       94]
+  reft {VV##888 : a_aNo | [$k_##889]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87]
+  reft {VV##817 : a_aNo | [$k_##818]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58]
+  reft {VV##583 : a_aKJ | [$k_##584]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       42;
+       43]
+  reft {VV##449 : (LazyQueue.SList  a_aKn) | [$k_##450]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 63]
+  reft {VV##651 : a_aNx | [$k_##652]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       107;
+       108]
+  reft {VV##1021 : a_aQl | [$k_##1022]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89]
+  reft {VV##836 : a_aNo | [$k_##837]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104]
+  reft {VV##984 : a_aQl | [$k_##985]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102]
+  reft {VV##959 : GHC.Prim.Void# | [$k_##960]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       92;
+       93]
+  reft {VV##877 : a_aNo | [$k_##878]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       59]
+  reft {VV##586 : a_aKJ | [$k_##587]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40]
+  reft {VV##416 : GHC.Prim.Void# | [$k_##417]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       50;
+       51;
+       52;
+       53;
+       54;
+       55;
+       56;
+       57;
+       58;
+       60]
+  reft {VV##605 : a_aKJ | [$k_##606]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 61; 62]
+  reft {VV##635 : a_aNx | [$k_##636]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105]
+  reft {VV##992 : a_aQl | [$k_##993]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90;
+       91]
+  reft {VV##864 : a_aNo | [$k_##865]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       253]
+  reft {VV##963 : a_aQl | [$k_##964]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]
+  reft {VV##261 : t_aAW | [$k_##262]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24;
+       25;
+       26;
+       27]
+  reft {VV##340 : t_aBt | [$k_##341]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 64; 65]
+  reft {VV##665 : a_aNK | [$k_##666]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86]
+  reft {VV##808 : a_aNo | [$k_##809]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115;
+       116]
+  reft {VV##1079 : a_aQB | [$k_##1080]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 64]
+  reft {VV##660 : a_aNK | [$k_##661]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88]
+  reft {VV##825 : a_aNo | [$k_##826]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       109;
+       110;
+       111;
+       112;
+       113;
+       114;
+       115]
+  reft {VV##1067 : a_aQB | [$k_##1068]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       42;
+       43;
+       259]
+  reft {VV##446 : a_aKn | [$k_##447]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       68;
+       69;
+       70;
+       71;
+       72;
+       73;
+       74]
+  reft {VV##721 : a_aAN | [$k_##722]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103]
+  reft {VV##970 : a_aQl | [$k_##971]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       256]
+  reft {VV##790 : a_aNo | [$k_##791]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85;
+       86;
+       87;
+       88;
+       89;
+       90]
+  reft {VV##851 : a_aNo | [$k_##852]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41;
+       260]
+  reft {VV##420 : a_aKn | [$k_##421]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21;
+       22;
+       23;
+       24;
+       25]
+  reft {VV##317 : t_aBt | [$k_##318]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       32;
+       33;
+       34;
+       35;
+       36;
+       37;
+       38;
+       39;
+       40;
+       41]
+  reft {VV##423 : (LazyQueue.SList  a_aKn) | [$k_##424]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       76;
+       77;
+       78;
+       79;
+       80;
+       81;
+       82;
+       83;
+       84;
+       85]
+  reft {VV##793 : (LazyQueue.SList  a_aNo) | [$k_##794]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       95;
+       96;
+       97;
+       98;
+       99;
+       100;
+       101;
+       102;
+       103;
+       104;
+       105;
+       106]
+  reft {VV##1003 : a_aQl | [$k_##1004]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       12;
+       13;
+       14;
+       64;
+       67;
+       68;
+       69;
+       70;
+       71;
+       72;
+       73]
+  reft {VV##712 : a_aAN | [$k_##713]}
+  // META wf : ()
+
+
+
+
+
+
+

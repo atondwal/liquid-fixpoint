@@ -1,0 +1,820 @@
+qualif Fst(v : @(1), y : @(0)): ((v = (fst y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 30, column 8)
+qualif Snd(v : @(1), y : @(0)): ((v = (snd y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 31, column 8)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) > 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 13, column 8)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) = 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 14, column 8)
+qualif ListZ(v : [@(0)]): (((len v) = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 16, column 8)
+qualif ListZ(v : [@(0)]): (((len v) >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 17, column 8)
+qualif ListZ(v : [@(0)]): (((len v) > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 18, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 20, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) >= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 21, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) > (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 22, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) <= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 23, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) < (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 24, column 8)
+qualif EqLen(v : int, xs : [@(0)]): ((v = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 26, column 8)
+qualif LenEq(v : [@(0)], x : int): ((x = (len v))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 27, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x + 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 28, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x - 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 29, column 8)
+qualif LenAcc(v : int, xs : [@(0)], n : int): ((v = ((len xs) + n))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 30, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 3, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 4, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 5, column 8)
+qualif Bot(v : bool): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 6, column 8)
+qualif Bot(v : int): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 7, column 8)
+qualif CmpZ(v : @(0)): ((v < 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 9, column 8)
+qualif CmpZ(v : @(0)): ((v <= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 10, column 8)
+qualif CmpZ(v : @(0)): ((v > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 11, column 8)
+qualif CmpZ(v : @(0)): ((v >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 12, column 8)
+qualif CmpZ(v : @(0)): ((v = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 13, column 8)
+qualif CmpZ(v : @(0)): ((v != 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 14, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v < x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 16, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v <= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 17, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v > x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 18, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v >= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 19, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v = x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 20, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v != x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 21, column 8)
+qualif One(v : int): ((v = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 28, column 8)
+qualif True1(v : GHC.Types.Bool): ((Prop v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 29, column 8)
+qualif False1(v : GHC.Types.Bool): ((~ ((Prop v)))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 30, column 8)
+qualif Papp(v : @(0), p : (Pred  @(0))): ((papp1 p v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 34, column 8)
+qualif Papp2(v : @(1), x : @(0), p : (Pred  @(1)  @(0))): ((papp2 p v x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 37, column 8)
+qualif Papp3(v : @(2), x : @(0), y : @(1), p : (Pred  @(2)  @(0)  @(1))): ((papp3 p v x y)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 39, column 8)
+
+
+
+
+constant runFun : (func(2, [(Arrow  @(0)  @(1)); @(0); @(1)]))
+constant addrLen : (func(0, [Str; int]))
+constant papp5 : (func(10, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4));
+                            @(5);
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            bool]))
+constant x_Tuple21 : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant x_Tuple65 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(4)]))
+constant x_Tuple55 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(4)]))
+constant GHC.Types.$58$$35$$35$64 : (func(1, [@(0);
+                                              [@(0)];
+                                              [@(0)]]))
+constant x_Tuple33 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(2)]))
+constant x_Tuple77 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(6)]))
+constant papp3 : (func(6, [(Pred  @(0)  @(1)  @(2));
+                           @(3);
+                           @(4);
+                           @(5);
+                           bool]))
+constant x_Tuple63 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(2)]))
+constant x_Tuple41 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(0)]))
+constant GHC.Types.LT##6S : (GHC.Types.Ordering)
+constant papp4 : (func(8, [(Pred  @(0)  @(1)  @(2)  @(3));
+                           @(4);
+                           @(5);
+                           @(6);
+                           @(7);
+                           bool]))
+constant x_Tuple64 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(3)]))
+constant GHC.Types.GT##6W : (GHC.Types.Ordering)
+constant autolen : (func(1, [@(0); int]))
+constant x_Tuple52 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(1)]))
+constant head : (func(1, [[@(0)]; @(0)]))
+constant null : (func(1, [[@(0)]; bool]))
+constant papp2 : (func(4, [(Pred  @(0)  @(1)); @(2); @(3); bool]))
+constant x_Tuple62 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(1)]))
+constant fromJust : (func(1, [(GHC.Base.Maybe  @(0)); @(0)]))
+constant papp7 : (func(14, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            @(12);
+                            @(13);
+                            bool]))
+constant x_Tuple53 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(2)]))
+constant x_Tuple71 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(0)]))
+constant x_Tuple74 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(3)]))
+constant len : (func(2, [(@(0)  @(1)); int]))
+constant papp6 : (func(12, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            bool]))
+constant x_Tuple22 : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant x_Tuple66 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(5)]))
+constant x_Tuple44 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(3)]))
+constant strLen : (func(0, [[Char]; int]))
+constant GHC.Types.$91$$93$$35$$35$6m : (func(1, [[@(0)]]))
+constant x_Tuple72 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(1)]))
+constant isJust : (func(1, [(GHC.Base.Maybe  @(0)); bool]))
+constant Prop : (func(0, [GHC.Types.Bool; bool]))
+constant x_Tuple31 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(0)]))
+constant x_Tuple75 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(4)]))
+constant papp1 : (func(2, [(Pred  @(0)); @(1); bool]))
+constant x_Tuple61 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(0)]))
+constant x_Tuple43 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(2)]))
+constant tail : (func(1, [[@(0)]; [@(0)]]))
+constant GHC.Types.EQ##6U : (GHC.Types.Ordering)
+constant x_Tuple51 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(0)]))
+constant x_Tuple73 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(2)]))
+constant x_Tuple54 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(3)]))
+constant cmp : (func(0, [GHC.Types.Ordering; GHC.Types.Ordering]))
+constant x_Tuple32 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(1)]))
+constant x_Tuple76 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(5)]))
+constant snd : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant fst : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant x_Tuple42 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(1)]))
+constant GHC.Prim.void###0l : (GHC.Prim.Void#)
+
+
+distinct GHC.Types.LT##6S : (GHC.Types.Ordering)
+distinct GHC.Types.GT##6W : (GHC.Types.Ordering)
+distinct GHC.Types.EQ##6U : (GHC.Types.Ordering)
+
+
+bind 0 GHC.Prim.void###0l : {VV##62 : GHC.Prim.Void# | []}
+bind 1 GHC.Types.$91$$93$$35$$35$6m : {VV : func(1, [[@(0)]]) | []}
+bind 2 GHC.Types.EQ##6U : {VV##67 : GHC.Types.Ordering | [(VV##67 = GHC.Types.EQ##6U)]}
+bind 3 GHC.Types.LT##6S : {VV##68 : GHC.Types.Ordering | [(VV##68 = GHC.Types.LT##6S)]}
+bind 4 GHC.Types.GT##6W : {VV##69 : GHC.Types.Ordering | [(VV##69 = GHC.Types.GT##6W)]}
+bind 5 GHC.Types.$91$$93$$35$$35$6m : {VV : func(1, [[@(0)]]) | []}
+bind 6 p : {VV##79 : (Pred  a_an2) | []}
+bind 7 q : {VV##80 : (Pred  a_an2) | []}
+bind 8 fix$36$$36$dNum_an3 : {VV##81 : (GHC.Num.Num  a_an2) | []}
+bind 9 a_an2 : {VV : num | []}
+bind 10 ds_dvS : {VV##82 : [a_an2] | [((len VV##82) >= 0)]}
+bind 11 lq_anf$##1677723580##dvW : {lq_tmp$x##84 : [a_an2] | [((len lq_tmp$x##84) >= 0);
+                                                              (lq_tmp$x##84 = ds_dvS);
+                                                              ((len lq_tmp$x##84) >= 0)]}
+bind 12 lq_anf$##1677723580##dvW : {lq_tmp$x##88 : [a_an2] | [((len lq_tmp$x##88) >= 0);
+                                                              (lq_tmp$x##88 = ds_dvS);
+                                                              ((len lq_tmp$x##88) >= 0);
+                                                              ((len lq_tmp$x##88) >= 0)]}
+bind 13 lq_anf$##1677723580##dvW : {lq_tmp$x##88 : [a_an2] | [((len lq_tmp$x##88) >= 0);
+                                                              (lq_tmp$x##88 = ds_dvS);
+                                                              ((len lq_tmp$x##88) >= 0);
+                                                              ((len lq_tmp$x##88) = 0);
+                                                              ((null lq_tmp$x##88) <=> true);
+                                                              (lq_tmp$x##88 = GHC.Types.$91$$93$$35$$35$6m);
+                                                              ((len lq_tmp$x##88) = 0);
+                                                              ((null lq_tmp$x##88) <=> true);
+                                                              ((len lq_tmp$x##88) >= 0)]}
+bind 14 lq_anf$##1677723581##dvX : {lq_tmp$x##97 : int | [(lq_tmp$x##97 = 0)]}
+bind 15 lq_anf$##1677723580##dvW : {lq_tmp$x##109 : [a_an2] | [((len lq_tmp$x##109) >= 0);
+                                                               (lq_tmp$x##109 = ds_dvS);
+                                                               ((len lq_tmp$x##109) >= 0);
+                                                               ((len lq_tmp$x##109) >= 0)]}
+bind 16 x##amx : {VV : a_an2 | [(0 <= VV); (papp1 p VV)]}
+bind 17 ds_dvT : {lq_tmp$x##123 : [a_an2] | [((len lq_tmp$x##123) >= 0)]}
+bind 18 lq_anf$##1677723580##dvW : {lq_tmp$x##109 : [a_an2] | [((len lq_tmp$x##109) >= 0);
+                                                               (lq_tmp$x##109 = ds_dvS);
+                                                               ((len lq_tmp$x##109) >= 0);
+                                                               ((len lq_tmp$x##109) = (1 + (len ds_dvT)));
+                                                               ((null lq_tmp$x##109) <=> false);
+                                                               ((tail lq_tmp$x##109) = ds_dvT);
+                                                               ((head lq_tmp$x##109) = x##amx);
+                                                               (lq_tmp$x##109 = (GHC.Types.$58$$35$$35$64 x##amx ds_dvT));
+                                                               ((len lq_tmp$x##109) = (1 + (len ds_dvT)));
+                                                               ((null lq_tmp$x##109) <=> false);
+                                                               ((tail lq_tmp$x##109) = ds_dvT);
+                                                               ((head lq_tmp$x##109) = x##amx);
+                                                               ((len lq_tmp$x##109) >= 0)]}
+bind 19 lq_anf$##1677723582##dvY : {lq_tmp$x##133 : [a_an2] | [((len lq_tmp$x##133) >= 0);
+                                                               (lq_tmp$x##133 = ds_dvT);
+                                                               ((len lq_tmp$x##133) >= 0)]}
+bind 20 lq_anf$##1677723582##dvY : {lq_tmp$x##137 : [a_an2] | [((len lq_tmp$x##137) >= 0);
+                                                               (lq_tmp$x##137 = ds_dvT);
+                                                               ((len lq_tmp$x##137) >= 0);
+                                                               ((len lq_tmp$x##137) >= 0)]}
+bind 21 lq_anf$##1677723582##dvY : {lq_tmp$x##137 : [a_an2] | [((len lq_tmp$x##137) >= 0);
+                                                               (lq_tmp$x##137 = ds_dvT);
+                                                               ((len lq_tmp$x##137) >= 0);
+                                                               ((len lq_tmp$x##137) = 0);
+                                                               ((null lq_tmp$x##137) <=> true);
+                                                               (lq_tmp$x##137 = GHC.Types.$91$$93$$35$$35$6m);
+                                                               ((len lq_tmp$x##137) = 0);
+                                                               ((null lq_tmp$x##137) <=> true);
+                                                               ((len lq_tmp$x##137) >= 0)]}
+bind 22 lq_anf$##1677723582##dvY : {lq_tmp$x##147 : [a_an2] | [((len lq_tmp$x##147) >= 0);
+                                                               (lq_tmp$x##147 = ds_dvT);
+                                                               ((len lq_tmp$x##147) >= 0);
+                                                               ((len lq_tmp$x##147) >= 0)]}
+bind 23 lq_anf$##1677723584##dw0 : {VV : a_an2 | [(0 <= VV);
+                                                  (papp1 p VV)]}
+bind 24 lq_anf$##1677723585##dw1 : {lq_tmp$x##161 : [a_an2] | [((len lq_tmp$x##161) >= 0)]}
+bind 25 lq_anf$##1677723582##dvY : {lq_tmp$x##147 : [a_an2] | [((len lq_tmp$x##147) >= 0);
+                                                               (lq_tmp$x##147 = ds_dvT);
+                                                               ((len lq_tmp$x##147) >= 0);
+                                                               ((len lq_tmp$x##147) = (1 + (len lq_anf$##1677723585##dw1)));
+                                                               ((null lq_tmp$x##147) <=> false);
+                                                               ((tail lq_tmp$x##147) = lq_anf$##1677723585##dw1);
+                                                               ((head lq_tmp$x##147) = lq_anf$##1677723584##dw0);
+                                                               (lq_tmp$x##147 = (GHC.Types.$58$$35$$35$64 lq_anf$##1677723584##dw0 lq_anf$##1677723585##dw1));
+                                                               ((len lq_tmp$x##147) = (1 + (len lq_anf$##1677723585##dw1)));
+                                                               ((null lq_tmp$x##147) <=> false);
+                                                               ((tail lq_tmp$x##147) = lq_anf$##1677723585##dw1);
+                                                               ((head lq_tmp$x##147) = lq_anf$##1677723584##dw0);
+                                                               ((len lq_tmp$x##147) >= 0)]}
+bind 26 ds_dvV : {VV##170 : GHC.Prim.Void# | [$k_##171]}
+bind 27 x : {VV : a_an2 | [$k_##183[VV##182:=VV]]}
+bind 28 lq_anf$##1677723583##dvZ : {VV : a_an2 | [((len ds_dvT) >= 0);
+                                                  (0 <= VV);
+                                                  $k_##186[lq_tmp$x##76:=fix$36$$36$dNum_an3][xs:=ds_dvT][VV##185:=VV]]}
+bind 29 fix$36$$36$dNum_an3 : {VV##214 : (GHC.Num.Num  a_an2) | []}
+bind 30 a_an2 : {VV : num | []}
+bind 31 VV##215 : {VV##215 : [a_an2] | [((len VV##215) >= 0)]}
+bind 32 lq_tmp$x##77 : {VV : a_an2 | []}
+bind 33 lq_tmp$x##209 : {VV##218 : [a_an2] | [((len VV##218) >= 0)]}
+bind 34 VV##219 : {VV##219 : [a_an2] | [((len VV##219) >= 0)]}
+bind 35 lq_tmp$x##77 : {VV : a_an2 | []}
+bind 36 ds_dvS : {VV##222 : [a_an2] | [((len VV##222) >= 0)]}
+bind 37 VV##223 : {VV##223 : GHC.Prim.Void# | [(VV##223 = GHC.Prim.void###0l)]}
+bind 38 VV##225 : {VV##225 : [a_an2] | [((len VV##225) >= 0);
+                                        (VV##225 = ds_dvT);
+                                        ((len VV##225) >= 0)]}
+bind 39 lq_tmp$x##77 : {VV : a_an2 | []}
+bind 40 VV##228 : {VV##228 : int | [(VV##228 = 0);
+                                    (VV##228 = lq_anf$##1677723581##dvX)]}
+bind 41 VV##170 : {VV##170 : GHC.Prim.Void# | [$k_##171]}
+
+
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25]
+  lhs {VV##F##1 : a_an2 | [$k_##175[ds_dvV:=GHC.Prim.void###0l][VV##174:=VV##F##1][VV##F:=VV##F##1];
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(x##amx <= VV##F##1);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##1)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##1);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##1)]);
+                           (&& [(VV##F##1 <= x##amx);
+                                (papp1 p VV##F##1)] => && [(papp1 q x##amx)]);
+                           (&& [(VV##F##1 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##1)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(papp1 p VV##F##1)] => && [(papp1 q VV##F##1)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((VV##F##1 = 0) => && [(papp1 q VV##F##1)])]}
+  rhs {VV##F##1 : a_an2 | [((len ds_dvS) >= 0);
+                           (0 <= VV##F##1);
+                           (papp1 q VV##F##1)]}
+  id 1 tag [1]
+  // META constraint id 1 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25]
+  lhs {VV##F##2 : GHC.Prim.Void# | [(VV##F##2 = GHC.Prim.void###0l);
+                                    (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                                    (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                         (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                                    (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                         (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                                    (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                                    ((x##amx = 0) => && [(papp1 q x##amx)]);
+                                    ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)])]}
+  rhs {VV##F##2 : GHC.Prim.Void# | [$k_##171[VV##223:=VV##F##2][VV##170:=VV##F##2][VV##F:=VV##F##2]]}
+  id 2 tag [1]
+  // META constraint id 2 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26;
+       28]
+  lhs {VV##F##3 : a_an2 | [(VV##F##3 = (x##amx + lq_anf$##1677723583##dvZ));
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##3);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##3)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(x##amx <= lq_anf$##1677723583##dvZ);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723583##dvZ)]);
+                           (&& [(VV##F##3 <= x##amx);
+                                (papp1 p VV##F##3)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##3)] => && [(papp1 q VV##F##3)]);
+                           (&& [(VV##F##3 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##3)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(VV##F##3 <= lq_anf$##1677723583##dvZ);
+                                (papp1 p VV##F##3)] => && [(papp1 q lq_anf$##1677723583##dvZ)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##3);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##3)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= lq_anf$##1677723583##dvZ);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723583##dvZ)]);
+                           (&& [(lq_anf$##1677723583##dvZ <= x##amx);
+                                (papp1 p lq_anf$##1677723583##dvZ)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723583##dvZ <= VV##F##3);
+                                (papp1 p lq_anf$##1677723583##dvZ)] => && [(papp1 q VV##F##3)]);
+                           (&& [(lq_anf$##1677723583##dvZ <= lq_anf$##1677723584##dw0);
+                                (papp1 p lq_anf$##1677723583##dvZ)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(papp1 p lq_anf$##1677723583##dvZ)] => && [(papp1 q lq_anf$##1677723583##dvZ)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##3 = 0) => && [(papp1 q VV##F##3)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((lq_anf$##1677723583##dvZ = 0) => && [(papp1 q lq_anf$##1677723583##dvZ)])]}
+  rhs {VV##F##3 : a_an2 | [$k_##175[VV##174:=VV##F##3][VV##F:=VV##F##3]]}
+  id 3 tag [1]
+  // META constraint id 3 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26]
+  lhs {VV##F##4 : [a_an2] | [((len VV##F##4) >= 0);
+                             (VV##F##4 = ds_dvT);
+                             ((len VV##F##4) >= 0);
+                             (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                             (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                  (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                             (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                  (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                             (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                             ((x##amx = 0) => && [(papp1 q x##amx)]);
+                             ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)])]}
+  rhs {VV##F##4 : [a_an2] | [((len VV##F##4) < (len ds_dvS));
+                             ((len VV##F##4) >= 0)]}
+  id 4 tag [1]
+  // META constraint id 4 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26;
+       38]
+  lhs {VV##F##5 : a_an2 | [(0 <= VV##F##5);
+                           (papp1 p VV##F##5);
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##5);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##5)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(VV##F##5 <= x##amx);
+                                (papp1 p VV##F##5)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##5)] => && [(papp1 q VV##F##5)]);
+                           (&& [(VV##F##5 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##5)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##5);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##5)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##5 = 0) => && [(papp1 q VV##F##5)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)])]}
+  rhs {VV##F##5 : a_an2 | [(0 <= VV##F##5)]}
+  id 5 tag [1]
+  // META constraint id 5 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26;
+       38]
+  lhs {VV##F##6 : a_an2 | [(0 <= VV##F##6);
+                           (papp1 p VV##F##6);
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##6);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##6)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(VV##F##6 <= x##amx);
+                                (papp1 p VV##F##6)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##6)] => && [(papp1 q VV##F##6)]);
+                           (&& [(VV##F##6 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##6)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##6);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##6)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##6 = 0) => && [(papp1 q VV##F##6)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)])]}
+  rhs {VV##F##6 : a_an2 | [$k_##183[VV:=VV##F##6][lq_tmp$x##76:=fix$36$$36$dNum_an3][VV##182:=VV##F##6][VV##F:=VV##F##6]]}
+  id 6 tag [1]
+  // META constraint id 6 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26;
+       27]
+  lhs {VV##F##7 : a_an2 | [(x <= VV##F##7);
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##7);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##7)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(x##amx <= x); (papp1 p x##amx)] => && [(papp1 q x)]);
+                           (&& [(VV##F##7 <= x##amx);
+                                (papp1 p VV##F##7)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##7)] => && [(papp1 q VV##F##7)]);
+                           (&& [(VV##F##7 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##7)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(VV##F##7 <= x); (papp1 p VV##F##7)] => && [(papp1 q x)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##7);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##7)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x)]);
+                           (&& [(x <= x##amx); (papp1 p x)] => && [(papp1 q x##amx)]);
+                           (&& [(x <= VV##F##7); (papp1 p x)] => && [(papp1 q VV##F##7)]);
+                           (&& [(x <= lq_anf$##1677723584##dw0);
+                                (papp1 p x)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(papp1 p x)] => && [(papp1 q x)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##7 = 0) => && [(papp1 q VV##F##7)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((x = 0) => && [(papp1 q x)])]}
+  rhs {VV##F##7 : a_an2 | [$k_##186[VV:=VV##F##7][VV##F:=VV##F##7][VV##185:=VV##F##7]]}
+  id 7 tag [1]
+  // META constraint id 7 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26]
+  lhs {VV##F##8 : a_an2 | [(VV##F##8 = 0);
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##8);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##8)]);
+                           (&& [(x##amx <= lq_anf$##1677723584##dw0);
+                                (papp1 p x##amx)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(VV##F##8 <= x##amx);
+                                (papp1 p VV##F##8)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##8)] => && [(papp1 q VV##F##8)]);
+                           (&& [(VV##F##8 <= lq_anf$##1677723584##dw0);
+                                (papp1 p VV##F##8)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= x##amx);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q x##amx)]);
+                           (&& [(lq_anf$##1677723584##dw0 <= VV##F##8);
+                                (papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q VV##F##8)]);
+                           (&& [(papp1 p lq_anf$##1677723584##dw0)] => && [(papp1 q lq_anf$##1677723584##dw0)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##8 = 0) => && [(papp1 q VV##F##8)]);
+                           ((lq_anf$##1677723584##dw0 = 0) => && [(papp1 q lq_anf$##1677723584##dw0)])]}
+  rhs {VV##F##8 : a_an2 | [$k_##186[VV:=VV##F##8][VV##F:=VV##F##8][VV##185:=VV##F##8]]}
+  id 8 tag [1]
+  // META constraint id 8 : ()
+
+
+constraint:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       20;
+       21]
+  lhs {VV##F##9 : a_an2 | [(0 <= VV##F##9);
+                           (papp1 p VV##F##9);
+                           (VV##F##9 = x##amx);
+                           (&& [(papp1 p x##amx)] => && [(papp1 q x##amx)]);
+                           (&& [(x##amx <= VV##F##9);
+                                (papp1 p x##amx)] => && [(papp1 q VV##F##9)]);
+                           (&& [(VV##F##9 <= x##amx);
+                                (papp1 p VV##F##9)] => && [(papp1 q x##amx)]);
+                           (&& [(papp1 p VV##F##9)] => && [(papp1 q VV##F##9)]);
+                           ((x##amx = 0) => && [(papp1 q x##amx)]);
+                           ((VV##F##9 = 0) => && [(papp1 q VV##F##9)])]}
+  rhs {VV##F##9 : a_an2 | [((len ds_dvS) >= 0);
+                           (0 <= VV##F##9);
+                           (papp1 q VV##F##9)]}
+  id 9 tag [1]
+  // META constraint id 9 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14]
+  lhs {VV##F##10 : a_an2 | [(VV##F##10 = lq_anf$##1677723581##dvX);
+                            (&& [(papp1 p VV##F##10)] => && [(papp1 q VV##F##10)]);
+                            ((VV##F##10 = 0) => && [(papp1 q VV##F##10)])]}
+  rhs {VV##F##10 : a_an2 | [((len ds_dvS) >= 0);
+                            (0 <= VV##F##10);
+                            (papp1 q VV##F##10)]}
+  id 10 tag [1]
+  // META constraint id 10 : ()
+
+
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25]
+  reft {VV##170 : GHC.Prim.Void# | [$k_##171]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26]
+  reft {VV##185 : a_an2 | [$k_##186]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26]
+  reft {VV##182 : a_an2 | [$k_##183]}
+  // META wf : ()
+
+
+wf:
+  env [0;
+       1;
+       2;
+       3;
+       4;
+       5;
+       6;
+       7;
+       8;
+       9;
+       10;
+       11;
+       15;
+       16;
+       17;
+       18;
+       19;
+       22;
+       23;
+       24;
+       25;
+       26]
+  reft {VV##174 : a_an2 | [$k_##175]}
+  // META wf : ()
+
+
+
+
+
+
+
