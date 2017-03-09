@@ -1,0 +1,372 @@
+qualif Fst(v : @(1), y : @(0)): ((v = (fst y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 30, column 8)
+qualif Snd(v : @(1), y : @(0)): ((v = (snd y))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.spec" (line 31, column 8)
+qualif Auto(VV : val_aml, rr2 : (Pred  val_aml  key_amk), lq_tmp$db##0 : key_amk): ((papp2 rr2 VV lq_tmp$db##0)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 10, column 1)
+qualif Auto(vv : key_amk, lq_tmp$db##0 : key_amk): ((vv = lq_tmp$db##0)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 10, column 1)
+qualif Auto(VV : val_aml, rr2 : (Pred  val_aml  key_amk), k : key_amk): ((papp2 rr2 VV k)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 10, column 1)
+qualif Auto(vv : key_amk, k : key_amk): ((vv = k)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 10, column 1)
+qualif Auto(VV : t_amv, rr1 : (Pred  t_amv  t_amu), lq_tmp$db##0 : t_amu): ((papp2 rr1 VV lq_tmp$db##0)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 14, column 5)
+qualif Auto(vv : t_amu, lq_tmp$db##0 : t_amu): ((vv = lq_tmp$db##0)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 14, column 5)
+qualif Auto(VV : t_amv, rr1 : (Pred  t_amv  t_amu), i : t_amu): ((papp2 rr1 VV i)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 14, column 5)
+qualif Auto(vv : t_amu, i : t_amu): ((vv = i)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 14, column 5)
+qualif Auto(VV : [key_alC], lq$recSel : (DataBase.Dict  key_alC  val_alD)): ((VV = (ddom lq$recSel))) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 16, column 24)
+qualif Auto(VV : val_alD, rr : (Pred  val_alD  key_alC), i : key_alC): ((papp2 rr VV i)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 16, column 21)
+qualif Auto(vv : key_alC, i : key_alC): ((vv = i)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 16, column 21)
+qualif Auto(VV : (DataBase.Dict  key_alC  val_alD), ddom##DataBase.D##rlx : [key_alC]): (((ddom VV) = ddom##DataBase.D##rlx)) // "/home/atondwal/src/liquidhaskell/tests/pos/DB00.hs" (line 16, column 21)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) > 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 13, column 8)
+qualif IsEmp(v : GHC.Types.Bool, xs : [@(0)]): (((Prop v) <=> ((len xs) = 0))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 14, column 8)
+qualif ListZ(v : [@(0)]): (((len v) = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 16, column 8)
+qualif ListZ(v : [@(0)]): (((len v) >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 17, column 8)
+qualif ListZ(v : [@(0)]): (((len v) > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 18, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 20, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) >= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 21, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) > (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 22, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) <= (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 23, column 8)
+qualif CmpLen(v : [@(1)], xs : [@(0)]): (((len v) < (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 24, column 8)
+qualif EqLen(v : int, xs : [@(0)]): ((v = (len xs))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 26, column 8)
+qualif LenEq(v : [@(0)], x : int): ((x = (len v))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 27, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x + 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 28, column 8)
+qualif LenDiff(v : [@(0)], x : int): (((len v) = (x - 1))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 29, column 8)
+qualif LenAcc(v : int, xs : [@(0)], n : int): ((v = ((len xs) + n))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/GHC/Base.hquals" (line 30, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 3, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 4, column 8)
+qualif Bot(v : @(0)): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 5, column 8)
+qualif Bot(v : bool): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 6, column 8)
+qualif Bot(v : int): ((0 = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 7, column 8)
+qualif CmpZ(v : @(0)): ((v < 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 9, column 8)
+qualif CmpZ(v : @(0)): ((v <= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 10, column 8)
+qualif CmpZ(v : @(0)): ((v > 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 11, column 8)
+qualif CmpZ(v : @(0)): ((v >= 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 12, column 8)
+qualif CmpZ(v : @(0)): ((v = 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 13, column 8)
+qualif CmpZ(v : @(0)): ((v != 0)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 14, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v < x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 16, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v <= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 17, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v > x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 18, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v >= x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 19, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v = x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 20, column 8)
+qualif Cmp(v : @(0), x : @(0)): ((v != x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 21, column 8)
+qualif One(v : int): ((v = 1)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 28, column 8)
+qualif True1(v : GHC.Types.Bool): ((Prop v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 29, column 8)
+qualif False1(v : GHC.Types.Bool): ((~ ((Prop v)))) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 30, column 8)
+qualif Papp(v : @(0), p : (Pred  @(0))): ((papp1 p v)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 34, column 8)
+qualif Papp2(v : @(1), x : @(0), p : (Pred  @(1)  @(0))): ((papp2 p v x)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 37, column 8)
+qualif Papp3(v : @(2), x : @(0), y : @(1), p : (Pred  @(2)  @(0)  @(1))): ((papp3 p v x y)) // "/home/atondwal/src/liquidhaskell/.stack-work/install/x86_64-linux-tinfo6/lts-6.14/7.10.3/share/x86_64-linux-ghc-7.10.3/liquidhaskell-0.6.0.0/include/Prelude.hquals" (line 39, column 8)
+
+
+
+
+constant runFun : (func(2, [(Arrow  @(0)  @(1)); @(0); @(1)]))
+constant addrLen : (func(0, [Str; int]))
+constant papp5 : (func(10, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4));
+                            @(5);
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            bool]))
+constant x_Tuple21 : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant x_Tuple65 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(4)]))
+constant x_Tuple55 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(4)]))
+constant x_Tuple33 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(2)]))
+constant x_Tuple77 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(6)]))
+constant papp3 : (func(6, [(Pred  @(0)  @(1)  @(2));
+                           @(3);
+                           @(4);
+                           @(5);
+                           bool]))
+constant x_Tuple63 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(2)]))
+constant x_Tuple41 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(0)]))
+constant ddom : (func(2, [(DataBase.Dict  @(0)  @(1)); [@(0)]]))
+constant GHC.Types.LT##6S : (GHC.Types.Ordering)
+constant papp4 : (func(8, [(Pred  @(0)  @(1)  @(2)  @(3));
+                           @(4);
+                           @(5);
+                           @(6);
+                           @(7);
+                           bool]))
+constant x_Tuple64 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(3)]))
+constant GHC.Types.GT##6W : (GHC.Types.Ordering)
+constant autolen : (func(1, [@(0); int]))
+constant x_Tuple52 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(1)]))
+constant head : (func(1, [[@(0)]; @(0)]))
+constant null : (func(1, [[@(0)]; bool]))
+constant papp2 : (func(4, [(Pred  @(0)  @(1)); @(2); @(3); bool]))
+constant x_Tuple62 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(1)]))
+constant fromJust : (func(1, [(GHC.Base.Maybe  @(0)); @(0)]))
+constant papp7 : (func(14, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            @(12);
+                            @(13);
+                            bool]))
+constant x_Tuple53 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(2)]))
+constant x_Tuple71 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(0)]))
+constant x_Tuple74 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(3)]))
+constant len : (func(2, [(@(0)  @(1)); int]))
+constant papp6 : (func(12, [(Pred  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                            @(6);
+                            @(7);
+                            @(8);
+                            @(9);
+                            @(10);
+                            @(11);
+                            bool]))
+constant x_Tuple22 : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant x_Tuple66 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(5)]))
+constant x_Tuple44 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(3)]))
+constant strLen : (func(0, [[Char]; int]))
+constant x_Tuple72 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(1)]))
+constant isJust : (func(1, [(GHC.Base.Maybe  @(0)); bool]))
+constant Prop : (func(0, [GHC.Types.Bool; bool]))
+constant x_Tuple31 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(0)]))
+constant x_Tuple75 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(4)]))
+constant papp1 : (func(2, [(Pred  @(0)); @(1); bool]))
+constant x_Tuple61 : (func(6, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5));
+                               @(0)]))
+constant x_Tuple43 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(2)]))
+constant tail : (func(1, [[@(0)]; [@(0)]]))
+constant GHC.Types.EQ##6U : (GHC.Types.Ordering)
+constant x_Tuple51 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(0)]))
+constant x_Tuple73 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(2)]))
+constant x_Tuple54 : (func(5, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4));
+                               @(3)]))
+constant cmp : (func(0, [GHC.Types.Ordering; GHC.Types.Ordering]))
+constant x_Tuple32 : (func(3, [(Tuple  @(0)  @(1)  @(2)); @(1)]))
+constant x_Tuple76 : (func(7, [(Tuple  @(0)  @(1)  @(2)  @(3)  @(4)  @(5)  @(6));
+                               @(5)]))
+constant snd : (func(2, [(Tuple  @(0)  @(1)); @(1)]))
+constant fst : (func(2, [(Tuple  @(0)  @(1)); @(0)]))
+constant x_Tuple42 : (func(4, [(Tuple  @(0)  @(1)  @(2)  @(3));
+                               @(1)]))
+
+
+distinct GHC.Types.LT##6S : (GHC.Types.Ordering)
+distinct GHC.Types.GT##6W : (GHC.Types.Ordering)
+distinct GHC.Types.EQ##6U : (GHC.Types.Ordering)
+
+
+bind 0 GHC.Types.EQ##6U : {VV##64 : GHC.Types.Ordering | [(VV##64 = GHC.Types.EQ##6U)]}
+bind 1 GHC.Types.LT##6S : {VV##65 : GHC.Types.Ordering | [(VV##65 = GHC.Types.LT##6S)]}
+bind 2 GHC.Types.GT##6W : {VV##66 : GHC.Types.Ordering | [(VV##66 = GHC.Types.GT##6W)]}
+bind 3 rr2 : {VV##79 : (Pred  val_aml  key_amk) | []}
+bind 4 lq_tmp$db##0 : {VV : key_amk | []}
+bind 5 k##alG : {VV : key_amk | []}
+bind 6 rr1 : {VV##86 : (Pred  t_amv  t_amu) | []}
+bind 7 lq_tmp$db##0 : {VV : t_amu | []}
+bind 8 k##alI : {VV : t_amx | []}
+bind 9 ds_dmQ : {VV##89 : (DataBase.Dict  t_amx  t_amy) | []}
+bind 10 lq_anf$##1677723024##dmY : {lq_tmp$x##91 : (DataBase.Dict  t_amx  t_amy) | [(lq_tmp$x##91 = ds_dmQ)]}
+bind 11 lq_anf$##1677723024##dmY : {lq_tmp$x##95 : (DataBase.Dict  t_amx  t_amy) | [(lq_tmp$x##95 = ds_dmQ)]}
+bind 12 ds_dmR : {lq_tmp$x##111 : [t_amx] | [((len lq_tmp$x##111) >= 0)]}
+bind 13 lq_anf$##1677723024##dmY : {lq_tmp$x##95 : (DataBase.Dict  t_amx  t_amy) | [(lq_tmp$x##95 = ds_dmQ);
+                                                                                    ((ddom lq_tmp$x##95) = ds_dmR);
+                                                                                    ((ddom lq_tmp$x##95) = ds_dmR)]}
+bind 14 lq_tmp$x##153 : {VV : key_amk | []}
+bind 15 k##alG : {VV : key_amk | []}
+bind 16 VV##214 : {VV##214 : [(DataBase.Dict  key_amk  val_aml)] | [((len VV##214) >= 0)]}
+bind 17 VV##216 : {VV##216 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 18 lq_tmp$x##75 : {VV : key_amk | []}
+bind 19 lq_tmp$x##77 : {VV##219 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 20 VV##220 : {VV##220 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 21 lq_tmp$x##76 : {VV : key_amk | []}
+bind 22 lq_tmp$x##194 : {VV##223 : [(DataBase.Dict  key_amk  val_aml)] | [((len VV##223) >= 0)]}
+bind 23 VV##224 : {VV##224 : [val_aml] | [((len VV##224) >= 0)]}
+bind 24 lq_tmp$x##78 : {VV : val_aml | []}
+bind 25 VV##227 : {VV##227 : [(DataBase.Dict  key_amk  val_aml)] | [((len VV##227) >= 0)]}
+bind 26 VV##229 : {VV##229 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 27 lq_tmp$x##182 : {VV : key_amk | []}
+bind 28 lq_tmp$x##167 : {VV##232 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 29 VV##233 : {VV##233 : (DataBase.Dict  key_amk  val_aml) | []}
+bind 30 lq_tmp$x##182 : {VV : key_amk | []}
+bind 31 lq_tmp$x##74 : {VV##236 : [(DataBase.Dict  key_amk  val_aml)] | [((len VV##236) >= 0)]}
+bind 32 VV##237 : {VV##237 : [val_aml] | [((len VV##237) = (len lq_tmp$x##74));
+                                          ((len VV##237) >= 0)]}
+bind 33 lq_tmp$x##78 : {VV : val_aml | []}
+bind 34 VV##240 : {VV##240 : (DataBase.Dict  key_amk  val_aml) | [$k_##180[VV##179:=VV##240][lq_tmp$x##183:=VV##240]]}
+bind 35 lq_tmp$x##192 : {VV : key_amk | []}
+bind 36 lq_tmp$x##163 : {lq_tmp$x##183 : (DataBase.Dict  key_amk  val_aml) | [$k_##180[VV##179:=lq_tmp$x##183]]}
+bind 37 k##alI : {VV : t_amx | []}
+bind 38 VV##245 : {VV##245 : (DataBase.Dict  t_amx  t_amy) | []}
+bind 39 lq_tmp$x##85 : {VV : t_amx | []}
+bind 40 lq_tmp$x##129 : {VV##248 : (DataBase.Dict  t_amx  t_amy) | []}
+bind 41 VV##249 : {VV##249 : (DataBase.Dict  t_amx  t_amy) | []}
+bind 42 lq_tmp$x##85 : {VV : t_amx | []}
+bind 43 ds_dmQ : {VV##252 : (DataBase.Dict  t_amx  t_amy) | []}
+bind 44 VV##179 : {VV##179 : (DataBase.Dict  key_amk  val_aml) | [$k_##180]}
+bind 45 lq_tmp$x##175 : {VV : key_amk | []}
+
+
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 25]
+  lhs {VV##F##1 : (DataBase.Dict  key_amk  val_aml) | []}
+  rhs {VV##F##1 : (DataBase.Dict  key_amk  val_aml) | [$k_##180[VV##229:=VV##F##1][lq_tmp$x##165:=lq_anf$##1677723025##dmZ][lq_tmp$x##158:=VV##227][VV##179:=VV##F##1][VV##F:=VV##F##1][lq_tmp$x##183:=VV##F##1]]}
+  id 1 tag [1]
+  // META constraint id 1 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 25; 26]
+  lhs {VV##F##2 : key_amk | []}
+  rhs {VV##F##2 : key_amk | [$k_##170[lq_tmp$x##165:=lq_anf$##1677723025##dmZ][VV##169:=VV##F##2][lq_tmp$x##158:=VV##227][VV##179:=VV##229][VV##F:=VV##F##2][lq_tmp$x##183:=VV##229]]}
+  id 2 tag [1]
+  // META constraint id 2 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 25; 26]
+  lhs {VV##F##3 : val_aml | []}
+  rhs {VV##F##3 : val_aml | [$k_##173[VV##172:=VV##F##3][lq_tmp$x##165:=lq_anf$##1677723025##dmZ][lq_tmp$x##158:=VV##227][VV##179:=VV##229][VV##F:=VV##F##3][lq_tmp$x##183:=VV##229]]}
+  id 3 tag [1]
+  // META constraint id 3 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 25; 26; 27]
+  lhs {VV##F##4 : val_aml | [(papp2 rr2 VV##F##4 lq_tmp$x##182)]}
+  rhs {VV##F##4 : val_aml | [$k_##177[lq_tmp$x##175:=lq_tmp$x##182][lq_tmp$x##165:=lq_anf$##1677723025##dmZ][VV##176:=VV##F##4][lq_tmp$x##158:=VV##227][VV##179:=VV##229][VV##F:=VV##F##4][lq_tmp$x##183:=VV##229]]}
+  id 4 tag [1]
+  // META constraint id 4 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 31; 32]
+  lhs {VV##F##5 : val_aml | [$k_##185[lq_tmp$x##165:=lq_anf$##1677723025##dmZ][VV##184:=VV##F##5][lq_tmp$x##160:=VV##237][lq_tmp$x##166:=lq_tmp$x##74][VV##F:=VV##F##5]]}
+  rhs {VV##F##5 : val_aml | [(papp2 rr2 VV##F##5 k##alG)]}
+  id 5 tag [1]
+  // META constraint id 5 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 34]
+  lhs {VV##F##6 : key_amk | [$k_##170[VV##169:=VV##F##6][VV##179:=VV##240][VV##F:=VV##F##6][lq_tmp$x##183:=VV##240]]}
+  rhs {VV##F##6 : key_amk | [$k_##145[lq_tmp$x##137:=VV##240][lq_tmp$x##141:=k##alG][VV##144:=VV##F##6][VV##F:=VV##F##6][lq_tmp$x##188:=VV##240]]}
+  id 6 tag [1]
+  // META constraint id 6 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 34]
+  lhs {VV##F##7 : key_amk | [$k_##145[lq_tmp$x##137:=VV##240][lq_tmp$x##141:=k##alG][VV##144:=VV##F##7][VV##F:=VV##F##7][lq_tmp$x##188:=VV##240]]}
+  rhs {VV##F##7 : key_amk | [$k_##170[VV##169:=VV##F##7][VV##179:=VV##240][VV##F:=VV##F##7][lq_tmp$x##183:=VV##240]]}
+  id 7 tag [1]
+  // META constraint id 7 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 34]
+  lhs {VV##F##8 : val_aml | [$k_##173[VV##172:=VV##F##8][VV##179:=VV##240][VV##F:=VV##F##8][lq_tmp$x##183:=VV##240]]}
+  rhs {VV##F##8 : val_aml | [$k_##148[lq_tmp$x##137:=VV##240][VV##147:=VV##F##8][lq_tmp$x##141:=k##alG][VV##F:=VV##F##8][lq_tmp$x##188:=VV##240]]}
+  id 8 tag [1]
+  // META constraint id 8 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 34; 35]
+  lhs {VV##F##9 : val_aml | [$k_##177[lq_tmp$x##175:=lq_tmp$x##192][lq_tmp$x##182:=lq_tmp$x##192][VV##176:=VV##F##9][VV##179:=VV##240][VV##F:=VV##F##9][lq_tmp$x##183:=VV##240]]}
+  rhs {VV##F##9 : val_aml | [$k_##151[lq_tmp$x##137:=VV##240][VV##147:=VV##F##9][lq_tmp$x##141:=k##alG][VV##150:=VV##F##9][lq_tmp$x##187:=lq_tmp$x##192][lq_tmp$x##153:=lq_tmp$x##192][VV##F:=VV##F##9][lq_tmp$x##143:=lq_tmp$x##192][lq_tmp$x##190:=lq_tmp$x##192][lq_tmp$x##188:=VV##240]]}
+  id 9 tag [1]
+  // META constraint id 9 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 36]
+  lhs {VV##F##10 : val_aml | [$k_##148[VV##147:=VV##F##10][lq_tmp$x##141:=k##alG][lq_tmp$x##142:=lq_tmp$x##163][lq_tmp$x##191:=lq_tmp$x##163][VV##F:=VV##F##10];
+                              $k_##151[VV##147:=VV##F##10][lq_tmp$x##141:=k##alG][lq_tmp$x##142:=lq_tmp$x##163][lq_tmp$x##191:=lq_tmp$x##163][VV##150:=VV##F##10][lq_tmp$x##153:=k##alG][VV##F:=VV##F##10]]}
+  rhs {VV##F##10 : val_aml | [$k_##185[VV##184:=VV##F##10][VV##F:=VV##F##10]]}
+  id 10 tag [1]
+  // META constraint id 10 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5]
+  lhs {VV##F##11 : key_amk | [(VV##F##11 = k##alG)]}
+  rhs {VV##F##11 : key_amk | [$k_##145[VV##144:=VV##F##11][VV##F:=VV##F##11]]}
+  id 11 tag [1]
+  // META constraint id 11 : ()
+
+
+constraint:
+  env [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13]
+  lhs {VV##F##12 : t_amy | [(papp2 rr1 VV##F##12 k##alI)]}
+  rhs {VV##F##12 : t_amy | [(papp2 rr1 VV##F##12 k##alI)]}
+  id 12 tag [1]
+  // META constraint id 12 : ()
+
+
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 44]
+  reft {VV##169 : key_amk | [$k_##170]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5]
+  reft {VV##179 : (DataBase.Dict  key_amk  val_aml) | [$k_##180]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 45]
+  reft {VV##176 : val_aml | [$k_##177]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5]
+  reft {VV##144 : key_amk | [$k_##145]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5]
+  reft {VV##184 : val_aml | [$k_##185]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5]
+  reft {VV##147 : val_aml | [$k_##148]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 14]
+  reft {VV##150 : val_aml | [$k_##151]}
+  // META wf : ()
+
+
+wf:
+  env [0; 1; 2; 3; 4; 5; 44]
+  reft {VV##172 : val_aml | [$k_##173]}
+  // META wf : ()
+
+
+
+
+
+
+
