@@ -28,7 +28,7 @@ unitTests
     , testGroup "elim-neg"   <$> dirTests elimCmd   "tests/neg"    []             (ExitFailure 1)
     , testGroup "elim-crash" <$> dirTests elimCmd   "tests/crash"  []             (ExitFailure 2)
     , testGroup "interp-pos" <$> dirTests interpCmd "tests/interp"   []           ExitSuccess
-    , testGroup "interp-neg" <$> dirTests interpCmd "tests/interp-neg"   []           (ExitFailure 124)
+    -- , testGroup "interp-neg" <$> dirTests interpCmd "tests/interp-neg"   []           (ExitFailure 124)
    ]
 
 skipNativePos :: [FilePath]

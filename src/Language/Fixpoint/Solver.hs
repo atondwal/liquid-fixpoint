@@ -93,8 +93,8 @@ interpSolve n cfg q = interpSolve' n cfg si4 cs
   si0 = {-# SCC "convertFormat" #-} convertFormat q
   si1 = either die id $ {-# SCC "validate" #-} sanitize $!! si0
   -- TODO Fix this?
-  -- si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
-  si3 = {-# SCC "renameAll" #-} renameAll $!! si1
+  si2 = {-# SCC "wfcUniqify" #-} wfcUniqify $!! si1
+  si3 = {-# SCC "renameAll" #-} renameAll $!! si2
   si4  = {-# SCC "defunctionalize" #-} defunctionalize cfg $!! si3
 
 {-@ Lazy interpSolve' @-}
