@@ -54,8 +54,6 @@ solveFQ cfg = do
     let fi'     = ignoreQualifiers cfg' fi
     r          <- solve cfg' fi'
     let stat    = resStatus $!! r
-    putStrLn "solution:"
-    print $ resSolution r
     -- let str  = render $ resultDoc $!! (const () <$> stat)
     -- putStrLn "\n"
     whenNormal $ colorStrLn (colorResult stat) (statStr $!! stat)
