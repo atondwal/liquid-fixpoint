@@ -669,7 +669,7 @@ pairP xP sepP yP = (,) <$> xP <* sepP <*> yP
 -- | Axioms for Symbolic Evaluation ---------------------------------
 ---------------------------------------------------------------------
 
-defineP = Equ <$> symbolP <*> many symbolP <*> (reserved "=" >> exprP)
+defineP = Equ <$> symbolP <*> many symbolP <*> (reserved "=" >> predP)
 
 matchP = SMeasure <$> symbolP <*> symbolP <*> many symbolP <*> (reserved "=" >> exprP)
 
