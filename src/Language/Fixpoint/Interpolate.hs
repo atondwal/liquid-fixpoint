@@ -274,6 +274,7 @@ symSorts sinfo = M.fromList $ bindsyms ++ wfsyms
 
 getBindSort (_,s,RR sort _)         = (s,sort)
 getKSort (WfC _ (_, sort, KV s) _)  = (s,sort)
+getKSort (GWfC _ (_, sort, KV s) _ _ _)  = (s,sort)
 -- convert SInfo to data structures used for unrolling
 
 -- A Query is the root of the unrolling tree: subtyes of the form  Gamma /\ k_1 /\ k_2 <: { v /= 0 }

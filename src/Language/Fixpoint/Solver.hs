@@ -88,7 +88,7 @@ solve cfg q
   | interpolate cfg = interpSolve 0 cfg $!! q
   | otherwise      = solve'     cfg        $!! q
 
-interpSolve :: (NFData a, Fixpoint a) => Int -> Solver a
+interpSolve :: (NFData a, Fixpoint a, Show a, Loc a) => Int -> Solver a
 interpSolve n cfg q = interpSolve' n cfg si4 cs
   where
   cs  = (reftBind . sr_reft . srhs &&& sr_sort . srhs) <$> cm q
@@ -105,10 +105,10 @@ interpSolve' n cfg q csyms = do
   interpQuals <- genQualifiers csyms q n
   res <- Sol.solve cfg $!! q { quals = interpQuals }
   case res of
-    (Result Safe _) -> return res
+    (Result Safe _ _) -> return res
     _               -> interpSolve' (n+1) cfg q csyms
 
-solve' :: (NFData a, Fixpoint a) => Solver a
+solve' :: (NFData a, Fixpoint a, Show a, Loc a) => Solver a
 solve' cfg q = do
   when (save cfg) $ saveQuery   cfg q
   configSW  cfg     solveNative cfg q
