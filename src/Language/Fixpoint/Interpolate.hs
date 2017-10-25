@@ -20,6 +20,7 @@ import Control.Monad.Reader
 import System.Console.CmdArgs (def)
 import Language.Fixpoint.Types hiding (renameSymbol)
 import Language.Fixpoint.Solver.Solve (interpolation, solverInfo)
+import Language.Fixpoint.SortCheck (elaborate)
 import qualified Language.Fixpoint.Types.Visitor as V
 
 
@@ -517,8 +518,9 @@ genCandSolutions sinfo u dquery =
   forM (expandTree dquery) (\tquery ->
     extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
     genTreeInterp tquery <$>
-    interpolation def sI sinfo (genQueryFormula tquery))
+    interpolation def sI sinfo (elaborate "interp" defs $ genQueryFormula tquery))
   where sI = solverInfo def sinfo
+        defs = gLits sinfo
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc
