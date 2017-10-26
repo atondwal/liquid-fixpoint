@@ -18,11 +18,13 @@ import Control.Monad.State
 import Control.Monad.Reader
 
 import System.Console.CmdArgs (def)
-import Language.Fixpoint.Types hiding (renameSymbol)
+import Language.Fixpoint.Types hiding (renameSymbol, allowHO)
+import Language.Fixpoint.Types.Config
 import Language.Fixpoint.Solver.Solve (interpolation, solverInfo)
 import Language.Fixpoint.SortCheck (elaborate)
+import Language.Fixpoint.Solver.Sanitize (symbolEnv)
 import qualified Language.Fixpoint.Types.Visitor as V
-
+import Debug.Trace
 
 
 data AOTree b a = And b a [AOTree b a]
@@ -482,7 +484,11 @@ genQueryFormula (And _ root children) =
 ----------------------------------------
 
 popInterp :: State [Expr] Expr
-popInterp = state $ \(x:xs) -> (x,xs)
+popInterp = do
+  list <- get
+  traceM "asdf"
+  traceShowM list
+  state $ \case { (x:xs) -> (x,xs); [] -> (PTrue,[]) }
 
 -- construct a tree interpolant from a list of interpolants
 -- returned by Z3
@@ -518,9 +524,13 @@ genCandSolutions sinfo u dquery =
   forM (expandTree dquery) (\tquery ->
     extractSol (Su $ M.fromList $ second EVar <$> M.toList u) .
     genTreeInterp tquery <$>
-    interpolation def sI sinfo (elaborate "interp" defs $ genQueryFormula tquery))
-  where sI = solverInfo def sinfo
-        defs = gLits sinfo
+    interpolation conf sI sinfo (elaborate "interp" defs $ genQueryFormula tquery))
+  where sI = solverInfo conf sinfo
+        defs = symbolEnv conf sinfo
+        conf = def { allowHO = True, defunction = True }
+        senv = SMT.ctxSymEnv ctx
+        toSMT bs = defuncAny cfg senv . elaborate "makeKnowledge" (elabEnv bs)
+        elabEnv  = L.foldl' (\env (x, s) -> insertSymEnv x s env) senv
 
 renameQualParams :: Qualifier -> Qualifier
 renameQualParams (Q name params body loc) = Q name newParams newBody loc

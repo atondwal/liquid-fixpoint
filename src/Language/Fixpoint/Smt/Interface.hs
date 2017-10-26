@@ -103,7 +103,7 @@ import           Data.Attoparsec.Internal.Types (Parser)
 import           Text.PrettyPrint.HughesPJ (text)
 import           Text.Read (readMaybe)
 import           Data.Text.Read (decimal)
-
+import Debug.Trace
 {-
 runFile f
   = readFile f >>= runString
@@ -506,6 +506,8 @@ smtDoInterpolate :: Context -> SInfo a -> Expr -> IO [Expr]
 smtDoInterpolate me _ p = do
   -- icontext <- makeZ3Context "interp.out" (toListSEnv $ lits sinfo)
   -- smtWrite icontext $ runSmt2 (smtenv icontext) p
+  -- traceShowM (smt2 p)
+  traceShowM n
 
   respInterp <$> command me (Interpolate n p)
   where n = countInterp p 
