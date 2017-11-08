@@ -34,6 +34,7 @@ import           Language.Fixpoint.Solver.UniqifyBinds (renameAll)
 import           Language.Fixpoint.Defunctionalize (defunctionalize)
 import           Language.Fixpoint.SortCheck            (Elaborate (..))
 import           Language.Fixpoint.Solver.UniqifyKVars (wfcUniqify)
+import           Language.Fixpoint.Solver.Synthesize (synthesize)
 import qualified Language.Fixpoint.Solver.Solve     as Sol
 import           Language.Fixpoint.Types.Config
 import           Language.Fixpoint.Types.Errors
@@ -203,7 +204,8 @@ simplifyFInfo !cfg !fi0 = do
   loudDump 2 cfg si4
   let si5  = {-# SCC "elaborate"  #-} elaborate "solver" (symbolEnv cfg si4) si4
   loudDump 3 cfg si5
-  instantiate cfg $!! si5
+  let si6 =  {-# SCC "synthesize" #-} synthesize si5
+  instantiate cfg $!! si6
 
 solveNative' !cfg !fi0 = do
   si6 <- simplifyFInfo cfg fi0 
