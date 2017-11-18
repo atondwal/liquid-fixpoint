@@ -45,6 +45,7 @@ module Language.Fixpoint.Smt.Interface (
     , smtAssertAxiom
     , smtCheckUnsat
     , smtCheckSat
+    , smtGetValues
     , smtBracket, smtBracketAt
     , smtDistinct
     , smtPush, smtPop
@@ -54,6 +55,7 @@ module Language.Fixpoint.Smt.Interface (
     , checkValid'
     , checkValidWithContext
     , checkValids
+    , getValues
 
     ) where
 
@@ -144,6 +146,13 @@ checkValids cfg f xts ps
        forM ps $ \p ->
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
+
+getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
+getValues me xts p xs = do
+  smtDecls me xts
+  smtAssert me p
+  smtCheckUnsat me
+  smtGetValues me xs
 
 -- debugFile :: FilePath
 -- debugFile = "DEBUG.smt2"
@@ -383,6 +392,10 @@ smtDistinct me az = interact' me (Distinct az)
 
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
+
+-- TODO: JR plz parse this into an Expr
+smtGetValues :: Context -> [Symbol] -> IO [(Symbol, T.Text)]
+smtGetValues me vs = (\(Values x) -> x) <$> command me (GetValue vs)
 
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a
 smtBracketAt sp x y z = smtBracket x y z `catch` dieAt sp

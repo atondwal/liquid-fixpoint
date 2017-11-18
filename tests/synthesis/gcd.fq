@@ -5,11 +5,11 @@
 // gcd(M,N,R) as the predicate (M = N) → (M ≥ R)
 
 // This qualifier saves the day. Solve the constraints WITHOUT IT
-qualif Zog(v:a, m:a, n:a) : ((m = n) => (m >= v))
+// qualif Zog(v:a, m:a, n:a) : ((m = n) => (m >= v))
 // NB: v has to come first in the qualif
 // Remember this or you will spend a few hours confused, like I just did
 
-qualif Bar(v:a, m:a, n:a) : (m = n)
+// qualif Bar(v:a, m:a, n:a) : (m = n)
 qualif Baz(v:a, m:a) : (m >= v)
 
 bind 0 m : {v: int | true }

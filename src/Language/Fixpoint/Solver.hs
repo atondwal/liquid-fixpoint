@@ -204,7 +204,7 @@ simplifyFInfo !cfg !fi0 = do
   loudDump 2 cfg si4
   let si5  = {-# SCC "elaborate"  #-} elaborate "solver" (symbolEnv cfg si4) si4
   loudDump 3 cfg si5
-  let si6 =  {-# SCC "synthesize" #-} synthesize si5
+  si6 <- {-# SCC "synthesize" #-} synthesize si5
   instantiate cfg $!! si6
 
 solveNative' !cfg !fi0 = do
