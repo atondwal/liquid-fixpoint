@@ -1,3 +1,6 @@
+{-# LANGUAGE BangPatterns              #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.Fixpoint.Solver.Synthesize (
     synthesize
 ) where
@@ -11,9 +14,16 @@ import qualified Language.Fixpoint.Types.Visitor as Vis
 import           Language.Fixpoint.Types.Config  as FC
 import           Language.Fixpoint.Defunctionalize
 import           Language.Fixpoint.SortCheck
-
+import Control.Applicative ((<|>))
+import Data.Char
+import Data.Attoparsec.Internal.Types (Parser)
+import Data.Monoid
+import qualified Data.Attoparsec.Text as A
 import qualified Data.HashMap.Strict       as M
 import qualified Data.HashSet              as S
+import           Text.PrettyPrint.HughesPJ (text)
+import           Text.Read (readMaybe)
+import Data.Text.Read (decimal)
 
 synthesize :: Config -> SInfo a -> IO (SInfo a)
 synthesize cfg fi = do
@@ -79,3 +89,114 @@ makeCtx cfg ctx es = (dumbContext context) { scPreds  = \bs e c -> askSMT c bs e
           SMT.smtPop ctx
           return b
       | otherwise      = error "Synthesis tried to write a KVar to SMT"
+
+
+space2 c = isSpace c && not (A.isEndOfLine c)
+
+predP = {-# SCC "predP" #-}
+        (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipWhile space2) <* A.char ')'))
+    <|> (Sym <$> symbolP)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+strToOp _ = error "Op not found"
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+strToRel _ = error "Rel not found"
+
+parseLisp :: Lisp -> Expr
+parseLisp (Sym s)
+  | symbolText s == "true"  = PTrue
+  | symbolText s == "false" = PFalse
+  | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
+  | otherwise               = EVar s
+parseLisp l@(Lisp xs)
+  | [Sym s, x] <- xs, symbolText s == "not"     =
+    PNot (parseLisp x)
+  | [Sym s, x] <- xs, symbolText s == "-"       =
+    ENeg (parseLisp x)
+  | [Sym s, x, y] <- xs, symbolText s == "=>"   =
+    PImp (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s == "="    =
+    PAtom Eq (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
+    EBin (strToOp $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
+    PAtom (strToRel $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
+    EIte (parseLisp x) (parseLisp y) (parseLisp z)
+  | (Sym s:xs) <- xs, symbolText s == "and"     =
+    PAnd $ L.map parseLisp xs
+  | (Sym s:xs) <- xs, symbolText s == "or"      =
+    POr $ L.map parseLisp xs
+  | otherwise                                   =
+    lispToFunc l
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
+        -- this should not be called
+        lispToFunc (Sym s)   = EVar s
+
+type SmtParser a = Parser T.Text a
+
+responseP :: SmtParser SMT.Response
+responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
+          <|> A.string "sat"     *> return SMT.Sat
+          <|> A.string "unsat"   *> return SMT.Unsat
+          <|> A.string "unknown" *> return SMT.Unknown
+
+sexpP :: SmtParser SMT.Response
+sexpP = {-# SCC "sexpP" #-} A.string "error" *> (SMT.Error <$> errorP)
+      <|> SMT.Values <$> valuesP
+
+errorP :: SmtParser T.Text
+errorP = A.skipSpace *> A.char '"' *> A.takeWhile1 (/='"') <* A.string "\")"
+
+valuesP :: SmtParser [(Symbol, T.Text)]
+valuesP = A.many1' pairP <* A.char ')'
+
+pairP :: SmtParser (Symbol, T.Text)
+pairP = {-# SCC "pairP" #-}
+  do
+      A.skipSpace
+      A.char '('
+      !x <- symbolP
+      A.skipSpace
+      !v <- valueP
+      A.char ')'
+      return (x,v)
+
+symbolP :: SmtParser Symbol
+symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
+
+decode :: T.Text -> T.Text
+decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fromRight . decimal]) (T.split (=='$') s)
+
+fromRight (Right (x,_)) = x
+fromRight (Left _) = error "Invalid hashcons format"
+
+valueP :: SmtParser T.Text
+valueP = {-# SCC "valueP" #-} negativeP
+      <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
+
+negativeP :: SmtParser T.Text
+negativeP
+  = do
+      v <- A.char '(' *> A.takeWhile1 (/=')') <* A.char ')'
+      return $ "(" <> v <> ")"
