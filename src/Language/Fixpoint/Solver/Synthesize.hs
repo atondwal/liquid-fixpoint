@@ -15,19 +15,27 @@ import           Language.Fixpoint.SortCheck
 import qualified Data.HashMap.Strict       as M
 import qualified Data.HashSet              as S
 
-synthesize :: SInfo a -> IO (SInfo a)
-synthesize fi = do
-      qs <- theks
+synthesize :: Config -> SInfo a -> IO (SInfo a)
+synthesize cfg fi = do
+      qs <- qualForK
       return fi { quals = qs }
   where (KS kvars) = kuts fi
         cons k = M.filter (hasKvar k) (cm fi)
-        theks = (\k -> synthesizeKvar k (cons k)) `mapM` (S.toList kvars)
+        qualForK :: IO [Qualifier]
+        qualForK = concat <$>
+           sequence ((\k -> synthesizeKvar cfg k (cons k))
+                     <$> S.toList kvars)
 
 -- Yeah, these qualifiers should acutally be known types wrapped inside a
 -- solverInfo, but I really don't understand that solverInfo/Eliminate codebase
 -- that well... maybe then
-synthesizeKvar :: KVar -> M.HashMap SubcId (SimpC a) -> IO Qualifier
-synthesizeKvar = _
+synthesizeKvar :: Config -> KVar -> M.HashMap SubcId (SimpC a) -> IO [Qualifier]
+synthesizeKvar cfg k0 cs = sequence
+    $ (\c -> let γ = makeCtx cfg undefined in undefined)
+    . snd
+    <$> M.toList cs
+  where clear :: Vis.Visitable a => a -> a
+        clear = Vis.mapKVars (\k -> if k == k0 then Nothing else Just PTrue)
 
 hasKvar k a = elem k (Vis.kvars a)
 
