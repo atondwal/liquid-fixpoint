@@ -1,0 +1,128 @@
+# Overview
+
+Given a graph of cut kvars, we want to perform synthesis on them.
+
+    /> κ₁\
+   /      \
+κ₀/ -> κ₂->> κ₃ -> .
+
+Now, we start with some computed solution (at the end of `solve_`), and then we take the "query clauses". The ones we care about will always be failing constraints! So just sweep over those and grab the ones that don't have any kvars on the rhs (later: just grab all of them, not just the ones with kvarless rhs).
+
+We recurse back to the previous kvar where we strengthen with crap[0] until it satisfies the subsequent fellas.
+
+If it doesn't satisfy the subsequent fellas, we backtrack (in actuality we just have all the paths in a list maybe?; grab the first working solution)
+
+If we've backtracked all the way to the query node, then we fail? or just get more counterexamples to run it with
+
+# Stengthening
+
+Okay what's this crap that we're strengthening with?
+
+Well, we take everything directly succ of the kvar in the graph and ask if the kvar implies it. If it does, we're done. If it doesn't we get a counter-example (TODO: get more than one), try some synthesis with our duderinos, and try again.
+
+# Instrumenting
+
+Inside of `Sol.solve`, where we call `solve_` is actually a pretty good place to do our business; we have both a `SolverInfo` and a `Result`, so we know what kvars to solve for, how to get `cSucc` boiz, and where we're starting from. It's even in the IO monad directly already, so we won't have to do too much fucking with shit.
+
+# Writing some code
+
+Let's start with the damn simple `bool00.fq` and see if we can ``synthesize'' the simple *conjuntive* invariant before we get all fancy with condition abduction 'n' shiz.
+
+> Wait, that's sort of dumb... we're already going to have a conjuctive solution coming in. Throw it away? Let's throw it away.
+
+No, that still doesn't work. Let's pretend that constraint `[3]` is the failing one for now. We can actually force it to do that by *actually* failing (by commenting out the quals), and thereby test all the code leading up to the actual synthesis before that. Then, when we have that working, we can comment out the code that figures out what cons to start on and the old sol, hardcode it, and write synthesis on the conjuctive boi.
+
+TODO: this won't (at all) test the path where the code extracts solutions.
+
+## Getting the fools from the data structure
+
+        sucs = cSucc (siDeps sI)
+        kprevs = cPrev (siDeps sI)
+
+the `sucs` are straightforward, but they're actually the opposite of what we need. The prevs, unlike the sucs are actually read-from kvars, not cids. (WHY?) This is going to be work :(
+
+        cons = case F.resStatus res of
+          F.Crash{} -> error "CRASH"
+          F.Safe -> error "ALREADY SAFE"
+          F.Unsafe xs -> fst <$> xs
+
+On the other hand, extracting the failing constraints is straightforward.
+
+    prevs = mfromJust (error "NO CONSID") <$>
+     (map (F.sid . snd) . M.toList . flip M.filter (F.cm fi) . writes
+      =<< mfromJust stupidError . flip M.lookup kprevs
+      =<< cons)
+    writes x c = x `elem` V.kvars (F.crhs c)
+
+So we extract the predecessor information we need from taking the kvars read from in the constraint. we're going to need this again SOON, so I'll generalize it over cons in just a sec.
+
+## Getting the counterexamples from z3
+
+Well, there are three bits here: making the query, actually passing it off to z3, and then reading it in. We should be able to build the query by applying the solution to the `sucs`s and then compiling the constraint. Passing off to z3... well, let's hope those hacks that we spent all of October fighting z3 for work now. At least for reading it in we can reuse some of the code from my Masters' thesis.
+
+### Building the query
+
+How do we apply a FixSolution? Something like `mapKvars (flip M.lookup sol)`
+
+Oh, but we don't just need *a* constraint; we need all of the constraints that this one writes to! So instead of prev constraints I should've built up a bunch of failing KVars.
+
+        failingKVars = mfromJust stupidError . flip M.lookup kprevs =<< cons
+
+Okay, that wasn't so bad!
+
+    synthesisProject fi sI res = do
+      print cons
+      print kprevs
+      print failingKVars
+      foldrM (synthKVar fi sI) res failingKVars
+      where cons = case F.resStatus res of
+              F.Crash{} -> error "CRASH SYNTH!!"
+              F.Safe -> error "LOL ALRDY SAFE!!!"
+              F.Unsafe xs -> fst <$> xs
+            kprevs = cPrev (siDeps sI)
+            failingKVars = mfromJust stupidError . flip M.lookup kprevs =<< cons
+
+    synthKVar fi _sI k res = do
+      putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k ++ "\x1b[0m"
+      print sol
+      print prevs
+      print k
+      return res
+      where prevs = mfromJust (error "NO CONSID") <$>
+               (map (F.sid . snd) . M.toList .
+               flip M.filter (F.cm fi) $
+               writes k)
+            writes x c = x `elem` V.kvars (F.crhs c)
+            sol = F.resSolution res
+
+Avoid the temptation to use res and rés as variable names.
+
+Oh boy, that stupidError should've been a catMaybes. And while we're at it, we should have previous kvars if we really do want to recurse. And while we're recursing we should not go into an infinite loop, so we need to keep track of visited.
+
+
+```
+synthKVar cfg fi sI k0 res = synthKVar' cfg fi sI (S.singleton k0) k0 res
+
+synthKVar' cfg fi sI ks k0 res = do
+  putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k0 ++ "\x1b[0m"
+  res' <- foldrM (synthKVar' cfg fi sI ks') res reck
+  return res'
+  where prevkvars = join $ catMaybes $ flip M.lookup kprevs <$> prevs
+        sol = F.resSolution res
+        ks' = S.insert k0 ks
+        reck = S.difference (S.fromList prevkvars) ks'
+  
+        kprevs = cPrev (siDeps sI)
+        prevs = mfromJust (error "NO CONSID") <$>
+           (map (F.sid . snd) . M.toList .
+           flip M.filter (F.cm fi) $ -- Should probably cache this
+           writes k0)
+        writes x c = x `elem` Vis.kvars (F.crhs c)
+```
+
+Praise be to the worst implementation of binary search I've ever seen, that took me two days to write!
+
+Now we should test this recursion scheme on some test with more cyclic shit to make sure it's terminating
+
+
+Then we should just have it pop shit in qual to emulate the Rondon et algorithm (easy, right? :P)
