@@ -176,7 +176,7 @@ data Sol b a = Sol
   , gMap  :: !(M.HashMap KVar b)         -- ^ Solution for gradual variables
   , sHyp  :: !(M.HashMap KVar Hyp)       -- ^ Defining cubes  (for non-cut kvar)
   , sScp  :: !(M.HashMap KVar IBindEnv)  -- ^ set of allowed binders for kvar
-  }
+  } deriving Show
 
 updateGMap :: Sol b a -> M.HashMap KVar b -> Sol b a
 updateGMap sol gmap = sol {gMap = gmap}

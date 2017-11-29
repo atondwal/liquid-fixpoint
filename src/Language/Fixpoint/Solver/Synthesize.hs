@@ -1,5 +1,9 @@
 module Language.Fixpoint.Solver.Synthesize (
-    synthesize
+    synthesisProject
+  , synthesize
+  , SynthesisConext (..)
+  , makeCtx
+  , isValid
 ) where
 
 import           Language.Fixpoint.Types
@@ -11,9 +15,40 @@ import qualified Language.Fixpoint.Types.Visitor as Vis
 import           Language.Fixpoint.Types.Config  as FC
 import           Language.Fixpoint.Defunctionalize
 import           Language.Fixpoint.SortCheck
+import qualified Language.Fixpoint.Types           as F
+import           Language.Fixpoint.Misc
+import           Language.Fixpoint.Graph.Types
 
 import qualified Data.HashMap.Strict       as M
 import qualified Data.HashSet              as S
+import           Data.Foldable
+
+synthesisProject fi sI res = do
+  print cons
+  print kprevs
+  print failingKVars
+  foldrM (synthKVar fi sI) res failingKVars
+  where cons = case F.resStatus res of
+          F.Crash{} -> error "CRASH BEFORE SYNTH!!"
+          F.Safe -> error "LOL WHY SO SYNTH? ALRDY SAFE!!!"
+          F.Unsafe xs -> fst <$> xs
+        kprevs = cPrev (siDeps sI)
+        failingKVars = mfromJust stupidError . flip M.lookup kprevs =<< cons
+
+synthKVar fi _sI k res = do
+  putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k ++ "\x1b[0m"
+  print sol
+  print prevs
+  return res
+  where prevs = mfromJust (error "NO CONSID") <$>
+           (map (F.sid . snd) . M.toList .
+           flip M.filter (F.cm fi) $
+           writes k)
+        writes x c = x `elem` Vis.kvars (F.crhs c)
+        sol = F.resSolution res
+
+stupidError = error "LOL FAILED AT NONEXTANT CONS. U DUM, BRO?"
+
 
 synthesize :: SInfo a -> IO (SInfo a)
 synthesize fi = do
@@ -27,7 +62,7 @@ synthesize fi = do
 -- solverInfo, but I really don't understand that solverInfo/Eliminate codebase
 -- that well... maybe then
 synthesizeKvar :: KVar -> M.HashMap SubcId (SimpC a) -> IO Qualifier
-synthesizeKvar = _
+synthesizeKvar = undefined
 
 hasKvar k a = elem k (Vis.kvars a)
 

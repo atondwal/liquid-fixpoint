@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 --------------------------------------------------------------------------------
 -- | Solve a system of horn-clause constraints ---------------------------------
@@ -22,6 +23,7 @@ import qualified Language.Fixpoint.Solver.Solution  as S
 import qualified Language.Fixpoint.Solver.Worklist  as W
 import qualified Language.Fixpoint.Solver.Eliminate as E
 import           Language.Fixpoint.Solver.Monad
+import qualified Language.Fixpoint.Solver.Synthesize as Q
 import           Language.Fixpoint.Utils.Progress
 import           Language.Fixpoint.Graph
 import           Text.PrettyPrint.HughesPJ
@@ -33,7 +35,7 @@ import qualified Data.HashSet        as S
 import qualified Data.List as L
 
 --------------------------------------------------------------------------------
-solve :: (NFData a, F.Fixpoint a, Show a, F.Loc a) => Config -> F.SInfo a -> IO (F.Result (Integer, a))
+solve :: forall a. (NFData a, F.Fixpoint a, Show a, F.Loc a) => Config -> F.SInfo a -> IO (F.Result (Integer, a))
 --------------------------------------------------------------------------------
 
 solve cfg fi = do
@@ -42,7 +44,10 @@ solve cfg fi = do
     (res, stat) <- (if (Quiet == vb || gradual cfg) then id else withProgressFI sI) $ runSolverM cfg sI act
     when (solverStats cfg) $ printStats fi wkl stat
     -- print (numIter stat)
-    return res
+    print (sI :: SolverInfo a (),res)
+    putStrLn $ "\x1b[32m" ++ "LESSA-GO-GO" ++ "\x1b[0m"
+    res' <- Q.synthesisProject fi sI res
+    return res'
   where
     act  = solve_ cfg fi s0 ks  wkl
     sI   = solverInfo cfg fi
@@ -64,7 +69,7 @@ printStats fi w s = putStrLn "\n" >> ppTs [ ptable fi, ptable s, ptable w ]
     ppTs          = putStrLn . showpp . mconcat
 
 --------------------------------------------------------------------------------
-solverInfo :: Config -> F.SInfo a -> SolverInfo a b
+-- solverInfo :: Show b => Config -> F.SInfo a -> SolverInfo a b
 --------------------------------------------------------------------------------
 solverInfo cfg fI
   | useElim cfg = E.solverInfo cfg fI
