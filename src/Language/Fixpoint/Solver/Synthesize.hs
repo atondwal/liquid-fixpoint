@@ -28,33 +28,59 @@ import qualified Data.HashSet              as S
 import           Text.Read (readMaybe)
 import           Data.Text.Read (decimal)
 import           Data.Foldable
+import           Data.Maybe
+import           Control.Monad
 
-synthesisProject fi sI res = do
+synthesisProject cfg fi sI res = do
   print cons
   print kprevs
   print failingKVars
-  foldrM (synthKVar fi sI) res failingKVars
+  foldrM (synthKVar cfg fi sI) res failingKVars
   where cons = case F.resStatus res of
           F.Crash{} -> error "CRASH BEFORE SYNTH!!"
           F.Safe -> error "LOL WHY SO SYNTH? ALRDY SAFE!!!"
           F.Unsafe xs -> fst <$> xs
         kprevs = cPrev (siDeps sI)
-        failingKVars = mfromJust stupidError . flip M.lookup kprevs =<< cons
+        -- we should remove kvars that are redundant or nonkut
+        failingKVars = join $ catMaybes $ flip M.lookup kprevs <$> cons
 
-synthKVar fi _sI k res = do
-  putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k ++ "\x1b[0m"
+synthKVar :: TaggedC c0 a0
+          => Config
+          -> GInfo c0 a0
+          -> SolverInfo a1 b
+          -> KVar
+          -> Result a
+          -> IO (Result a)
+synthKVar cfg fi sI k0 res = synthKVar' cfg fi sI (S.singleton k0) k0 res
+
+synthKVar' :: TaggedC c0 a0
+          => Config
+          -> GInfo c0 a0
+          -> SolverInfo a1 b
+          -> S.HashSet KVar
+          -> KVar
+          -> Result a
+          -> IO (Result a)
+synthKVar' cfg fi sI ks k0 res = do
+  putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k0 ++ "\x1b[0m"
   print sol
   print prevs
-  return res
-  where prevs = mfromJust (error "NO CONSID") <$>
-           (map (F.sid . snd) . M.toList .
-           flip M.filter (F.cm fi) $
-           writes k)
-        writes x c = x `elem` Vis.kvars (F.crhs c)
+  print kprevs
+  print prevkvars
+  print reck
+  res' <- foldrM (synthKVar' cfg fi sI ks') res reck
+  return res'
+  where prevkvars = join $ catMaybes $ flip M.lookup kprevs <$> prevs
         sol = F.resSolution res
+        ks' = S.insert k0 ks
+        reck = S.difference (S.fromList prevkvars) ks'
 
-stupidError = error "LOL FAILED AT NONEXTANT CONS. U DUM, BRO?"
-
+        kprevs = cPrev (siDeps sI)
+        prevs = mfromJust (error "NO CONSID") <$>
+           (map (F.sid . snd) . M.toList .
+           flip M.filter (F.cm fi) $ -- Should probably cache this
+           writes k0)
+        writes x c = x `elem` Vis.kvars (F.crhs c)
 
 synthesize :: Config -> SInfo a -> IO (SInfo a)
 synthesize cfg fi = do

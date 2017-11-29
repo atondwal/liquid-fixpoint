@@ -46,7 +46,7 @@ solve cfg fi = do
     -- print (numIter stat)
     print (sI :: SolverInfo a (),res)
     putStrLn $ "\x1b[32m" ++ "LESSA-GO-GO" ++ "\x1b[0m"
-    res' <- Q.synthesisProject fi sI res
+    res' <- Q.synthesisProject cfg fi sI res
     return res'
   where
     act  = solve_ cfg fi s0 ks  wkl
