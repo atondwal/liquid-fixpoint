@@ -120,9 +120,58 @@ synthKVar' cfg fi sI ks k0 res = do
         writes x c = x `elem` Vis.kvars (F.crhs c)
 ```
 
-Praise be to the worst implementation of binary search I've ever seen, that took me two days to write!
+Praise be to the worst implementation of dfs I've ever seen, that took me two days to write!
 
 Now we should test this recursion scheme on some test with more cyclic shit to make sure it's terminating
 
+```
+bind 0 a  : {v: int  | $k0}
+bind 1 tt : {v: bool | v}
+bind 2 b  : {v: int  | b == 3}
+
+constraint:
+  env [ ]
+  lhs {v : int | v = 10}
+  rhs {v : int | $k0}
+  id 1 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | v = 20}
+  rhs {v : int | $k0}
+  id 2 tag []
+
+constraint:
+  env [ 0 ]
+  lhs {v : int | v = a}
+  rhs {v : int | 10 <= v}
+  id 3 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | $k1}
+  rhs {v : int | $k0}
+  id 4 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | $k0}
+  rhs {v : int | $k1}
+  id 5 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | v<4}
+  rhs {v : int | $k1}
+  id 6 tag []
+
+wf:
+  env [ ]
+  reft {v: int | $k0}
+
+wf:
+  env [ ]
+  reft {v: int | $k1}
+```
 
 Then we should just have it pop shit in qual to emulate the Rondon et algorithm (easy, right? :P)

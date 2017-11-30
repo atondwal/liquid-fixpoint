@@ -1,0 +1,47 @@
+bind 0 a  : {v: int  | $k0}
+bind 1 tt : {v: bool | v}
+bind 2 b  : {v: int  | b == 3}
+
+constraint:
+  env [ ]
+  lhs {v : int | v = 10}
+  rhs {v : int | $k0}
+  id 1 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | v = 20}
+  rhs {v : int | $k0}
+  id 2 tag []
+
+constraint:
+  env [ 0 ]
+  lhs {v : int | v = a}
+  rhs {v : int | 10 <= v}
+  id 3 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | $k1}
+  rhs {v : int | $k0}
+  id 4 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | $k0}
+  rhs {v : int | $k1}
+  id 5 tag []
+
+constraint:
+  env [ ]
+  lhs {v : int | v<4}
+  rhs {v : int | $k1}
+  id 6 tag []
+
+wf:
+  env [ ]
+  reft {v: int | $k0}
+
+wf:
+  env [ ]
+  reft {v: int | $k1}
