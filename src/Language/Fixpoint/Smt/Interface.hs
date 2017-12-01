@@ -328,18 +328,23 @@ maybeList l = foldl extract (Just []) l
 
 data OneOf3 a b c = Left a | Middle b | Right c 
 
+getDouble :: Maybe (OneOf3 Bool Integer Double) -> Maybe Double
+getDouble (Just (Right d)) = Just d
+getDouble (Just (Middle d)) = Just $ fromIntegral d
+getDouble _ = Nothing
+
 eval :: Expr -> Maybe (OneOf3 Bool Integer Double)
 eval (EIte b e1 e2)
   = if b' then eval e1 else eval e2
   where Just (Left b') = eval b
 eval (PAtom r e1 e2)
-  = Just $ Left $ relDenote r a b
-  where Just (Right a) = eval e1
-        Just (Right b) = eval e2
+  = Just $ Left $ relDenote r a b -- @Anish, right now I always upgrade to Double. We'd need to isolate division and make denoteRel more flexible to do otherwise
+  where Just a = getDouble $ eval e1
+        Just b = getDouble $ eval e2
 eval (EBin o e1 e2)
   = Just $ Right $ opDenote o a b
-  where Just (Right a) = eval e1
-        Just (Right b) = eval e2
+  where Just a = getDouble $ eval e1
+        Just b = getDouble $ eval e2
 eval (ENeg e)
   = Just $ Right $ negate a
   where Just (Right a) = eval e
