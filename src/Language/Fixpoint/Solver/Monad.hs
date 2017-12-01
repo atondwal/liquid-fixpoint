@@ -277,9 +277,6 @@ filterStaticCEGIS pts p qs = foldr filterOne qs pts
 ev :: CntrEx -> F.Expr -> F.Expr
 ev pts e = foldr (flip F.subst1) e pts
 
-fromLeft (Left a) = a
-fromLeft (Right _) = error "fromLeft"
-
 filterValidCEGIS_ :: [F.Symbol] -> F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
 filterValidCEGIS_ xs sp p qs me = partitionEithers <$> do
   smtAssert me p

@@ -60,6 +60,7 @@ module Language.Fixpoint.Smt.Interface (
 
     -- * Evaluate SMT2LIB Lisp
     , eval
+    , fromLeft
     ) where
 
 import           Language.Fixpoint.Types.Config ( SMTSolver (..)
@@ -92,6 +93,8 @@ import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
 import           Data.Text.Read              (decimal)
+import           Prelude                  hiding (Left, Right)
+import qualified Prelude as P
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -186,8 +189,8 @@ smtRead me = {-# SCC "smtRead" #-} do
   ln  <- smtReadRaw me
   res <- A.parseWith (smtReadRaw me) responseP ln
   case A.eitherResult res of
-    Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
-    Right r -> do
+    P.Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
+    P.Right r -> do
       maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (ctxLog me)
       when (ctxVerbose me) $ LTIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
       return r
@@ -226,8 +229,8 @@ lispP = parseLisp <$> predP
 symbolP :: SmtParser Symbol
 symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
-fromRight (Right a) = a
-fromRight (Left _) = error "FROMRIGHT LEFT"
+fromRight (P.Right a) = a
+fromRight (P.Left _) = error "FROMRIGHT LEFT"
 
 decode :: T.Text -> T.Text
 decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
@@ -313,44 +316,59 @@ relDenote Ne = (/=)
 relDenote Ueq = (/=)
 relDenote Une = (/=)
 
-fromLeft (Left a) = a
-fromLeft (Right a) = error $ show a
+fromLeft (Just (Left a)) = Just a
+fromLeft _ = Nothing
 
-eval :: Expr -> Either Bool Double
+maybeList :: [Maybe a] -> Maybe [a]
+maybeList l = foldl extract (Just []) l
+              where extract :: Maybe [a] -> Maybe a -> Maybe [a]
+                    extract _ Nothing = Nothing
+                    extract Nothing _ = Nothing
+                    extract (Just xs) (Just r) = Just (r:xs)
+
+data OneOf3 a b c = Left a | Middle b | Right c 
+
+eval :: Expr -> Maybe (OneOf3 Bool Integer Double)
 eval (EIte b e1 e2)
   = if b' then eval e1 else eval e2
-  where Left b' = eval b
+  where Just (Left b') = eval b
 eval (PAtom r e1 e2)
-  = Left $ relDenote r a b
-  where Right a = eval e1
-        Right b = eval e2
+  = Just $ Left $ relDenote r a b
+  where Just (Right a) = eval e1
+        Just (Right b) = eval e2
 eval (EBin o e1 e2)
-  = Right $ opDenote o a b
-  where (Right a) = eval e1
-        (Right b) = eval e2
+  = Just $ Right $ opDenote o a b
+  where Just (Right a) = eval e1
+        Just (Right b) = eval e2
 eval (ENeg e)
-  = Right $ negate a
-  where (Right a) = eval e
+  = Just $ Right $ negate a
+  where Just (Right a) = eval e
 eval (PNot e)
-  = Left $ not b
-  where Left b = eval e
+  = Just $ Left $ not b
+  where Just (Left b) = eval e
 eval (PImp e1 e2)
-  = Left $ b <= a
-  where Left a = eval e1
-        Left b = eval e2
+  = Just $ Left $ b <= a
+  where Just (Left a) = eval e1
+        Just (Left b) = eval e2
 eval (PIff e1 e2)
-  = Left $ b == a
-  where Left a = eval e1
-        Left b = eval e2
+  = Just $ Left $ b == a
+  where Just (Left a) = eval e1
+        Just (Left b) = eval e2
 eval (PAnd es)
-  = Left $ and es'
-  where es' = fromLeft . eval <$> es
+  = case es' of
+      Nothing -> Nothing
+      Just es' -> Just $ Left $ or es'
+  where
+        es' = maybeList ((fromLeft . eval) <$> es)
 eval (POr es)
-  = Left $ or es'
-  where es' = fromLeft . eval <$> es
+  = case es' of
+      Nothing -> Nothing
+      Just es' -> Just $ Left $ or es'
+  where
+        es' = maybeList (fromLeft . eval <$> es)
 eval (ECst e _) = eval e
-eval (ECon (I n)) = Right $ fromIntegral n
-eval (ECon (R n)) = Right n
+eval (ECon (I n)) = Just $ Middle n
+eval (ECon (R n)) = Just $ Right n
 eval (ETApp e _) = eval e
 eval (ETAbs e _) = eval e
 
