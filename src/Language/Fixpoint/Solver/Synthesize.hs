@@ -52,7 +52,7 @@ synthKVar' cfg fi cD rS ks k0 (pts,sol) = do
   lift $ print kprevs
   lift $ print prevkvars
   lift $ print reck
-  lift $ print $ apply sol k0
+  -- lift $ print $ apply sol k0
   (pts',sol') <- foldrM (synthKVar' cfg fi cD rS ks') (pts,sol) reck
   return (pts',sol')
   where prevkvars = join $ catMaybes $ flip M.lookup kprevs <$> prevs
