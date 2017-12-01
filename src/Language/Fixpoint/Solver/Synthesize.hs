@@ -30,6 +30,61 @@ import           Data.Text.Read (decimal)
 import           Data.Foldable
 import           Data.Maybe
 
+
+opDenote Plus  = (+)
+opDenote Minus = (-)
+opDenote Times = (*)
+opDenote Div   = (/)
+opDenote r     = error $ "くそ Op: " ++ show r
+
+relDenote Gt = (>)
+relDenote Ge = (>=)
+relDenote Lt = (<)
+relDenote Le = (<=)
+relDenote r  = error $ "くそ Rel: " ++ show r
+
+boolDenote PTrue  = True
+boolDenote PFalse = False
+boolDenote e      = error $ "くそ Bool: " ++ show e
+
+fromLeft (Left a) = a
+fromLeft (Right a) = error $ show a
+
+eval :: Expr -> Either Bool Double
+eval (EIte b e1 e2)
+  = if b' then eval e1 else eval e2
+  where Left b' = eval b
+eval (PAtom r e1 e2)
+  = Left $ relDenote r a b
+  where Left a = eval e1
+        Left b = eval e2
+eval (EBin o e1 e2)
+  | (Right a) <- eval e1
+  , (Right b) <- eval e2
+  = Right $ opDenote o a b
+eval (ENeg e)
+  | (Right a) <- eval e
+  = Right $ negate a
+eval (PNot e)
+  = Left $ not b
+  where Left b = eval e
+eval (PImp e1 e2)
+  = Left $ b <= a
+  where Left a = eval e1
+        Left b = eval e2
+eval (PIff e1 e2)
+  = Left $ b == a
+  where Left a = eval e1
+        Left b = eval e2
+eval (PAnd es)
+  = Left $ and es'
+  where es' = fromLeft . eval <$> es
+eval (POr es)
+  = Left $ or es'
+  where es' = fromLeft . eval <$> es
+eval e = error $ "くそ " ++ show e
+
+
 synthesisProject cfg fi cD res rondonSol (pts,init) = do
   lift $ print cons
   lift $ print kprevs

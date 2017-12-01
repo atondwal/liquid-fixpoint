@@ -254,18 +254,31 @@ filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual) -> SolveM [(
 filterValidCEGIS sp p qs = do
   ss <- get
   let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
-  (qs',pts) <- withContext $ \me ->
+  let pts = ssPts ss
+  let qs' = filterStaticCEGIS pts p qs
+  (qs'',pts') <- withContext $ \me ->
            smtBracket me "filterValidLHS" $
-             filterValidCEGIS_ xs sp p qs me
+             filterValidCEGIS_ xs sp p qs' me
   -- stats
   incBrkt
   incChck (length qs)
-  incVald (length qs')
-  put (ss { ssPts = pts ++ ssPts ss })
-  return qs'
+  incVald (length qs'')
+  put (ss { ssPts = pts' ++ pts})
+  return qs''
 
 snd3 :: (a,b,c) -> b
 snd3 (_,x,_) = x
+
+-- uncommment const True and everything goes through (obviously)
+filterStaticCEGIS pts p qs = foldr filterOne qs pts
+  where filterOne pt = filter $ {- const True . -} (<= (fromLeft $ eval $ ev pt p)) .
+                                     fromLeft . eval . ev pt . fst
+
+ev :: CntrEx -> F.Expr -> F.Expr
+ev pts e = foldr (flip F.subst1) e pts
+
+fromLeft (Left a) = a
+fromLeft (Right _) = error "fromLeft"
 
 filterValidCEGIS_ :: [F.Symbol] -> F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
 filterValidCEGIS_ xs sp p qs me = partitionEithers <$> do
