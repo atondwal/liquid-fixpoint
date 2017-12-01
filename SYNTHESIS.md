@@ -2,9 +2,11 @@
 
 Given a graph of cut kvars, we want to perform synthesis on them.
 
+```
     /> κ₁\
    /      \
 κ₀/ -> κ₂->> κ₃ -> .
+```
 
 Now, we start with some computed solution (at the end of `solve_`), and then we take the "query clauses". The ones we care about will always be failing constraints! So just sweep over those and grab the ones that don't have any kvars on the rhs (later: just grab all of them, not just the ones with kvarless rhs).
 
@@ -34,7 +36,7 @@ No, that still doesn't work. Let's pretend that constraint `[3]` is the failing 
 
 TODO: this won't (at all) test the path where the code extracts solutions.
 
-## Getting the fools from the data structure
+# Getting the fools from the data structure
 
         sucs = cSucc (siDeps sI)
         kprevs = cPrev (siDeps sI)
@@ -56,7 +58,7 @@ On the other hand, extracting the failing constraints is straightforward.
 
 So we extract the predecessor information we need from taking the kvars read from in the constraint. we're going to need this again SOON, so I'll generalize it over cons in just a sec.
 
-## Getting the counterexamples from z3
+# Getting the counterexamples from z3
 
 Well, there are three bits here: making the query, actually passing it off to z3, and then reading it in. We should be able to build the query by applying the solution to the `sucs`s and then compiling the constraint. Passing off to z3... well, let's hope those hacks that we spent all of October fighting z3 for work now. At least for reading it in we can reuse some of the code from my Masters' thesis.
 
@@ -175,3 +177,50 @@ wf:
 ```
 
 Then we should just have it pop shit in qual to emulate the Rondon et algorithm (easy, right? :P)
+
+### Enumerative Search
+
+Well, we probably want to reuse the worklist from Rondon et al, but we still need to reimplement the whole EUSolver algorithm. Among other things, that means running the fucking semantics, which we can maybe just use instantiate's eval for in a pinch, but that'll be extremely slow, so at some point we're going to have to write an interpreter for smt2lib lisp.
+
+The whole EUSolver algorithm is pretty complex, so let's start by just implementing enumerative search, as show in in algorithm 1 of the paper.
+
+```
+Algorithm 1
+Enumerative Solver
+Require: Grammar G = 〈N ,S, R〉
+Require: Specification Φ
+Ensure: e s.t. e ∈ [[ G ]] ∧ e | = Φ
+1: pts ← emp
+2: while true do
+3:   for e ∈ enumerate ( G, pts) do
+4:   if e |/= Φ|pts then continue
+5:   cexpt ← verify (e,Φ)
+6:   if cexpt = ⊥ then return e
+7:   pts ← pts ∪ cexpt
+```
+
+We should grab the enumerated list from Language.Fixpoint.Solver.Solution.init
+
+We need to change our code to operate on Solutions, not Results!
+
+```
+solve_ cfg fi s0 ks cD wkl = do
+  let s1  = mappend s0 $ {-# SCC "sol-init" #-} S.init cfg fi ks
+  s       <-  refine s1 wkl
+  res     <-  result cfg wkl s
+  lift$putStrLn$"\x1b[32m"++"LESSA-GO-GO"++"\x1b[0m"
+  (_,s')<- Q.synthesisProject cfg fi cD res s ([],s1)
+  st      <- stats
+  res     <-  result cfg wkl s'
+  let res' =  tidyResult res
+  return $!! (res', st)
+```
+
+Now we need to check each conjunct against the points.
+
+
+OH FUCK ME WE'RE TRAVERSING IN THE GFP DIRECTION, NOT THE LFP DIRECTION. FUCK ME FUCK ME FUCK ME.
+
+.... okay starting over.
+
+We need to iterate on constraints, not kvars!!!!

@@ -45,11 +45,9 @@ solve cfg fi = do
     when (solverStats cfg) $ printStats fi wkl stat
     -- print (numIter stat)
     print (sI :: SolverInfo a (),res)
-    putStrLn $ "\x1b[32m" ++ "LESSA-GO-GO" ++ "\x1b[0m"
-    res' <- Q.synthesisProject cfg fi sI res
-    return res'
+    return res
   where
-    act  = solve_ cfg fi s0 ks  wkl
+    act  = solve_ cfg fi s0 ks (siDeps sI) wkl
     sI   = solverInfo cfg fi
     wkl  = W.init sI
     s0   = siSol  sI
@@ -86,14 +84,18 @@ solve_ :: (NFData a, F.Fixpoint a, F.Loc a)
        -> F.SInfo a
        -> Sol.Solution
        -> S.HashSet F.KVar
+       -> CDeps
        -> W.Worklist a
        -> SolveM (F.Result (Integer, a), Stats)
 --------------------------------------------------------------------------------
-solve_ cfg fi s0 ks wkl = do
+solve_ cfg fi s0 ks cD wkl = do
   let s1  = mappend s0 $ {-# SCC "sol-init" #-} S.init cfg fi ks
   s       <- {-# SCC "sol-refine" #-} refine s1 wkl
   res     <- {-# SCC "sol-result" #-} result cfg wkl s
+  lift $ putStrLn $ "\x1b[32m" ++ "LESSA-GO-GO" ++ "\x1b[0m"
+  (_,s') <- Q.synthesisProject cfg fi cD res s ([],s1)
   st      <- stats
+  res     <- {-# SCC "sol-result" #-} result cfg wkl s'
   let res' = {-# SCC "sol-tidy"   #-} tidyResult res
   return $!! (res', st)
 
@@ -132,6 +134,7 @@ refine s w
 refineC :: (F.Loc a) => Int -> Sol.Solution -> F.SimpC a
         -> SolveM (Bool, Sol.Solution)
 ---------------------------------------------------------------------------
+-- | Bool : constraint is to be revisited
 refineC _i s c
   | null rhs  = return (False, s)
   | otherwise = do be     <- getBinds

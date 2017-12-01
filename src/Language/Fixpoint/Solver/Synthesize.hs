@@ -18,6 +18,7 @@ import           Language.Fixpoint.Misc
 import           Language.Fixpoint.Graph.Types
 
 
+import Control.Monad.State.Strict
 import Control.Applicative ((<|>))
 import Data.Char
 import Data.Attoparsec.Internal.Types (Parser)
@@ -29,53 +30,36 @@ import           Text.Read (readMaybe)
 import           Data.Text.Read (decimal)
 import           Data.Foldable
 import           Data.Maybe
-import           Control.Monad
 
-synthesisProject cfg fi sI res = do
-  print cons
-  print kprevs
-  print failingKVars
-  foldrM (synthKVar cfg fi sI) res failingKVars
+synthesisProject cfg fi cD res rondonSol (pts,init) = do
+  lift $ print cons
+  lift $ print kprevs
+  lift $ print failingKVars
+  foldrM (synthKVar cfg fi cD rondonSol) (pts,init) failingKVars
   where cons = case F.resStatus res of
           F.Crash{} -> error "CRASH BEFORE SYNTH!!"
           F.Safe -> error "LOL WHY SO SYNTH? ALRDY SAFE!!!"
           F.Unsafe xs -> fst <$> xs
-        kprevs = cPrev (siDeps sI)
+        kprevs = cPrev cD
         -- we should remove kvars that are redundant or nonkut
         failingKVars = join $ catMaybes $ flip M.lookup kprevs <$> cons
 
-synthKVar :: TaggedC c0 a0
-          => Config
-          -> GInfo c0 a0
-          -> SolverInfo a1 b
-          -> KVar
-          -> Result a
-          -> IO (Result a)
-synthKVar cfg fi sI k0 res = synthKVar' cfg fi sI (S.singleton k0) k0 res
+synthKVar cfg fi cD rS k0 = synthKVar' cfg fi cD rS (S.singleton k0) k0
 
-synthKVar' :: TaggedC c0 a0
-          => Config
-          -> GInfo c0 a0
-          -> SolverInfo a1 b
-          -> S.HashSet KVar
-          -> KVar
-          -> Result a
-          -> IO (Result a)
-synthKVar' cfg fi sI ks k0 res = do
-  putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k0 ++ "\x1b[0m"
-  print sol
-  print prevs
-  print kprevs
-  print prevkvars
-  print reck
-  res' <- foldrM (synthKVar' cfg fi sI ks') res reck
-  return res'
+synthKVar' cfg fi cD rS ks k0 (pts,sol) = do
+  lift $ putStrLn $ "\x1b[32m" ++ "SYNTH BABY SYNTH " ++ show k0 ++ "\x1b[0m"
+  lift $ print prevs
+  lift $ print kprevs
+  lift $ print prevkvars
+  lift $ print reck
+  lift $ print $ apply sol k0
+  (pts',sol') <- foldrM (synthKVar' cfg fi cD rS ks') (pts,sol) reck
+  return (pts',sol')
   where prevkvars = join $ catMaybes $ flip M.lookup kprevs <$> prevs
-        sol = F.resSolution res
         ks' = S.insert k0 ks
         reck = S.difference (S.fromList prevkvars) ks'
 
-        kprevs = cPrev (siDeps sI)
+        kprevs = cPrev cD
         prevs = mfromJust (error "NO CONSID") <$>
            (map (F.sid . snd) . M.toList .
            flip M.filter (F.cm fi) $ -- Should probably cache this
