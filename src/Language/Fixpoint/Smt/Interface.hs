@@ -354,17 +354,27 @@ eval (ECon (R n)) = Right n
 eval (ETApp e _) = eval e
 eval (ETAbs e _) = eval e
 
-eval PAll{}   = error "Yeah, sorry, idk how to run a quantifier"
-eval PExist{} = error "Yeah, sorry, idk how to run a quantifier"
+eval PKVar{}  = error "Someone forgot to subst a KVar.\n\
+                     \ Please file a bug!               \
+                     \ http://github.com/ucsd-progsys/liquid-fixpoint"
+eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s ++
+                     " Please file a bug!               \
+                     \ http://github.com/ucsd-progsys/liquid-fixpoint"
+
+eval ELam{}   = error "--cegis doesn't support top-level lambdas\
+                      \ and uninterpreted measures.\n\
+                      \ If you want to use a λ or a measure, please\
+                      \ make sure to apply it to a concrete term in\
+                      \ the domain of that λ/measure"
+
+eval PAll{}   = error "quantifiers are incompatible with --cegis"
+eval PExist{} = error "quantifiers are incompatible with --cegis"
 eval PGrad{}  = error "--cegis is incompatible with --gradual"
-eval PKVar{}  = error "Someone forgot to subst a KVar"
-eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s
 
-eval ELam{}   = error "ELam not implemented in CEGIS"
 eval EApp{}   = error "EApp not implemented in CEGIS"
-eval (ESym _) = error "what the fuck is even an ESym"
-eval (ECon (L _ _)) = error $ "lmao string literals"
 
+eval (ESym _) = error "--cegis doesn't yet support string lits"
+eval (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
 
 
 smtWriteRaw      :: Context -> Raw -> IO ()
