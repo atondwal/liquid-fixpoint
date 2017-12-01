@@ -5,6 +5,7 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE PatternGuards             #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -56,7 +57,6 @@ module Language.Fixpoint.Smt.Interface (
     , checkValidWithContext
     , checkValids
     , getValues
-
     ) where
 
 import           Language.Fixpoint.Types.Config ( SMTSolver (..)
@@ -81,7 +81,6 @@ import           Control.Monad
 import           Control.Exception
 import           Data.Char
 import qualified Data.HashMap.Strict      as M
-import           Data.Monoid
 import           Data.Maybe                  (fromMaybe)
 import qualified Data.Text                as T
 import           Data.Text.Format
@@ -89,6 +88,7 @@ import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
+import           Data.Text.Read              (decimal)
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -99,6 +99,7 @@ import qualified Data.Attoparsec.Text     as A
 -- import qualified Data.HashMap.Strict      as M
 import           Data.Attoparsec.Internal.Types (Parser)
 import           Text.PrettyPrint.HughesPJ (text)
+import           Text.Read (readMaybe)
 import           Language.Fixpoint.SortCheck
 -- import qualified Language.Fixpoint.Types as F
 -- import           Language.Fixpoint.Types.PrettyPrint (tracepp)
@@ -147,7 +148,7 @@ checkValids cfg f xts ps
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
 
-getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
+getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol,Expr)]
 getValues me xts p xs = do
   smtDecls me xts
   smtAssert me p
@@ -203,30 +204,92 @@ sexpP = {-# SCC "sexpP" #-} A.string "error" *> (Error <$> errorP)
 errorP :: SmtParser T.Text
 errorP = A.skipSpace *> A.char '"' *> A.takeWhile1 (/='"') <* A.string "\")"
 
-valuesP :: SmtParser [(Symbol, T.Text)]
+valuesP :: SmtParser [(Symbol, Expr)]
 valuesP = A.many1' pairP <* A.char ')'
 
-pairP :: SmtParser (Symbol, T.Text)
+pairP :: SmtParser (Symbol, Expr)
 pairP = {-# SCC "pairP" #-}
   do A.skipSpace
      A.char '('
      !x <- symbolP
      A.skipSpace
-     !v <- valueP
+     !v <- lispP
      A.char ')'
      return (x,v)
 
+lispP :: SmtParser Expr
+lispP = parseLisp <$> predP
+
 symbolP :: SmtParser Symbol
-symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (not . isSpace)
+symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
-valueP :: SmtParser T.Text
-valueP = {-# SCC "valueP" #-} negativeP
-      <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
+fromRight (Right a) = a
+fromRight (Left _) = error "FROMRIGHT LEFT"
 
-negativeP :: SmtParser T.Text
-negativeP
-  = do v <- A.char '(' *> A.takeWhile1 (/=')') <* A.char ')'
-       return $ "(" <> v <> ")"
+decode :: T.Text -> T.Text
+decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
+
+predP = {-# SCC "predP" #-}
+      (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipWhile space2) <* A.char ')'))
+  <|> (Sym <$> symbolP)
+
+space2 c = isSpace c && not (A.isEndOfLine c)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+strToOp _ = error "Op not found"
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+strToRel _ = error "Rel not found"
+
+parseLisp :: Lisp -> Expr
+parseLisp (Sym s)
+  | symbolText s == "true"  = PTrue
+  | symbolText s == "false" = PFalse
+  | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
+  | otherwise               = EVar s
+parseLisp l@(Lisp xs)
+  | [Sym s, x] <- xs, symbolText s == "not"     =
+    PNot (parseLisp x)
+  | [Sym s, x] <- xs, symbolText s == "-"       =
+    ENeg (parseLisp x)
+  | [Sym s, x, y] <- xs, symbolText s == "=>"   =
+    PImp (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s == "="    =
+    PAtom Eq (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
+    EBin (strToOp $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
+    PAtom (strToRel $ symbolText s) (parseLisp x) (parseLisp y)
+  | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
+    EIte (parseLisp x) (parseLisp y) (parseLisp z)
+  | (Sym s:xs) <- xs, symbolText s == "and"     =
+    PAnd $ parseLisp <$> xs
+  | (Sym s:xs) <- xs, symbolText s == "or"      =
+    POr $ parseLisp <$> xs
+  | otherwise                                   =
+    lispToFunc l
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
+        -- this should not be called
+        lispToFunc (Sym s)   = EVar s
 
 smtWriteRaw      :: Context -> Raw -> IO ()
 smtWriteRaw me !s = {-# SCC "smtWriteRaw" #-} do
@@ -393,8 +456,7 @@ smtDistinct me az = interact' me (Distinct az)
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
 
--- TODO: JR plz parse this into an Expr
-smtGetValues :: Context -> [Symbol] -> IO [(Symbol, T.Text)]
+smtGetValues :: Context -> [Symbol] -> IO [(Symbol, Expr)]
 smtGetValues me vs = (\(Values x) -> x) <$> command me (GetValue vs)
 
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a

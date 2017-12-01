@@ -23,7 +23,6 @@ import qualified Language.Fixpoint.Solver.Solution  as S
 import qualified Language.Fixpoint.Solver.Worklist  as W
 import qualified Language.Fixpoint.Solver.Eliminate as E
 import           Language.Fixpoint.Solver.Monad
-import qualified Language.Fixpoint.Solver.Synthesize as Q
 import           Language.Fixpoint.Utils.Progress
 import           Language.Fixpoint.Graph
 import           Text.PrettyPrint.HughesPJ
@@ -88,14 +87,13 @@ solve_ :: (NFData a, F.Fixpoint a, F.Loc a)
        -> W.Worklist a
        -> SolveM (F.Result (Integer, a), Stats)
 --------------------------------------------------------------------------------
-solve_ cfg fi s0 ks cD wkl = do
+solve_ cfg fi s0 ks _cD wkl = do
   let s1  = mappend s0 $ {-# SCC "sol-init" #-} S.init cfg fi ks
   s       <- {-# SCC "sol-refine" #-} refine s1 wkl
   res     <- {-# SCC "sol-result" #-} result cfg wkl s
   lift $ putStrLn $ "\x1b[32m" ++ "LESSA-GO-GO" ++ "\x1b[0m"
-  (_,s') <- Q.synthesisProject cfg fi cD res s ([],s1)
+  -- (_,s') <- Q.synthesisProject cfg fi cD res s ([],s1)
   st      <- stats
-  res     <- {-# SCC "sol-result" #-} result cfg wkl s'
   let res' = {-# SCC "sol-tidy"   #-} tidyResult res
   return $!! (res', st)
 
@@ -139,7 +137,7 @@ refineC _i s c
   | null rhs  = return (False, s)
   | otherwise = do be     <- getBinds
                    let lhs = S.lhsPred be s c
-                   kqs    <- filterValid (cstrSpan c) lhs rhs
+                   kqs    <- filterValidCEGIS (cstrSpan c) lhs rhs
                    return  $ S.update s ks kqs
   where
     _ci       = F.subcId c

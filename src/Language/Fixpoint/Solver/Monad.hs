@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExplicitForAll    #-}
+{-# LANGUAGE RankNTypes        #-}
 
 -- | This is a wrapper around IO that permits SMT queries
 
@@ -16,6 +18,7 @@ module Language.Fixpoint.Solver.Monad
          -- * SMT Query
        , filterRequired
        , filterValid
+       , filterValidCEGIS
        , filterValidGradual
        , checkSat
        , smtEnablembqi
@@ -48,6 +51,7 @@ import           Language.Fixpoint.Graph.Types (SolverInfo (..))
 -- import           Language.Fixpoint.Solver.Solution
 -- import           Data.Maybe           (catMaybes)
 import           Data.List            (partition)
+import           Data.Either
 -- import           Data.Char            (isUpper)
 import           Text.PrettyPrint.HughesPJ (text)
 import           Control.Monad.State.Strict
@@ -55,15 +59,20 @@ import qualified Data.HashMap.Strict as M
 import           Data.Maybe (catMaybes)
 import           Control.Exception.Base (bracket)
 
+import Debug.Trace
+
 --------------------------------------------------------------------------------
 -- | Solver Monadic API --------------------------------------------------------
 --------------------------------------------------------------------------------
 
 type SolveM = StateT SolverState IO
 
-data SolverState = SS { ssCtx     :: !Context          -- ^ SMT Solver Context
-                      , ssBinds   :: !F.SolEnv         -- ^ All variables and types
-                      , ssStats   :: !Stats            -- ^ Solver Statistics
+type CntrEx = [(F.Symbol,F.Expr)]
+
+data SolverState = SS { ssCtx     :: !Context      -- ^ SMT Solver Context
+                      , ssBinds   :: !F.SolEnv     -- ^ All variables and types
+                      , ssStats   :: !Stats        -- ^ Solver Statistics
+                      , ssPts     :: ![CntrEx]      -- ^ CEs for synthesis
                       }
 
 data Stats = Stats { numCstr :: !Int -- ^ # Horn Constraints
@@ -98,7 +107,7 @@ runSolverM cfg sI act =
     smtWrite ctx "(exit)"
     return (fst res)
   where
-    s0 ctx   = SS ctx be (stats0 fi)
+    s0 ctx   = SS ctx be (stats0 fi) []
     act'     = {- declare initEnv >> -} assumesAxioms (F.asserts fi) >> act
     release  = cleanupContext
     acquire  = makeContextWithSEnv cfg file initEnv
@@ -171,6 +180,7 @@ filterRequired = error "TBD:filterRequired"
 
 > unsat (b2 bR)
 -}
+--
 
 --------------------------------------------------------------------------------
 -- | `filterValid p [(x1, q1),...,(xn, qn)]` returns the list `[ xi | p => qi]`
@@ -237,6 +247,37 @@ smtEnablembqi :: SolveM ()
 smtEnablembqi
   = withContext $ \me ->
       smtWrite me "(set-option :smt.mbqi true)"
+
+--------------------------------------------------------------------------------
+filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual) -> SolveM [(F.KVar, F.EQual)]
+--------------------------------------------------------------------------------
+filterValidCEGIS sp p qs = do
+  ss <- get
+  let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
+  (qs',pts) <- withContext $ \me ->
+           smtBracket me "filterValidLHS" $
+             filterValidCEGIS_ xs sp p qs me
+  -- stats
+  incBrkt
+  incChck (length qs)
+  incVald (length qs')
+  put (ss { ssPts = pts ++ ssPts ss })
+  return qs'
+
+snd3 :: (a,b,c) -> b
+snd3 (_,x,_) = x
+
+filterValidCEGIS_ :: [F.Symbol] -> F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
+filterValidCEGIS_ xs sp p qs me = partitionEithers <$> do
+  smtAssert me p
+  forM qs $ \(q, x) ->
+    smtBracketAt sp me "filterValidRHS" $ do
+      smtAssert me (F.PNot q)
+      valid <- smtCheckUnsat me
+      if valid
+        then return $ Left x
+        else Right . traceShowId <$> smtGetValues me xs
+
 
 --------------------------------------------------------------------------------
 checkSat :: F.Expr -> SolveM  Bool

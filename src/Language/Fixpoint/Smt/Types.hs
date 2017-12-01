@@ -78,7 +78,7 @@ data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, T.Text)]
+                  | Values [(Symbol, Expr)]
                   | Error !T.Text
                   deriving (Eq, Show)
 

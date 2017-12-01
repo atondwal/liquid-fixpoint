@@ -224,3 +224,180 @@ OH FUCK ME WE'RE TRAVERSING IN THE GFP DIRECTION, NOT THE LFP DIRECTION. FUCK ME
 .... okay starting over.
 
 We need to iterate on constraints, not kvars!!!!
+
+# A Fresh Start
+
+Okay, so we fucked up. Not bad, we can start over. That's what grad school is for, right? Eternally writing and rewriting code? Well, I'm actually sort of starting to enjoy this now, so it's not so bad, but I wish I didn't make so many mistakes.
+
+Alright so our problem was that we didn't consider the possibility that each SimpC could have multiple KVars on the lhs.So our "build a graph of KVars and bfs it" strategy isn't going to work. Instead we have to traverse the constraint graph constraint-by-constraint, in lfp order, just like the algorithm of Rondon et al does.
+
+> So we could start by CEGIS-ifying their search?
+
+Maybe. Ultimately we're going to have to add
+
+1. Condition Adbuction
+2. Backtracking
+
+So when we exhaustively search conditionals for a solution, and still don't find one, that just means we have to give ourselves a bigger support (ie, strengthen the solution to the last fella), right?
+
+> Wait, can that ever even help?
+
+Hmm, perhaps not... Well, the idea is that we eventually hit a ConcC, and at that point, we can CA the kvars leading into it until we find something, and we backtrack and CA the ones before it.
+
+> That seems reasonable, but I'm not sure there's an upgrade path from Rondon et al's recursion scheme to one that backtracks.
+
+I wouldn't be so hasty! Since in haskell pretty much all iteration happen by recursion, we just add stuff to after the recursive call. This will be a problem when they have things like folds and filters, but we can unwrap them, and do our thing inside them.
+
+So let's GOGOGO
+
+# Adding CEGIS to Rondon et al
+
+Okay so the solving code here is actually pretty (unnecessarily) complex. So let's start by just inserting print statements. The basic idea is that they generate an initial solution that's the bottom of the lattice, and then they work upwards to get to a fixpoint solution. In code, they start with a `Solution`, and then `refine` it by going through the `wkl` worklist.
+
+So what we should do is hang out inside this `refine` fella, and maybe add a monad (or a record in some monad) to keep track of the counterexamples (call 'em `pts`) thus far. Then we check that the constraint is satisfied for each counter example before asking the SMT solver to do their biz.
+
+> Alright you've made it pretty far into this bullshit stream of conciousness text file. I hope Future Anish isn't going to try to pass this off as documentation. Fuck that guy. Anyhow, here's a [politically charged meme](https://www.facebook.com/ShitBootlickersSay/photos/a.816217618461246.1073741828.816213195128355/1594993447250322/?type=3) for your efforts.
+
+Alright that was mildly inappropriate for this sort of document, but I'll go with it.
+
+Anyhow the `refine` function is a bitchass motherfucker.
+To be clear, I mean the one in Solve.hs. Call us `refine` for we are many.
+
+The actual refining happens in a function called `refineC`, which returns a bool that tell us if we should add this constraint back to the worklist, and a new Solution (all wrapped inside the `SolveM` monad). It does its business by calling this `filterValid` fellow, which just does the deed and also inside the SolveM Monad.
+
+This seems to make a good case for adding the list of counterexamples as a bit of SolverState. I still want a way to keep track of the inital solution (and the hittīng-sets sort of deal with each of the EQuals), but we can add that after we CEGIS-ify.
+
+## The new SolverState
+
+```
+{-# LANGUAGE ExplicitForAll    #-}
+{-# LANGUAGE RankNTypes        #-}
+type CntrExs = forall a. [a]
+
+data SolverState = SS { ssCtx     :: !Context      
+                      , ssBinds   :: !F.SolEnv     
+                      , ssStats   :: !Stats        
+                      , ssPts     :: !CntrExs      
+                      }
+```
+
+> Woah, it turns out there's acutally a better way to do this
+>
+> ```
+> type CntrEx = GHC.Prim.Anu
+> ```
+
+Uhhh, fix this later, I have no idea what type the counterexamples are going to be. We'll figure it out after we read them in from Z3, I guess. Def fix this before actually committing anything.
+
+Okay let's read those motherfuckers in!
+
+## Reading in counterexamples
+
+```
+filterValid :: F.SrcSpan -> F.Expr -> F.Cand a -> SolveM [a]
+filterValid sp p qs = do
+  qs' <- withContext $ \me ->
+           smtBracket me "filterValidLHS" $
+             filterValid_ sp p qs me
+  -- stats
+  incBrkt
+  incChck (length qs)
+  incVald (length qs')
+  return qs'
+
+filterValid_ :: F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO [a]
+filterValid_ sp p qs me = catMaybes <$> do
+  smtAssert me p
+  forM qs $ \(q, x) ->
+    smtBracketAt sp me "filterValidRHS" $ do
+      smtAssert me (F.PNot q)
+      valid <- smtCheckUnsat me
+      return $ if valid then Just x else Nothing
+
+```
+
+This boi seems ready for some CEGIS action! We should replace the `Maybe a` with `Either a CounterExample`... after we figure out what the fuck the counterexample type is.
+
+Until then, we should just see if we can add onto smtCheckUnsat to grab the model while we're at it!
+
+Okay, I think I got all the parse stuff right, (good thing I still had it laying around from my Master's Thesis hahahhaha...). But I want to compose parsers in a way that I'm unsure about.
+
+```
+pairP :: SmtParser (Symbol, Expr)
+pairP = {-# SCC "pairP" #-}
+  do A.skipSpace
+     A.char '('
+     !x <- symbolP
+     A.skipSpace
+     !v <- (valueP >>= lispP)
+     A.char ')'
+     return (x,v)
+```
+
+Parser is a monad, so there should be a way to do this thing, right? I'm just going to say fuck it and git rid of the ValuesP. We can rewrite Target to take real Exprs when the time comes, if need be.
+
+Alright now for filterValid. I don't need it to actually return the counterexamples, just add them to the SolveM Monad. (under a flag, I guess)
+
+```
+filterValid :: F.SrcSpan -> F.Expr -> F.Cand a -> SolveM [a]
+filterValid sp p qs = do
+  qs' <- withContext $ \me ->
+           smtBracket me "filterValidLHS" $
+             filterValid_ sp p qs me
+  -- stats
+  incBrkt
+  incChck (length qs)
+  incVald (length qs')
+  ss <- get
+  put (ss { ssPts = (snd <$> qs') ++ ssPts ss })
+  return (fst <$> qs')
+
+filterValid_ :: F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO [(a, CntrEx)]
+filterValid_ sp p qs me = catMaybes <$> do
+  smtAssert me p
+  forM qs $ \(q, x) ->
+    smtBracketAt sp me "filterValidRHS" $ do
+      smtAssert me (F.PNot q)
+      valid <- smtCheckUnsat me
+      return $ if valid then Just (x,undefined) else Nothing
+```
+
+
+BAH. If I want to getValues, I have to pass around the values that I need and think ahead. I could go and change the whole thing now to just use getModel, but that would mean a performance hit, and I'd have to write a whole bunch of code єither way. It *is* more complex to write the code to figure out and keep what xs I need AND it means that I need a new filterValid specifically for synthesis, but I'm afraid of spending all <s>day</s> night rewriting the SMT interface.
+
+So here goes.
+
+Split into a new codepath called filterValidCEGIS, and all tests passing! so that's a good sign.
+
+Now let's actually start reading in these motherfucking counterexamples from Z3.
+
+```
+filterValidCEGIS_ :: F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
+filterValidCEGIS_ sp p qs me = partitionEithers <$> do
+  smtAssert me p
+  forM qs $ \(q, x) ->
+    smtBracketAt sp me "filterValidRHS" $ do
+      smtAssert me (F.PNot q)
+      valid <- smtCheckUnsat me
+      if valid
+        then return $ Left x
+        else Right <$> smtGetValues me undefined
+```
+
+Alright we resolved `CtnrEx = [(Symbol,Expr)]`!! But this still  means that we have to pass around the symbols that we want to get the values for in the counterexample.
+
+Uhm, we actually need all the vålues in the environment if we're going to evaluate the expression ANYWAYS. So we could've totally done getModel instead of getValues. But I just remembered that the soverstate keeps track of the bindenv, so maybe we can just use those? They probably have things that aren't in Z3's model so it'll throw an error. We can ask rise4fun if that's kosh.
+
+Okay, after playing around with the Z3 webapp it looks like we're fine as long as it's declared
+
+Oh boy we're having some parser trouble. Let's hope we don't have to revisit that stuff where ## was getting read in as some encoding into acsii
+
+Okay we had it do it, but it wasn't so bad
+
+```
+decode :: T.Text -> T.Text
+decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
+```
+
+
+
