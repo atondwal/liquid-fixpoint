@@ -449,3 +449,15 @@ ooh, pretty! Here ev does evaluation at a point.
 So it runs, and doesn't crash.... but still somehow causes some tests to fail. Need to debug it...
 
 # Debugging CEGIS
+
+Okay I fixed a few cases, include that Op takes Nums as args, but I was right to worry about uninterpreted functions --- they do appear everywhere! I'm just surprised I didn't already crash on them, but I guess the deal іs that we don't ever read in an uninterpreted function, so that was fine, but now that we're evaluating everything, I don't know what to do.
+
+This is the reason that the following regression tests are crashing:
+- MergeSort.fq
+- test00.hs.fq
+- listqual.hs.fq
+- elim00.hs.fq
+
+wl00.fq & test2.fq are failing with Unsafe! We did something unsound, oops!
+
+Looks like we'll have to borrow reflection code from Instantiate to figure out how to run those functions?

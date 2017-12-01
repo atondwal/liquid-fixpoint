@@ -304,6 +304,8 @@ relDenote Gt = (>)
 relDenote Ge = (>=)
 relDenote Lt = (<)
 relDenote Le = (<=)
+relDenote Eq = (==)
+relDenote Ne = (/=)
 relDenote r  = error $ "くそ Rel: " ++ show r
 
 fromLeft (Left a) = a
@@ -315,8 +317,8 @@ eval (EIte b e1 e2)
   where Left b' = eval b
 eval (PAtom r e1 e2)
   = Left $ relDenote r a b
-  where Left a = eval e1
-        Left b = eval e2
+  where Right a = eval e1
+        Right b = eval e2
 eval (EBin o e1 e2)
   | (Right a) <- eval e1
   , (Right b) <- eval e2
@@ -341,6 +343,9 @@ eval (PAnd es)
 eval (POr es)
   = Left $ or es'
   where es' = fromLeft . eval <$> es
+eval (ECst e _) = eval e
+eval (ECon (I n)) = Right $ fromIntegral n
+eval (ECon (R n)) = Right n
 eval e = error $ "くそ " ++ show e
 
 
