@@ -294,11 +294,15 @@ parseLisp l@(Lisp xs)
         -- this should not be called
         lispToFunc (Sym s)   = EVar s
 
+opDenote :: Bop -> Double -> Double -> Double
 opDenote Plus  = (+)
 opDenote Minus = (-)
 opDenote Times = (*)
 opDenote Div   = (/)
-opDenote r     = error $ "くそ Op: " ++ show r
+-- Below here, untested
+opDenote Mod   = \a b -> fromIntegral $ mod (floor a) (floor b)
+opDenote RTimes = (*)
+opDenote RDiv  = (/)
 
 relDenote Gt = (>)
 relDenote Ge = (>=)
@@ -306,7 +310,8 @@ relDenote Lt = (<)
 relDenote Le = (<=)
 relDenote Eq = (==)
 relDenote Ne = (/=)
-relDenote r  = error $ "くそ Rel: " ++ show r
+relDenote Ueq = (/=)
+relDenote Une = (/=)
 
 fromLeft (Left a) = a
 fromLeft (Right a) = error $ show a
@@ -320,12 +325,12 @@ eval (PAtom r e1 e2)
   where Right a = eval e1
         Right b = eval e2
 eval (EBin o e1 e2)
-  | (Right a) <- eval e1
-  , (Right b) <- eval e2
   = Right $ opDenote o a b
+  where (Right a) = eval e1
+        (Right b) = eval e2
 eval (ENeg e)
-  | (Right a) <- eval e
   = Right $ negate a
+  where (Right a) = eval e
 eval (PNot e)
   = Left $ not b
   where Left b = eval e
@@ -346,7 +351,19 @@ eval (POr es)
 eval (ECst e _) = eval e
 eval (ECon (I n)) = Right $ fromIntegral n
 eval (ECon (R n)) = Right n
-eval e = error $ "くそ " ++ show e
+eval (ETApp e _) = eval e
+eval (ETAbs e _) = eval e
+
+eval PAll{}   = error "Yeah, sorry, idk how to run a quantifier"
+eval PExist{} = error "Yeah, sorry, idk how to run a quantifier"
+eval PGrad{}  = error "--cegis is incompatible with --gradual"
+eval PKVar{}  = error "Someone forgot to subst a KVar"
+eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s
+
+eval ELam{}   = error "ELam not implemented in CEGIS"
+eval EApp{}   = error "EApp not implemented in CEGIS"
+eval (ESym _) = error "what the fuck is even an ESym"
+eval (ECon (L _ _)) = error $ "lmao string literals"
 
 
 
