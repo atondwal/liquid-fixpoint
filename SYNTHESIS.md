@@ -461,3 +461,5 @@ This is the reason that the following regression tests are crashing:
 wl00.fq & test2.fq are failing with Unsafe! We did something unsound, oops!
 
 Looks like we'll have to borrow reflection code from Instantiate to figure out how to run those functions?
+
+Woah, this should actually be an interesting (paper-worthy?) contribution itself! I should talk to nadia about it. I'll call it "Speeding up Horn Constraint Solving with Logical Normalization"
