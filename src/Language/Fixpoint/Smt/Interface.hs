@@ -60,7 +60,9 @@ module Language.Fixpoint.Smt.Interface (
 
     -- * Evaluate SMT2LIB Lisp
     , eval
-    , fromLeft
+    , SpecVal (..)
+    , toBool
+    , toDouble
     ) where
 
 import           Language.Fixpoint.Types.Config ( SMTSolver (..)
@@ -93,8 +95,6 @@ import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
 import           Data.Text.Read              (decimal)
-import           Prelude                  hiding (Left, Right)
-import qualified Prelude as P
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -189,8 +189,8 @@ smtRead me = {-# SCC "smtRead" #-} do
   ln  <- smtReadRaw me
   res <- A.parseWith (smtReadRaw me) responseP ln
   case A.eitherResult res of
-    P.Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
-    P.Right r -> do
+    Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
+    Right r -> do
       maybe (return ()) (\h -> hPutStrLnNow h $ format "; SMT Says: {}" (Only $ show r)) (ctxLog me)
       when (ctxVerbose me) $ LTIO.putStrLn $ format "SMT Says: {}" (Only $ show r)
       return r
@@ -229,8 +229,8 @@ lispP = parseLisp <$> predP
 symbolP :: SmtParser Symbol
 symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
-fromRight (P.Right a) = a
-fromRight (P.Left _) = error "FROMRIGHT LEFT"
+fromRight (Right a) = a
+fromRight (Left _) = error "FROMRIGHT LEFT"
 
 decode :: T.Text -> T.Text
 decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
@@ -313,67 +313,53 @@ relDenote Lt = (<)
 relDenote Le = (<=)
 relDenote Eq = (==)
 relDenote Ne = (/=)
+-- Not sure what these two do
 relDenote Ueq = (/=)
 relDenote Une = (/=)
 
-fromLeft (Just (Left a)) = Just a
-fromLeft _ = Nothing
+data SpecVal = B_ Bool | I_ Integer | D_ Double
 
-maybeList :: [Maybe a] -> Maybe [a]
-maybeList l = foldl extract (Just []) l
-              where extract :: Maybe [a] -> Maybe a -> Maybe [a]
-                    extract _ Nothing = Nothing
-                    extract Nothing _ = Nothing
-                    extract (Just xs) (Just r) = Just (r:xs)
+toBool :: Maybe SpecVal -> Maybe Bool
+toBool (Just (B_ b)) = Just b
+toBool _ = Nothing
 
-data OneOf3 a b c = Left a | Middle b | Right c 
+toDouble :: Maybe SpecVal -> Maybe Double
+toDouble (Just (D_ d)) = Just d
+toDouble (Just (I_ d)) = Just $ fromIntegral d
+toDouble _ = Nothing
 
-getDouble :: Maybe (OneOf3 Bool Integer Double) -> Maybe Double
-getDouble (Just (Right d)) = Just d
-getDouble (Just (Middle d)) = Just $ fromIntegral d
-getDouble _ = Nothing
-
-eval :: Expr -> Maybe (OneOf3 Bool Integer Double)
+eval :: Expr -> Maybe SpecVal
 eval (EIte b e1 e2)
-  = if b' then eval e1 else eval e2
-  where Just (Left b') = eval b
+  = (\b' -> if b' then eval e1 else eval e2) =<<
+    toBool (eval b)
 eval (PAtom r e1 e2)
-  = Just $ Left $ relDenote r a b -- @Anish, right now I always upgrade to Double. We'd need to isolate division and make denoteRel more flexible to do otherwise
-  where Just a = getDouble $ eval e1
-        Just b = getDouble $ eval e2
+  = fmap B_ $ relDenote r <$> a <*> b
+  where a = toDouble $ eval e1
+        b = toDouble $ eval e2
 eval (EBin o e1 e2)
-  = Just $ Right $ opDenote o a b
-  where Just a = getDouble $ eval e1
-        Just b = getDouble $ eval e2
+  = fmap D_ $ opDenote o <$> a <*> b
+  where a = toDouble $ eval e1
+        b = toDouble $ eval e2
 eval (ENeg e)
-  = Just $ Right $ negate a
-  where Just (Right a) = eval e
+  = fmap D_ $ negate <$> toDouble (eval e)
 eval (PNot e)
-  = Just $ Left $ not b
-  where Just (Left b) = eval e
+  = fmap B_ $ not <$> toBool (eval e)
 eval (PImp e1 e2)
-  = Just $ Left $ b <= a
-  where Just (Left a) = eval e1
-        Just (Left b) = eval e2
+  = fmap B_ $ (<=) <$> b <*> a
+  where a = toBool $ eval e1
+        b = toBool $ eval e2
 eval (PIff e1 e2)
-  = Just $ Left $ b == a
-  where Just (Left a) = eval e1
-        Just (Left b) = eval e2
+  = fmap B_ $ (==) <$> a <*> b
+  where a = toBool $ eval e1
+        b = toBool $ eval e2
 eval (PAnd es)
-  = case es' of
-      Nothing -> Nothing
-      Just es' -> Just $ Left $ or es'
-  where
-        es' = maybeList ((fromLeft . eval) <$> es)
+  = B_ . and <$> sequence (toBool . eval <$> es)
 eval (POr es)
-  = case es' of
-      Nothing -> Nothing
-      Just es' -> Just $ Left $ or es'
-  where
-        es' = maybeList (fromLeft . eval <$> es)
+  = B_ . or <$> sequence (toBool . eval <$> es)
+
 eval (ECst e _) = eval e
-eval (ECon (I n)) = Just $ Middle n
-eval (ECon (R n)) = Just $ Right n
+eval (ECon (I n)) = Just $ I_ n
+eval (ECon (R n)) = Just $ D_ n
 eval (ETApp e _) = eval e
 eval (ETAbs e _) = eval e
 
@@ -394,7 +380,7 @@ eval PAll{}   = error "quantifiers are incompatible with --cegis"
 eval PExist{} = error "quantifiers are incompatible with --cegis"
 eval PGrad{}  = error "--cegis is incompatible with --gradual"
 
-eval EApp{}   = error "EApp not implemented in CEGIS"
+eval EApp{}   = Nothing -- error "EApp not implemented in CEGIS"
 
 eval (ESym _) = error "--cegis doesn't yet support string lits"
 eval (ECon (L _ _)) = error "--cegis doesn't yet support string lits"

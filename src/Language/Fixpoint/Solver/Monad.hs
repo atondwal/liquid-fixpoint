@@ -271,8 +271,8 @@ snd3 (_,x,_) = x
 
 -- uncommment const True and everything goes through (obviously)
 filterStaticCEGIS pts p qs = foldr filterOne qs pts
-  where filterOne pt = filter $ {- const True . -} (<= (fromLeft $ eval $ ev pt p)) .
-                                     fromLeft . eval . ev pt . fst
+  where filterOne pt = filter $ {- const True . -} (<= (toBool $ eval $ ev pt p)) .
+                                     toBool . eval . ev pt . fst
 
 ev :: CntrEx -> F.Expr -> F.Expr
 ev pts e = foldr (flip F.subst1) e pts
