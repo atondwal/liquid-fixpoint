@@ -54,6 +54,7 @@ data Command      = Push
                   | AssertAx !(Triggered Expr)
                   | Distinct [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue [Symbol]
+                  | GetModel
                   | CMany    [Command]
                   deriving (Eq, Show)
 
@@ -71,6 +72,7 @@ ppCmd (Assert _ e)  = text "Assert" <+> pprint e
 ppCmd (AssertAx _)  = text "AssertAxiom ..."
 ppCmd (Distinct {}) = text "Distinct ..."
 ppCmd (GetValue {}) = text "GetValue ..."
+ppCmd (GetModel)    = text "GetModel"
 ppCmd (CMany {})    = text "CMany ..."
 
 -- | Responses received from SMT engine
@@ -78,7 +80,8 @@ data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, Expr)]
+                  | Values [(Symbol, T.Text)]
+                  | Model [(Symbol, Expr)]
                   | Error !T.Text
                   deriving (Eq, Show)
 

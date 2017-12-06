@@ -37,7 +37,7 @@ import           Language.Fixpoint.Utils.Progress
 import qualified Language.Fixpoint.Types.Config  as C
 import           Language.Fixpoint.Types.Config  (Config)
 import qualified Language.Fixpoint.Types   as F
--- import qualified Language.Fixpoint.Misc    as Misc
+import qualified Language.Fixpoint.Misc    as Misc
 -- import           Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types.Solutions as F
 import           Language.Fixpoint.Types   (pprint)
@@ -58,8 +58,6 @@ import           Control.Monad.State.Strict
 import qualified Data.HashMap.Strict as M
 import           Data.Maybe (catMaybes)
 import           Control.Exception.Base (bracket)
-
-import Debug.Trace
 
 --------------------------------------------------------------------------------
 -- | Solver Monadic API --------------------------------------------------------
@@ -272,13 +270,13 @@ snd3 (_,x,_) = x
 -- uncommment const True and everything goes through (obviously)
 filterStaticCEGIS pts p qs = foldr filterOne qs pts
   where filterOne pt = filter $ {- const True . -} (<= (toBool $ eval $ ev pt p)) .
-                                     toBool . eval . ev pt . fst
+                                     toBool . eval . Misc.traceShow "eval" . ev pt . fst
 
 ev :: CntrEx -> F.Expr -> F.Expr
 ev pts e = foldr (flip F.subst1) e pts
 
 filterValidCEGIS_ :: [F.Symbol] -> F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
-filterValidCEGIS_ xs sp p qs me = partitionEithers <$> do
+filterValidCEGIS_ _xs sp p qs me = partitionEithers <$> do
   smtAssert me p
   forM qs $ \(q, x) ->
     smtBracketAt sp me "filterValidRHS" $ do
@@ -286,7 +284,7 @@ filterValidCEGIS_ xs sp p qs me = partitionEithers <$> do
       valid <- smtCheckUnsat me
       if valid
         then return $ Left x
-        else Right . traceShowId <$> smtGetValues me xs
+        else Right <$> smtGetModel me
 
 
 --------------------------------------------------------------------------------

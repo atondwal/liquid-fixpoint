@@ -215,6 +215,7 @@ instance SMTLIB2 Command where
   smt2 _   (Pop)               = "(pop 1)"
   smt2 _   (CheckSat)          = "(check-sat)"
   smt2 env (GetValue xs)       = "(get-value (" <> smt2s env xs <> "))"
+  smt2 _   (GetModel)          = "(get-model)"
   smt2 env (CMany cmds)        = smt2many (smt2 env <$> cmds)
 
 instance SMTLIB2 (Triggered Expr) where

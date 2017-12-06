@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE PatternGuards             #-}
+{-# LANGUAGE LambdaCase                #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -46,7 +47,7 @@ module Language.Fixpoint.Smt.Interface (
     , smtAssertAxiom
     , smtCheckUnsat
     , smtCheckSat
-    , smtGetValues
+    , smtGetModel
     , smtBracket, smtBracketAt
     , smtDistinct
     , smtPush, smtPop
@@ -155,11 +156,11 @@ checkValids cfg f xts ps
             smtAssert me (PNot p) >> smtCheckUnsat me
 
 getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol,Expr)]
-getValues me xts p xs = do
+getValues me xts p _xs = do
   smtDecls me xts
   smtAssert me p
   smtCheckUnsat me
-  smtGetValues me xs
+  smtGetModel me
 
 -- debugFile :: FilePath
 -- debugFile = "DEBUG.smt2"
@@ -177,6 +178,7 @@ command me !cmd       = say cmd >> hear cmd
     say               = smtWrite me . Builder.toLazyText . runSmt2 env
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
+    hear (GetModel)   = smtRead me
     hear _            = return Ok
 
 
@@ -198,33 +200,32 @@ smtRead me = {-# SCC "smtRead" #-} do
 type SmtParser a = Parser T.Text a
 
 responseP :: SmtParser Response
-responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
-         <|> A.string "sat"     *> return Sat
-         <|> A.string "unsat"   *> return Unsat
-         <|> A.string "unknown" *> return Unknown
+responseP = {-# SCC "responseP" #-} A.peekChar' >>= \case
+              '(' -> sexpP
+              _ ->     A.string "sat"     *> return Sat
+                   <|> A.string "unsat"   *> return Unsat
+                   <|> A.string "unknown" *> return Unknown
 
 sexpP :: SmtParser Response
-sexpP = {-# SCC "sexpP" #-} A.string "error" *> (Error <$> errorP)
-     <|> Values <$> valuesP
+sexpP = {-# SCC "sexpP" #-} A.string "(error" *> (Error <$> errorP)
+     <|> modelOrValues <$> predP
+
+modelOrValues (Lisp ((Sym s):ls))
+  | symbolText s == "model" = toModel $ Misc.traceShow "model" ls
+modelOrValues (Lisp ls) = Values $ pairLisp <$> ls
+modelOrValues (Sym s) = error $ "unknown symbol when expecting Model or Values" ++ show s
+
+pairLisp :: Lisp -> (Symbol, T.Text)
+pairLisp (Lisp [Sym sym, Sym val]) = (sym, symbolText val)
+pairLisp l = error $ "expected pair of (sym,val); found " ++ show l
+
+toModel ls = Model $ defineLisp <$> ls
+
+defineLisp (Lisp [_,Sym sym,_,_,expr]) = (sym, parseLisp expr)
+defineLisp l = error $ "Expecting Lisp Define-fun, Got " ++ show l
 
 errorP :: SmtParser T.Text
 errorP = A.skipSpace *> A.char '"' *> A.takeWhile1 (/='"') <* A.string "\")"
-
-valuesP :: SmtParser [(Symbol, Expr)]
-valuesP = A.many1' pairP <* A.char ')'
-
-pairP :: SmtParser (Symbol, Expr)
-pairP = {-# SCC "pairP" #-}
-  do A.skipSpace
-     A.char '('
-     !x <- symbolP
-     A.skipSpace
-     !v <- lispP
-     A.char ')'
-     return (x,v)
-
-lispP :: SmtParser Expr
-lispP = parseLisp <$> predP
 
 symbolP :: SmtParser Symbol
 symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
@@ -378,10 +379,9 @@ eval ELam{}   = error "--cegis doesn't support top-level lambdas\
 
 eval PAll{}   = error "quantifiers are incompatible with --cegis"
 eval PExist{} = error "quantifiers are incompatible with --cegis"
+eval EApp{}   = error "EApp not implemented in CEGIS"
+
 eval PGrad{}  = error "--cegis is incompatible with --gradual"
-
-eval EApp{}   = Nothing -- error "EApp not implemented in CEGIS"
-
 eval (ESym _) = error "--cegis doesn't yet support string lits"
 eval (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
 
@@ -551,8 +551,8 @@ smtDistinct me az = interact' me (Distinct az)
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
 
-smtGetValues :: Context -> [Symbol] -> IO [(Symbol, Expr)]
-smtGetValues me vs = (\(Values x) -> x) <$> command me (GetValue vs)
+smtGetModel :: Context -> IO [(Symbol, Expr)]
+smtGetModel me = (\(Model x) -> x) . Misc.traceShow ("model") <$> command me GetModel
 
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a
 smtBracketAt sp x y z = smtBracket x y z `catch` dieAt sp

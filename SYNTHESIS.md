@@ -463,3 +463,122 @@ wl00.fq & test2.fq are failing with Unsafe! We did something unsound, oops!
 Looks like we'll have to borrow reflection code from Instantiate to figure out how to run those functions?
 
 Woah, this should actually be an interesting (paper-worthy?) contribution itself! I should talk to nadia about it. I'll call it "Speeding up Horn Constraint Solving with Logical Normalization"
+
+
+## `get-value` vs `get-model`
+
+SMT's `get-value` command won't actually give us values for function types. To do this we need to use `get-model`. It's not clear how much these will help --- in the worst case CEGIS with this sort of thing become adversarial (See paper that Nadia sent us). Worse still, SMT solvers don't really support curried/higher-order functions, so the examples for those we get out will very very likley be useless.
+
+We could use PLE. It would be expensive, but maybe worth it? A cool thing to include in our paper would be a comparison of PLE with just throwing them out, vs getting counterexamples, vs doing whatever (ICE?) thing that the papers Nadia sent us do.
+
+Which reminds me, we should really read the VS3 paper to figure out what they're doing and how we're different from them.
+
+Alright, I made the obvious things go through, without adding anything new to the parser, and it compiles, but for some reason it doesn't break *every* test. I have no fucking clue why. I guess in a lot of these tests we just never call CEGIS?
+
+we have this error: 
+```
+fixpoint: src/Language/Fixpoint/Smt/Interface.hs:566:19-33: Non-exhaustive patterns in lambda
+```
+
+Which happens when we destructure inside smtGetModel. Let's fix it:
+
+```haskell
+sexpP :: SmtParser Response
+sexpP = {-# SCC "sexpP" #-} A.string "error" *> (Error <$> errorP)
+     <|> Values <$> valuesP
+     <|> Model <$> modelP
+```
+
+Oh fuck that. We're going to parse it as an sexp and then decide if it's a model or a set of values based on the value of the first field.
+
+This does mean that we should ask Eric to see if there are Target tests to make sure we don't break them!
+
+```
+sexpP :: SmtParser Response
+sexpP = {-# SCC "sexpP" #-} A.string "(error" *> (Error <$> errorP)
+     <|> modelOrValues <$> predP
+
+modelOrValues (Lisp ((Sym s):ls))
+  | symbolText s == "model" = toModel ls
+modelOrValues (Lisp ls) = Values $ pairLisp <$> ls
+modelOrValues (Sym s) = error $ "unknown symbol when expecting Model or Values" ++ show s
+
+pairLisp :: Lisp -> (Symbol, T.Text)
+pairLisp (Lisp [Sym sym, Sym val]) = (sym, symbolText val)
+pairLisp l = error $ "expected pair of (sym,val); found " ++ show l
+
+toModel ls = Model $ defineLisp <$> ls
+
+defineLisp (Lisp [_,Sym sym,_,_,expr]) = (sym, parseLisp expr)
+defineLisp l = error $ "Expecting Lisp Define-fun, Got " ++ show l
+```
+
+Okay, that wasn't so bad. We should still make sure we don't break Target with this. Ah, balls, we forgot to read in the formals, so we still don't work with EApp. On top of that, there are a number of test cases where we're not reading in all the `EVar`s that we get with get-values.
+
+Here's our status.
+
+The following fail because of eliminate/quantifiers
+
+      listqual.hs.fq:         FAIL (0.12s)
+      wl00.fq:                FAIL (0.02s)
+      test2.fq:               FAIL (0.02s)
+
+The following fail due to some EApps not being read in by get-model
+
+      listqual.hs.fq:         FAIL (0.10s)
+      wl00.fq:                FAIL (0.02s)
+      test00.fq:              FAIL (0.01s)
+      test00.hs.fq:           FAIL (0.06s)
+      test2.fq:               FAIL (0.01s)
+      MergeSort.fq:           FAIL (0.50s)
+      test000.hs.fq:          FAIL (0.07s)
+      elim00.fq:              FAIL (0.10s)
+      bad-subst01.fq:         FAIL (0.01s)
+      listqual.hs.fq:         FAIL (0.11s)
+      wl00.fq:                FAIL (0.02s)
+      test2.fq:               FAIL (0.02s)
+      MergeSort.fq:           FAIL (0.44s)
+
+The following fail with that, and EApp turned on
+
+      listqual.hs.fq:         FAIL (0.10s)
+      wl00.fq:                FAIL (0.02s)
+      test00.fq:              FAIL (0.01s)
+      test00.hs.fq:           FAIL (0.06s)
+      test2.fq:               FAIL (0.01s)
+      MergeSort.fq:           FAIL (0.45s)
+      test000.hs.fq:          FAIL (0.07s)
+      elim00.fq:              FAIL (0.09s)
+      bad-subst01.fq:         FAIL (0.01s)
+      listqual.hs.fq:         FAIL (0.10s)
+      wl00.fq:                FAIL (0.02s)
+      test2.fq:               FAIL (0.02s)
+      MergeSort.fq:           FAIL (0.45s)
+
+Okay let's tackle each of these one-by-one
+
+### EApps not being read in correctly
+
+We trace as follows:
+
+```haskell
+decode :: T.Text -> T.Text
+decode s = Misc.traceShow "decode" $ T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') (Misc.traceShow "encode" s))
+```
+
+which gives us:
+
+```
+Trace: [encode] : "GHC.Types.EQ$36$35$36$6U"
+Trace: [decode] : "GHC.Types.EQ$35$6U"
+Trace: [encode] : "GHC.Types.LT$36$35$36$6S"
+Trace: [decode] : "GHC.Types.LT$35$6S"
+Trace: [encode] : "GHC.Types.GT$36$35$36$6W"
+Trace: [decode] : "GHC.Types.GT$35$6W"
+Trace: [encode] : "VV$36$35$36$424"
+Trace: [decode] : "VV$35$424"
+```
+
+So when we're reading things back from z3, for some reason we're encoding/decoding the wrong number of times `$35$ -> $36$35$36$ -> $35$`.
+
+Now Anish spends a while debugging a z3 segfault before shravan points out that he should try upgrading z3
