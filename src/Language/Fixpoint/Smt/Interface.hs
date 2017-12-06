@@ -47,7 +47,6 @@ module Language.Fixpoint.Smt.Interface (
     , smtAssertAxiom
     , smtCheckUnsat
     , smtCheckSat
-    , smtGetModel
     , smtBracket, smtBracketAt
     , smtDistinct
     , smtPush, smtPop
@@ -58,6 +57,7 @@ module Language.Fixpoint.Smt.Interface (
     , checkValidWithContext
     , checkValids
     , getValues
+    , getDefModel
 
     -- * Evaluate SMT2LIB Lisp
     , eval
@@ -84,6 +84,7 @@ import           Language.Fixpoint.Smt.Types
 import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Smt.Serialize ()
 import           Control.Applicative      ((<|>))
+import           Control.Arrow
 import           Control.Monad
 import           Control.Exception
 import           Data.Char
@@ -110,6 +111,7 @@ import           Text.Read (readMaybe)
 import           Language.Fixpoint.SortCheck
 -- import qualified Language.Fixpoint.Types as F
 -- import           Language.Fixpoint.Types.PrettyPrint (tracepp)
+import           Control.Monad.IO.Class
 
 {-
 runFile f
@@ -155,12 +157,25 @@ checkValids cfg f xts ps
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
 
-getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol,Expr)]
-getValues me xts p _xs = do
+getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
+getValues me xts p xs = do
   smtDecls me xts
   smtAssert me p
   smtCheckUnsat me
-  smtGetModel me
+  smtGetValues me xs
+
+getDefModel:: Context -> [Symbol] -> IO [(Symbol, Expr)]
+getDefModel me xs = smtBracket me "getDefModel" $ do
+  smtAssert me PTrue
+  smtCheckUnsat me
+  map (second parseExpr) <$> smtGetValues me xs
+
+parseExpr :: T.Text -> Expr
+parseExpr ln =
+  case parseLisp <$> A.parseOnly predP ln of
+    Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
+    Right r -> r
+
 
 -- debugFile :: FilePath
 -- debugFile = "DEBUG.smt2"
@@ -551,18 +566,18 @@ smtDistinct me az = interact' me (Distinct az)
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
 
-smtGetModel :: Context -> IO [(Symbol, Expr)]
-smtGetModel me = (\(Model x) -> x) . Misc.traceShow ("model") <$> command me GetModel
+smtGetValues :: Context -> [Symbol] -> IO [(Symbol, T.Text)]
+smtGetValues me xs = (\(Values x) -> x) <$> command me (GetValue xs)
 
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a
 smtBracketAt sp x y z = smtBracket x y z `catch` dieAt sp
 
 
-smtBracket :: Context -> String -> IO a -> IO a
+smtBracket :: MonadIO io => Context -> String -> io a -> io a
 smtBracket me _msg a   = do
-  smtPush me
+  liftIO $ smtPush me
   r <- a
-  smtPop me
+  liftIO $ smtPop me
   return r
 
 respSat :: Response -> Bool

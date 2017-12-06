@@ -51,7 +51,7 @@ import           Language.Fixpoint.Graph.Types (SolverInfo (..))
 -- import           Language.Fixpoint.Solver.Solution
 -- import           Data.Maybe           (catMaybes)
 import           Data.List            (partition)
-import           Data.Either
+-- import           Data.Either
 -- import           Data.Char            (isUpper)
 import           Text.PrettyPrint.HughesPJ (text)
 import           Control.Monad.State.Strict
@@ -247,45 +247,80 @@ smtEnablembqi
       smtWrite me "(set-option :smt.mbqi true)"
 
 --------------------------------------------------------------------------------
+filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual)
+                    -> SolveM [(F.KVar, F.EQual)]
+--------------------------------------------------------------------------------
+filterValidCEGIS _sp p qs = do
+  ss <- get
+  let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
+  qs' <- getContext >>= \me ->
+           smtBracket me "filterValidLHS" $ catMaybes<$> do
+    def <- lift $ getDefModel me xs
+    liftIO $ smtAssert me p
+    forM qs $ \(q, x) ->
+      smtBracket me "filterValidRHS" $ do
+        pts <- ssPts <$> get
+        let checkPt pt = (toBool $ eval $ ev def $ ev pt p) <= (toBool $ eval $ ev def $ ev pt q)
+        if and $ checkPt <$> pts
+          then do
+            liftIO $ smtAssert me (F.PNot q)
+            valid <- liftIO $ smtCheckUnsat me
+            if valid then return $ Just x else (smtGetModel me >> return Nothing)
+          else return Nothing
+  -- stats
+  incBrkt
+  incChck (length qs)
+  incVald (length qs')
+  return qs'
+
+snd3 :: (a,b,c) -> b
+snd3 (_,x,_) = x
+
+ev :: CntrEx -> F.Expr -> F.Expr
+ev pts e = foldr (flip F.subst1) e pts
+
+smtGetModel :: Context -> SolveM ()
+smtGetModel me = do
+  pt <- liftIO $ (\(Model x) -> x) . Misc.traceShow ("model") <$> command me GetModel
+  modify (\s -> s { ssPts = pt : ssPts s })
+
+
+{-
+--------------------------------------------------------------------------------
 filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual) -> SolveM [(F.KVar, F.EQual)]
 --------------------------------------------------------------------------------
 filterValidCEGIS sp p qs = do
   ss <- get
   let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
   let pts = ssPts ss
-  let qs' = filterStaticCEGIS pts p qs
-  (qs'',pts') <- withContext $ \me ->
-           smtBracket me "filterValidLHS" $
-             filterValidCEGIS_ xs sp p qs' me
+  -- FIlter away candidates that are invalidated by counterexamples
+  (qs',pts') <- getContext >>= \me -> do
+           -- Uses SMT solver to filter out invalid candidates
+           _defaultValues <- lift $ getDefModel me xs
+           lift $ smtBracket me "filterValidLHS" $ partitionEithers <$> do
+                      smtAssert me p
+                      forM qs $ \(q, x) ->
+                        smtBracketAt sp me "filterValidRHS" $ do
+                          -- if (toBool $ eval $ ev pt 
+                          smtAssert me (F.PNot q)
+                          valid <- smtCheckUnsat me
+                          if valid
+                            then return $ Left x
+                            else Right <$> smtGetModel me
   -- stats
   incBrkt
   incChck (length qs)
-  incVald (length qs'')
   put (ss { ssPts = pts' ++ pts})
-  return qs''
+  return qs'
 
 snd3 :: (a,b,c) -> b
 snd3 (_,x,_) = x
 
 -- uncommment const True and everything goes through (obviously)
-filterStaticCEGIS pts p qs = foldr filterOne qs pts
-  where filterOne pt = filter $ {- const True . -} (<= (toBool $ eval $ ev pt p)) .
-                                     toBool . eval . Misc.traceShow "eval" . ev pt . fst
-
-ev :: CntrEx -> F.Expr -> F.Expr
-ev pts e = foldr (flip F.subst1) e pts
-
-filterValidCEGIS_ :: [F.Symbol] -> F.SrcSpan -> F.Expr -> F.Cand a -> Context -> IO ([a],[CntrEx])
-filterValidCEGIS_ _xs sp p qs me = partitionEithers <$> do
-  smtAssert me p
-  forM qs $ \(q, x) ->
-    smtBracketAt sp me "filterValidRHS" $ do
-      smtAssert me (F.PNot q)
-      valid <- smtCheckUnsat me
-      if valid
-        then return $ Left x
-        else Right <$> smtGetModel me
-
+_filterStaticCEGIS def pts p qs = foldr filterOne qs pts
+  where filterOne pt = filter $ (<= (toBool $ eval $ ev def $ ev pt p)) .
+                                     toBool . eval . ev def . ev pt . fst
+-}
 
 --------------------------------------------------------------------------------
 checkSat :: F.Expr -> SolveM  Bool

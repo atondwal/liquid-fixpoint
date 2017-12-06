@@ -100,7 +100,6 @@ Library
                    Language.Fixpoint.Utils.Files,
                    Language.Fixpoint.Solver.GradualSolution,
                    Language.Fixpoint.Solver.Solution,
-                   Language.Fixpoint.Solver.Synthesize,
                    Language.Fixpoint.Solver.Worklist,
                    Language.Fixpoint.Solver.Monad,
                    Language.Fixpoint.Solver.TrivialSort,

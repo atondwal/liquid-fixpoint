@@ -557,7 +557,7 @@ The following fail with that, and EApp turned on
 
 Okay let's tackle each of these one-by-one
 
-### EApps not being read in correctly
+### ESyms missing
 
 We trace as follows:
 
@@ -582,3 +582,9 @@ Trace: [decode] : "VV$35$424"
 So when we're reading things back from z3, for some reason we're encoding/decoding the wrong number of times `$35$ -> $36$35$36$ -> $35$`.
 
 Now Anish spends a while debugging a z3 segfault before shravan points out that he should try upgrading z3
+
+Okay it wasn't that, it was that when we run getModel, we only get values for the symbols that were acutally mentione din the expression that we're scrutizing. We should get default values for all of the symbols that are in the environment that aren't mentioned in the specific constraints for each environment, ie for each constraint.
+
+Okay FIXED THAT!!! Whew that was a lot of work... 
+
+Now to implement EApp. Not only do we need to actually implement it, we need to fix the way we're reading in functions from the model --- right not we're just reading in the name and the body, but we should read them in as a lamdba, because otherwise we don't know what to do with the formal arguments.
