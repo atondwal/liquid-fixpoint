@@ -87,7 +87,7 @@ instKQ :: Bool
        -> F.Symbol
        -> F.Sort
        -> F.Qualifier
-       -> [Sol.EQual]
+       -> [F.Expr]
 instKQ ho env v t q
   = do (su0, v0) <- candidates senv [(t, [v])] qt
        xs        <- match senv tyss [v0] (So.apply su0 <$> qts)
@@ -123,7 +123,7 @@ candidates env tyss tx = -- traceShow _msg
     _msg  = "candidates tyss :=" ++ F.showpp tyss ++ "tx := " ++ F.showpp tx
 
 --------------------------------------------------------------------------------
-okInst :: F.SEnv F.Sort -> F.Symbol -> F.Sort -> Sol.EQual -> Bool
+okInst :: F.SEnv F.Sort -> F.Symbol -> F.Sort -> F.Expr -> Bool
 --------------------------------------------------------------------------------
 okInst env v t eq = isNothing tc
   where

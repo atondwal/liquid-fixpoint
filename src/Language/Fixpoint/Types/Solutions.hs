@@ -24,7 +24,7 @@ module Language.Fixpoint.Types.Solutions (
 
   -- * Solution elements
   , Hyp, Cube (..), QBind, GBind
-  , EQual
+  , Expr
 
   -- * Equal elements
   , eQual
@@ -89,7 +89,7 @@ import           Text.PrettyPrint.HughesPJ
 --------------------------------------------------------------------------------
 -- | Update Solution -----------------------------------------------------------
 --------------------------------------------------------------------------------
-update :: Sol a QBind -> [KVar] -> [(KVar, EQual)] -> (Bool, Sol a QBind)
+update :: Sol a QBind -> [KVar] -> [(KVar, Expr)] -> (Bool, Sol a QBind)
 --------------------------------------------------------------------------------
 update s ks kqs = {- tracepp msg -} (or bs, s')
   where
@@ -104,7 +104,7 @@ folds f b = L.foldl' step ([], b)
        where
          (c, x')      = f acc x
 
-groupKs :: [KVar] -> [(KVar, EQual)] -> [(KVar, QBind)]
+groupKs :: [KVar] -> [(KVar, Expr)] -> [(KVar, QBind)]
 groupKs ks kqs = [ (k, QB eqs) | (k, eqs) <- M.toList $ groupBase m0 kqs ]
   where
     m0         = M.fromList $ (,[]) <$> ks
@@ -120,8 +120,8 @@ update1 s (k, qs) = (change, updateK k qs s)
 --------------------------------------------------------------------------------
 type Solution  = Sol () QBind
 type GSolution = Sol (((Symbol, Sort), Expr), GBind) QBind
-newtype QBind = QB [EQual]   deriving (Show, Data, Typeable, Generic, Eq)
-newtype GBind = GB [[EQual]] deriving (Show, Data, Typeable, Generic)
+newtype QBind = QB [Expr]   deriving (Show, Data, Typeable, Generic, Eq)
+newtype GBind = GB [[Expr]] deriving (Show, Data, Typeable, Generic)
 
 emptyGMap :: GSolution -> GSolution
 emptyGMap sol = mapGMap sol (\(x,_) -> (x, GB []))
@@ -129,11 +129,8 @@ emptyGMap sol = mapGMap sol (\(x,_) -> (x, GB []))
 updateGMapWithKey :: [(KVar, QBind)] -> GSolution -> GSolution
 updateGMapWithKey kqs sol = sol {gMap =  foldl (\m (k, (QB eq)) -> M.adjust (\(x, GB eqs) -> (x, GB (if eq `elem` eqs then eqs else eq:eqs))) k m) (gMap sol) kqs }
 
-qb :: [EQual] -> QBind
+qb :: [Expr] -> QBind
 qb = QB
-
-qbEQuals :: QBind -> [EQual]
-qbEQuals (QB xs) = xs
 
 qbExprs :: QBind -> [Expr]
 qbExprs (QB xs) = xs
@@ -145,26 +142,26 @@ gbToQbs :: GBind -> [QBind]
 gbToQbs (GB [])  = [QB [trueEqual]]
 gbToQbs (GB ess) = QB <$> ess
 
-gbEquals :: GBind -> [[EQual]]
+gbEquals :: GBind -> [[Expr]]
 gbEquals (GB eqs) = eqs
 
-equalsGb :: [[EQual]] -> GBind
+equalsGb :: [[Expr]] -> GBind
 equalsGb = GB
 
-gbFilterM :: Monad m => ([EQual] -> m Bool) -> GBind -> m GBind
+gbFilterM :: Monad m => ([Expr] -> m Bool) -> GBind -> m GBind
 gbFilterM f (GB eqs) = GB <$> filterM f eqs
 
 qbSize :: QBind -> Int
-qbSize = length . qbEQuals
+qbSize = length . qbExprs
 
-qbFilter :: (EQual -> Bool) -> QBind -> QBind
+qbFilter :: (Expr -> Bool) -> QBind -> QBind
 qbFilter f (QB eqs) = QB (filter f eqs)
 
 instance NFData QBind
 instance NFData GBind
 
 instance PPrint QBind where
-  pprintTidy k = pprintTidy k . qbEQuals
+  pprintTidy k = pprintTidy k . qbExprs
 
 --------------------------------------------------------------------------------
 -- | A `Sol` contains the various indices needed to compute a solution,
@@ -223,7 +220,7 @@ instance Show Cube where
 --------------------------------------------------------------------------------
 result :: Sol a QBind -> M.HashMap KVar Expr
 --------------------------------------------------------------------------------
-result s = sMap $ (pAnd . qbEQuals) <$> s
+result s = sMap $ (pAnd . qbExprs) <$> s
 
 
 --------------------------------------------------------------------------------
@@ -247,7 +244,7 @@ fromList env kGs kXs kYs = Sol env kXm kGm kYm -- kBm
  -- kBm              = const () <$> kXm
 
 --------------------------------------------------------------------------------
-qbPreds :: String -> Sol a QBind -> Subst -> QBind -> [(Pred, EQual)]
+qbPreds :: String -> Sol a QBind -> Subst -> QBind -> [(Pred, Expr)]
 --------------------------------------------------------------------------------
 qbPreds msg s su (QB eqs) = [ (elabPred eq, eq) | eq <- eqs ]
   where
@@ -309,13 +306,13 @@ type Cand a   = [(Expr, a)]
 --------------------------------------------------------------------------------
 -- | Instantiated Qualifiers ---------------------------------------------------
 --------------------------------------------------------------------------------
-type EQual = Expr
 
-trueEqual :: EQual
+
+trueEqual :: Expr
 trueEqual = mempty
 
 {- EQL :: q:_ -> p:_ -> ListX F.Expr {q_params q} -> _ @-}
-eQual :: Qualifier -> [Symbol] -> EQual
+eQual :: Qualifier -> [Symbol] -> Expr
 eQual q xs = p
   where
     p      = subst su $  qBody q
