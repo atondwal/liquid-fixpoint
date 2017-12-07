@@ -80,7 +80,7 @@ instK :: Bool
 --------------------------------------------------------------------------------
 instK ho env v t = Sol.qb . unique . concatMap (instKQ ho env v t)
   where
-    unique       = L.nubBy ((. Sol.eqPred) . (==) . Sol.eqPred)
+    unique       = L.nubBy (==)
 
 instKQ :: Bool
        -> F.SEnv F.Sort
@@ -128,7 +128,7 @@ okInst :: F.SEnv F.Sort -> F.Symbol -> F.Sort -> Sol.EQual -> Bool
 okInst env v t eq = isNothing tc
   where
     sr            = F.RR t (F.Reft (v, p))
-    p             = Sol.eqPred eq
+    p             = eq
     tc            = So.checkSorted env sr -- (F.tracepp _msg sr)
     -- _msg          = printf "okInst: t = %s, eq = %s, env = %s" (F.showpp t) (F.showpp eq) (F.showpp env)
 

@@ -24,7 +24,7 @@ module Language.Fixpoint.Types.Solutions (
 
   -- * Solution elements
   , Hyp, Cube (..), QBind, GBind
-  , EQual (..)
+  , EQual
 
   -- * Equal elements
   , eQual
@@ -136,7 +136,7 @@ qbEQuals :: QBind -> [EQual]
 qbEQuals (QB xs) = xs
 
 qbExprs :: QBind -> [Expr]
-qbExprs (QB xs) = eqPred <$> xs
+qbExprs (QB xs) = xs
 
 qbToGb :: QBind -> GBind
 qbToGb (QB xs) = GB $ map (:[]) xs
@@ -223,7 +223,7 @@ instance Show Cube where
 --------------------------------------------------------------------------------
 result :: Sol a QBind -> M.HashMap KVar Expr
 --------------------------------------------------------------------------------
-result s = sMap $ (pAnd . fmap eqPred . qbEQuals) <$> s
+result s = sMap $ (pAnd . qbEQuals) <$> s
 
 
 --------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ resultGradual :: GSolution -> M.HashMap KVar (Expr, [Expr])
 resultGradual s = fmap go' (gMap s)
   where
     go' ((_,e), GB eqss)
-     = (e, [PAnd $ fmap eqPred eqs | eqs <- eqss])
+     = (e, [PAnd $ eqs | eqs <- eqss])
 
 
 --------------------------------------------------------------------------------
@@ -251,7 +251,7 @@ qbPreds :: String -> Sol a QBind -> Subst -> QBind -> [(Pred, EQual)]
 --------------------------------------------------------------------------------
 qbPreds msg s su (QB eqs) = [ (elabPred eq, eq) | eq <- eqs ]
   where
-    elabPred          = elaborate ("qbPreds:" ++ msg) env . subst su . eqPred
+    elabPred          = elaborate ("qbPreds:" ++ msg) env . subst su
     env               = sEnv s
 
 --------------------------------------------------------------------------------
@@ -309,23 +309,14 @@ type Cand a   = [(Expr, a)]
 --------------------------------------------------------------------------------
 -- | Instantiated Qualifiers ---------------------------------------------------
 --------------------------------------------------------------------------------
-data EQual = EQL
-  { _eqQual :: !Qualifier
-  , eqPred  :: !Expr
-  , _eqArgs :: ![Expr]
-  } deriving (Eq, Show, Data, Typeable, Generic)
+type EQual = Expr
 
 trueEqual :: EQual
-trueEqual = EQL trueQual mempty []
-
-instance PPrint EQual where
-  pprintTidy k = pprintTidy k . eqPred
-
-instance NFData EQual
+trueEqual = mempty
 
 {- EQL :: q:_ -> p:_ -> ListX F.Expr {q_params q} -> _ @-}
 eQual :: Qualifier -> [Symbol] -> EQual
-eQual q xs = {- tracepp "eQual" $ -} EQL q p es
+eQual q xs = p
   where
     p      = subst su $  qBody q
     su     = mkSubst  $  safeZip "eQual" qxs es
