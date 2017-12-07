@@ -588,3 +588,221 @@ Okay it wasn't that, it was that when we run getModel, we only get values for th
 Okay FIXED THAT!!! Whew that was a lot of work... 
 
 Now to implement EApp. Not only do we need to actually implement it, we need to fix the way we're reading in functions from the model --- right not we're just reading in the name and the body, but we should read them in as a lamdba, because otherwise we don't know what to do with the formal arguments.
+
+Okay we tried to read in lambdas properly, but we can't un-defunc them right, becaue apply gets mangeled to apply##1, apply##0 etc.
+
+Alright, fuck it, if we run into an EApp, we just give up and make the CE always pass.
+Here are the results:
+
+    native-pos                                   native-pos
+      func00.fq:              OK (0.04s)           func00.fq:              OK (0.08s)
+      adt_list_nested.fq:     OK (0.04s)           adt_list_nested.fq:     OK (0.03s)
+      num00.fq:               OK (0.04s)           num00.fq:               OK (0.03s)
+      real00.fq:              OK (0.04s)           real00.fq:              OK (0.03s)
+      hex.ts.fq:              OK (0.10s)           hex.ts.fq:              OK (0.08s)
+      cut-keyword.fq:         OK (0.03s)           cut-keyword.fq:         OK (0.03s)
+      meas00.fq:              OK (0.04s)           meas00.fq:              OK (0.03s)
+      test3.fq:               OK (0.04s)           test3.fq:               OK (0.03s)
+      listqual.hs.fq:         OK (14.63s)          listqual.hs.fq:         OK (0.16s)
+      adt.fq:                 OK (0.04s)           adt.fq:                 OK (0.03s)
+      test00.fq:              OK (0.04s)           test00.fq:              OK (0.03s)
+      bad-subst00.fq:         OK (0.04s)           bad-subst00.fq:         OK (0.03s)
+      test2.fq:               OK (0.04s)           test2.fq:               OK (0.03s)
+      poly2.fq:               OK (0.04s)           poly2.fq:               OK (0.03s)
+      min00.fq:               OK (0.04s)           min00.fq:               OK (0.03s)
+      bad-subst01.fq:         OK (0.04s)           bad-subst01.fq:         OK (0.03s)
+      LogicCurry1.hs.fq:      OK (0.07s)           LogicCurry1.hs.fq:      OK (0.08s)
+      qualif-inst.fq:         OK (0.03s)           qualif-inst.fq:         OK (0.03s)
+      numoverload00.fq:       OK (0.04s)           numoverload00.fq:       OK (0.03s)
+      multi-sorts.fq:         OK (0.04s)           multi-sorts.fq:         OK (0.03s)
+      test000.hs.fq:          OK (2.36s)           test000.hs.fq:          OK (0.09s)
+      MergeSort.fq:           OK (242.33s)         MergeSort.fq:           OK (0.41s)
+      wl00.fq:                OK (0.06s)           wl00.fq:                OK (0.03s)
+      bool00.fq:              OK (0.03s)           bool00.fq:              OK (0.03s)
+      test00-par.fq:          OK (0.03s)           test00-par.fq:          OK (0.03s)
+      len00.fq:               OK (0.03s)           len00.fq:               OK (0.03s)
+      adt_bin_lam.fq:         OK (0.03s)           adt_bin_lam.fq:         OK (0.03s)
+      adt_list_1.fq:          OK (0.04s)           adt_list_1.fq:          OK (0.03s)
+      literals03.fq:          OK (0.04s)           literals03.fq:          OK (0.03s)
+      bool04.fq:              OK (0.04s)           bool04.fq:              OK (0.03s)
+      adt_partial.fq:         OK (0.04s)           adt_partial.fq:         OK (0.03s)
+      adt_dep_0.fq:           OK (0.03s)           adt_dep_0.fq:           OK (0.03s)
+      kvar-param-poly-00.fq:  OK (0.03s)           kvar-param-poly-00.fq:  OK (0.03s)
+      unused.fq:              OK (0.03s)           unused.fq:              OK (0.03s)
+      lit00.fq:               OK (0.03s)           lit00.fq:               OK (0.03s)
+      conj-rhs.fq:            OK (0.03s)           conj-rhs.fq:            OK (0.03s)
+      wrong-arity.fq:         OK (0.03s)           wrong-arity.fq:         OK (0.03s)
+      adt_list_0.fq:          OK (0.03s)           adt_list_0.fq:          OK (0.03s)
+      literals02.fq:          OK (0.03s)           literals02.fq:          OK (0.03s)
+      adt_dep_1.fq:           OK (0.03s)           adt_dep_1.fq:           OK (0.03s)
+      elim00.fq:              OK (11.66s)          elim00.fq:              OK (0.14s)
+      wl01.fq:                OK (0.04s)           wl01.fq:                OK (0.03s)
+      sets.fq:                OK (0.03s)           sets.fq:                OK (0.03s)
+      baz.fq:                 OK (0.03s)           baz.fq:                 OK (0.03s)
+      literals01.fq:          OK (0.03s)           literals01.fq:          OK (0.03s)
+      func-arg.fq:            OK (0.03s)           func-arg.fq:            OK (0.03s)
+      ho00.fq:                OK (0.04s)           ho00.fq:                OK (0.03s)
+      adt_qual.fq:            OK (0.04s)           adt_qual.fq:            OK (0.03s)
+      adt_bin_0.fq:           OK (0.04s)           adt_bin_0.fq:           OK (0.03s)
+      adt_func_1.fq:          OK (0.04s)           adt_func_1.fq:          OK (0.03s)
+      wl02.fq:                OK (0.07s)           wl02.fq:                OK (0.04s)
+      EqConstr0.fq:           OK (0.03s)           EqConstr0.fq:           OK (0.03s)
+      literals05.fq:          OK (0.04s)           literals05.fq:          OK (0.03s)
+      overwrite-names.fq:     OK (0.03s)           overwrite-names.fq:     OK (0.03s)
+      len00-rename.fq:        OK (0.04s)           len00-rename.fq:        OK (0.03s)
+      adt_func_0.fq:          OK (0.04s)           adt_func_0.fq:          OK (0.03s)
+      EqConstr1.fq:           OK (0.04s)           EqConstr1.fq:           OK (0.03s)
+      literals04.fq:          OK (0.04s)           literals04.fq:          OK (0.03s)
+      bool03.fq:              OK (0.04s)           bool03.fq:              OK (0.03s)
+      poly_inst.fq:           OK (0.04s)           poly_inst.fq:           OK (0.03s)
+      adt_list_2.fq:          OK (0.04s)           adt_list_2.fq:          OK (0.03s)
+      test00a.fq:             OK (0.04s)           test00a.fq:             OK (0.03s)
+      adt_curry.fq:           OK (0.04s)           adt_curry.fq:           OK (0.03s)
+      multiple-func-sorts.fq: OK (0.03s)           multiple-func-sorts.fq: OK (0.03s)
+      test1.fq:               OK (0.04s)           test1.fq:               OK (0.03s)
+      poly1.fq:               OK (0.04s)           poly1.fq:               OK (0.03s)
+      bad-subst02.fq:         OK (0.04s)           bad-subst02.fq:         OK (0.03s)
+      test00.hs.fq:           OK (0.26s)           test00.hs.fq:           OK (0.08s)
+      adt_pair_cast.fq:       OK (0.03s)           adt_pair_cast.fq:       OK (0.03s)
+      poly.fq:                OK (0.03s)           poly.fq:                OK (0.03s)
+      literals.fq:            OK (0.04s)           literals.fq:            OK (0.03s)
+      hex00.fq:               OK (0.04s)           hex00.fq:               OK (0.03s)
+      meas02.fq:              OK (0.04s)           meas02.fq:              OK (0.03s)
+      test4.fq:               OK (0.04s)           test4.fq:               OK (0.03s)
+      float.fq:               OK (0.04s)           float.fq:               OK (0.03s)
+      adt_poly_dead.fq:       OK (0.04s)           adt_poly_dead.fq:       OK (0.03s)
+      poly0.fq:               OK (0.04s)           poly0.fq:               OK (0.03s)
+      adt_even_0.fq:          OK (0.04s)           adt_even_0.fq:          OK (0.03s)
+      unexpected-ge.fq:       OK (0.03s)           unexpected-ge.fq:       OK (0.03s)
+    native-neg                                   native-neg
+      test3.fq:               OK (0.04s)           test3.fq:               OK (0.03s)
+      test00.fq:              OK (0.04s)           test00.fq:              OK (0.03s)
+      test2.fq:               OK (0.04s)           test2.fq:               OK (0.03s)
+      poly2.fq:               OK (0.04s)           poly2.fq:               OK (0.03s)
+      NonLinear.hs.fq:        OK (0.04s)           NonLinear.hs.fq:        OK (0.04s)
+      pack01.fq:              OK (0.04s)           pack01.fq:              OK (0.03s)
+      adt0.fq:                OK (0.04s)           adt0.fq:                OK (0.03s)
+      lit00.fq:               OK (0.04s)           lit00.fq:               OK (0.03s)
+      conj-rhs.fq:            OK (0.03s)           conj-rhs.fq:            OK (0.03s)
+      adt1.fq:                OK (0.04s)           adt1.fq:                OK (0.03s)
+      float-literal.fq:       OK (0.04s)           float-literal.fq:       OK (0.03s)
+      pack00.fq:              OK (0.04s)           pack00.fq:              OK (0.03s)
+      adt2.fq:                OK (0.04s)           adt2.fq:                OK (0.03s)
+      adt_bin_0.fq:           OK (0.04s)           adt_bin_0.fq:           OK (0.03s)
+      NonLinear.fq:           OK (0.04s)           NonLinear.fq:           OK (0.03s)
+      elim-dep-00.fq:         OK (0.04s)           elim-dep-00.fq:         OK (0.03s)
+      adt3.fq:                OK (0.04s)           adt3.fq:                OK (0.03s)
+      test00a.fq:             OK (0.04s)           test00a.fq:             OK (0.03s)
+      test1.fq:               OK (0.04s)           test1.fq:               OK (0.03s)
+      poly1.fq:               OK (0.04s)           poly1.fq:               OK (0.03s)
+      test00.hs.fq:           OK (0.26s)           test00.hs.fq:           OK (0.07s)
+      literals.fq:            OK (0.03s)           literals.fq:            OK (0.03s)
+      hex00.fq:               OK (0.03s)           hex00.fq:               OK (0.03s)
+      poly0.fq:               OK (0.04s)           poly0.fq:               OK (0.03s)
+      adt_even_0.fq:          OK (0.04s)           adt_even_0.fq:          OK (0.03s)
+
+0.04s  ,  0.08s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.10s  ,  0.08s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+14.63s ,  0.16s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.07s  ,  0.08s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+2.36s  ,  0.09s
+242.33s,  0.41s
+0.06s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+11.66s ,  0.14s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.07s  ,  0.04s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.26s  ,  0.08s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+       , 
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.04s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s
+0.26s  ,  0.07s
+0.03s  ,  0.03s
+0.03s  ,  0.03s
+0.04s  ,  0.03s
+0.04s  ,  0.03s

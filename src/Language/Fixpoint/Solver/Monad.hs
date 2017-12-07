@@ -37,7 +37,6 @@ import           Language.Fixpoint.Utils.Progress
 import qualified Language.Fixpoint.Types.Config  as C
 import           Language.Fixpoint.Types.Config  (Config)
 import qualified Language.Fixpoint.Types   as F
-import qualified Language.Fixpoint.Misc    as Misc
 -- import           Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types.Solutions as F
 import           Language.Fixpoint.Types   (pprint)
@@ -281,7 +280,7 @@ ev pts e = foldr (flip F.subst1) e pts
 
 smtGetModel :: Context -> SolveM ()
 smtGetModel me = do
-  pt <- liftIO $ (\(Model x) -> x) . Misc.traceShow ("model") <$> command me GetModel
+  pt <- liftIO $ (\(Model x) -> x) <$> command me GetModel
   modify (\s -> s { ssPts = pt : ssPts s })
 
 

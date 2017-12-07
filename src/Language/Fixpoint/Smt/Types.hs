@@ -16,6 +16,7 @@ module Language.Fixpoint.Smt.Types (
 
     -- * Responses
     , Response (..)
+    , Lisp (..)
 
     -- * Typeclass for SMTLIB2 conversion
     , SMTLIB2 (..)
@@ -80,10 +81,12 @@ data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, T.Text)]
+                  | Values [(Symbol, Lisp)]
                   | Model [(Symbol, Expr)]
                   | Error !T.Text
                   deriving (Eq, Show)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
 
 -- | Information about the external SMT process
 data Context = Ctx

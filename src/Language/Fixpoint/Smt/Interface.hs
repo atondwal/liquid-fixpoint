@@ -162,19 +162,19 @@ getValues me xts p xs = do
   smtDecls me xts
   smtAssert me p
   smtCheckUnsat me
-  smtGetValues me xs
+  map (second printLisp) <$> smtGetValues me xs
 
 getDefModel:: Context -> [Symbol] -> IO [(Symbol, Expr)]
 getDefModel me xs = smtBracket me "getDefModel" $ do
   smtAssert me PTrue
   smtCheckUnsat me
-  map (second parseExpr) <$> smtGetValues me xs
+  map (second parseLisp) <$> smtGetValues me xs
 
-parseExpr :: T.Text -> Expr
+{- parseExpr :: T.Text -> Expr
 parseExpr ln =
   case parseLisp <$> A.parseOnly predP ln of
     Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
-    Right r -> r
+    Right r -> r -}
 
 
 -- debugFile :: FilePath
@@ -226,18 +226,30 @@ sexpP = {-# SCC "sexpP" #-} A.string "(error" *> (Error <$> errorP)
      <|> modelOrValues <$> predP
 
 modelOrValues (Lisp ((Sym s):ls))
-  | symbolText s == "model" = toModel $ Misc.traceShow "model" ls
-modelOrValues (Lisp ls) = Values $ pairLisp <$> ls
+  | symbolText s == "model" = toModel $ ls
+modelOrValues (Lisp ls) = Values $ map (\(Lisp [(Sym sym), e]) -> (sym, e)) ls
 modelOrValues (Sym s) = error $ "unknown symbol when expecting Model or Values" ++ show s
 
-pairLisp :: Lisp -> (Symbol, T.Text)
-pairLisp (Lisp [Sym sym, Sym val]) = (sym, symbolText val)
-pairLisp l = error $ "expected pair of (sym,val); found " ++ show l
+{- pairLisp :: Lisp -> (Symbol, T.Text)
+pairLisp (Lisp [Sym sym, v]) = (sym, printLisp v)
+pairLisp l = error $ "expected pair of (sym,val); found " ++ show l -}
 
-toModel ls = Model $ defineLisp <$> ls
+printLisp :: Lisp -> T.Text
+printLisp (Lisp xs) = "(" `T.append` foldr (\ x y -> x `T.append` " " `T.append` y) ")" (printLisp <$> xs)
+printLisp (Sym s) = symbolText s
 
-defineLisp (Lisp [_,Sym sym,_,_,expr]) = (sym, parseLisp expr)
-defineLisp l = error $ "Expecting Lisp Define-fun, Got " ++ show l
+toModel ls = Model $ lispToModel <$> ls
+
+lispToModel (Lisp [_,Sym sym, Lisp args,_,expr]) = (sym, foldr abstract (parseLisp expr) args)
+      where abstract (Lisp [Sym x,_]) e = ELam (x,FInt) e
+            abstract _ _ = error "reading in a bad list of formals"
+
+            -- Since we can't recover full typing information from the SMT
+            -- Sovler, we just give up and give it FInt. Hopefully this make
+            -- everyone who tries to use it wrong crash.
+
+lispToModel l = error $ "Expecting Lisp Define-fun, Got " ++ show l
+
 
 errorP :: SmtParser T.Text
 errorP = A.skipSpace *> A.char '"' *> A.takeWhile1 (/='"') <* A.string "\")"
@@ -256,8 +268,6 @@ predP = {-# SCC "predP" #-}
   <|> (Sym <$> symbolP)
 
 space2 c = isSpace c && not (A.isEndOfLine c)
-
-data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
 
 binOpStrings :: [T.Text]
 binOpStrings = [ "+", "-", "*", "/", "mod"]
@@ -391,10 +401,11 @@ eval ELam{}   = error "--cegis doesn't support top-level lambdas\
                       \ If you want to use a λ or a measure, please\
                       \ make sure to apply it to a concrete term in\
                       \ the domain of that λ/measure"
+-- eval (EApp (ELam (x,_) e) ex)  = eval $ subst1 e (x,ex)
+eval EApp{}   = Nothing -- error "EApp not implemented in CEGIS"
 
 eval PAll{}   = error "quantifiers are incompatible with --cegis"
 eval PExist{} = error "quantifiers are incompatible with --cegis"
-eval EApp{}   = error "EApp not implemented in CEGIS"
 
 eval PGrad{}  = error "--cegis is incompatible with --gradual"
 eval (ESym _) = error "--cegis doesn't yet support string lits"
@@ -566,7 +577,7 @@ smtDistinct me az = interact' me (Distinct az)
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
 
-smtGetValues :: Context -> [Symbol] -> IO [(Symbol, T.Text)]
+smtGetValues :: Context -> [Symbol] -> IO [(Symbol, Lisp)]
 smtGetValues me xs = (\(Values x) -> x) <$> command me (GetValue xs)
 
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a
