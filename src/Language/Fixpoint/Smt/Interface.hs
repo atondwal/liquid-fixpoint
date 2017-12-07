@@ -56,8 +56,8 @@ module Language.Fixpoint.Smt.Interface (
     , checkValid'
     , checkValidWithContext
     , checkValids
-    , getValues
-    , getDefModel
+    , getValuesText
+    , getValuesExpr
 
     -- * Evaluate SMT2LIB Lisp
     , eval
@@ -157,24 +157,18 @@ checkValids cfg f xts ps
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
 
-getValues :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
-getValues me xts p xs = do
+getValuesText :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
+getValuesText me xts p xs = do
   smtDecls me xts
   smtAssert me p
   smtCheckUnsat me
-  map (second printLisp) <$> smtGetValues me xs
+  map (second lispToText) <$> smtGetValues me xs
 
-getDefModel:: Context -> [Symbol] -> IO [(Symbol, Expr)]
-getDefModel me xs = smtBracket me "getDefModel" $ do
+getValuesExpr :: Context -> [Symbol] -> IO [(Symbol, Expr)]
+getValuesExpr me xs = smtBracket me "getDefModel" $ do
   smtAssert me PTrue
   smtCheckUnsat me
-  map (second parseLisp) <$> smtGetValues me xs
-
-{- parseExpr :: T.Text -> Expr
-parseExpr ln =
-  case parseLisp <$> A.parseOnly predP ln of
-    Left e  -> Misc.errorstar $ "SMTREAD:" ++ e
-    Right r -> r -}
+  map (second lispToExpr) <$> smtGetValues me xs
 
 
 -- debugFile :: FilePath
@@ -216,31 +210,28 @@ type SmtParser a = Parser T.Text a
 
 responseP :: SmtParser Response
 responseP = {-# SCC "responseP" #-} A.peekChar' >>= \case
-              '(' -> sexpP
+              '(' -> responseBodyP
               _ ->     A.string "sat"     *> return Sat
                    <|> A.string "unsat"   *> return Unsat
                    <|> A.string "unknown" *> return Unknown
 
-sexpP :: SmtParser Response
-sexpP = {-# SCC "sexpP" #-} A.string "(error" *> (Error <$> errorP)
-     <|> modelOrValues <$> predP
+responseBodyP :: SmtParser Response
+responseBodyP = {-# SCC "responseBodyP" #-} A.string "(error" *> (Error <$> errorP)
+     <|> modelOrValues <$> lispP
 
+modelOrValues :: Lisp -> Response
 modelOrValues (Lisp ((Sym s):ls))
   | symbolText s == "model" = toModel $ ls
 modelOrValues (Lisp ls) = Values $ map (\(Lisp [(Sym sym), e]) -> (sym, e)) ls
 modelOrValues (Sym s) = error $ "unknown symbol when expecting Model or Values" ++ show s
 
-{- pairLisp :: Lisp -> (Symbol, T.Text)
-pairLisp (Lisp [Sym sym, v]) = (sym, printLisp v)
-pairLisp l = error $ "expected pair of (sym,val); found " ++ show l -}
-
-printLisp :: Lisp -> T.Text
-printLisp (Lisp xs) = "(" `T.append` foldr (\ x y -> x `T.append` " " `T.append` y) ")" (printLisp <$> xs)
-printLisp (Sym s) = symbolText s
+lispToText :: Lisp -> T.Text
+lispToText (Lisp xs) = "(" `T.append` foldr (\ x y -> x `T.append` " " `T.append` y) ")" (lispToText <$> xs)
+lispToText (Sym s) = symbolText s
 
 toModel ls = Model $ lispToModel <$> ls
 
-lispToModel (Lisp [_,Sym sym, Lisp args,_,expr]) = (sym, foldr abstract (parseLisp expr) args)
+lispToModel (Lisp [_,Sym sym, Lisp args,_,expr]) = (sym, foldr abstract (lispToExpr expr) args)
       where abstract (Lisp [Sym x,_]) e = ELam (x,FInt) e
             abstract _ _ = error "reading in a bad list of formals"
 
@@ -263,8 +254,8 @@ fromRight (Left _) = error "FROMRIGHT LEFT"
 decode :: T.Text -> T.Text
 decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
 
-predP = {-# SCC "predP" #-}
-      (Lisp <$> (A.char '(' *> A.sepBy' predP (A.skipWhile space2) <* A.char ')'))
+lispP = {-# SCC "lispP" #-}
+      (Lisp <$> (A.char '(' *> A.sepBy' lispP (A.skipWhile space2) <* A.char ')'))
   <|> (Sym <$> symbolP)
 
 space2 c = isSpace c && not (A.isEndOfLine c)
@@ -291,35 +282,35 @@ strToRel "<=" = Le
 -- Do I need Ne Une Ueq?
 strToRel _ = error "Rel not found"
 
-parseLisp :: Lisp -> Expr
-parseLisp (Sym s)
+lispToExpr :: Lisp -> Expr
+lispToExpr (Sym s)
   | symbolText s == "true"  = PTrue
   | symbolText s == "false" = PFalse
   -- | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
   | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
   | otherwise               = EVar s
-parseLisp l@(Lisp xs)
+lispToExpr l@(Lisp xs)
   | [Sym s, x] <- xs, symbolText s == "not"     =
-    PNot (parseLisp x)
+    PNot (lispToExpr x)
   | [Sym s, x] <- xs, symbolText s == "-"       =
-    ENeg (parseLisp x)
+    ENeg (lispToExpr x)
   | [Sym s, x, y] <- xs, symbolText s == "=>"   =
-    PImp (parseLisp x) (parseLisp y)
+    PImp (lispToExpr x) (lispToExpr y)
   | [Sym s, x, y] <- xs, symbolText s == "="    =
-    PAtom Eq (parseLisp x) (parseLisp y)
+    PAtom Eq (lispToExpr x) (lispToExpr y)
   | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
-    EBin (strToOp $ symbolText s) (parseLisp x) (parseLisp y)
+    EBin (strToOp $ symbolText s) (lispToExpr x) (lispToExpr y)
   | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
-    PAtom (strToRel $ symbolText s) (parseLisp x) (parseLisp y)
+    PAtom (strToRel $ symbolText s) (lispToExpr x) (lispToExpr y)
   | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
-    EIte (parseLisp x) (parseLisp y) (parseLisp z)
+    EIte (lispToExpr x) (lispToExpr y) (lispToExpr z)
   | (Sym s:xs) <- xs, symbolText s == "and"     =
-    PAnd $ parseLisp <$> xs
+    PAnd $ lispToExpr <$> xs
   | (Sym s:xs) <- xs, symbolText s == "or"      =
-    POr $ parseLisp <$> xs
+    POr $ lispToExpr <$> xs
   | otherwise                                   =
     lispToFunc l
-  where lispToFunc (Lisp xs) = foldr1 EApp $ map parseLisp xs
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map lispToExpr xs
         -- this should not be called
         lispToFunc (Sym s)   = EVar s
 

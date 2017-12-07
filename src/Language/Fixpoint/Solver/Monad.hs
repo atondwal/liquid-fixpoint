@@ -254,7 +254,7 @@ filterValidCEGIS _sp p qs = do
   let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
   qs' <- getContext >>= \me ->
            smtBracket me "filterValidLHS" $ catMaybes<$> do
-    def <- lift $ getDefModel me xs
+    def <- lift $ getValuesExpr me xs
     liftIO $ smtAssert me p
     forM qs $ \(q, x) ->
       smtBracket me "filterValidRHS" $ do
@@ -282,44 +282,6 @@ smtGetModel :: Context -> SolveM ()
 smtGetModel me = do
   pt <- liftIO $ (\(Model x) -> x) <$> command me GetModel
   modify (\s -> s { ssPts = pt : ssPts s })
-
-
-{-
---------------------------------------------------------------------------------
-filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual) -> SolveM [(F.KVar, F.EQual)]
---------------------------------------------------------------------------------
-filterValidCEGIS sp p qs = do
-  ss <- get
-  let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
-  let pts = ssPts ss
-  -- FIlter away candidates that are invalidated by counterexamples
-  (qs',pts') <- getContext >>= \me -> do
-           -- Uses SMT solver to filter out invalid candidates
-           _defaultValues <- lift $ getDefModel me xs
-           lift $ smtBracket me "filterValidLHS" $ partitionEithers <$> do
-                      smtAssert me p
-                      forM qs $ \(q, x) ->
-                        smtBracketAt sp me "filterValidRHS" $ do
-                          -- if (toBool $ eval $ ev pt 
-                          smtAssert me (F.PNot q)
-                          valid <- smtCheckUnsat me
-                          if valid
-                            then return $ Left x
-                            else Right <$> smtGetModel me
-  -- stats
-  incBrkt
-  incChck (length qs)
-  put (ss { ssPts = pts' ++ pts})
-  return qs'
-
-snd3 :: (a,b,c) -> b
-snd3 (_,x,_) = x
-
--- uncommment const True and everything goes through (obviously)
-_filterStaticCEGIS def pts p qs = foldr filterOne qs pts
-  where filterOne pt = filter $ (<= (toBool $ eval $ ev def $ ev pt p)) .
-                                     toBool . eval . ev def . ev pt . fst
--}
 
 --------------------------------------------------------------------------------
 checkSat :: F.Expr -> SolveM  Bool
