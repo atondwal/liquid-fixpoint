@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExplicitForAll    #-}
 {-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE LambdaCase        #-}
 
 -- | This is a wrapper around IO that permits SMT queries
 
@@ -28,6 +29,12 @@ module Language.Fixpoint.Solver.Monad
        , tickIter
        , stats
        , numIter
+
+       , getTerms
+       , putTerms
+       , ssPreds
+       , dcSolve
+       , nextDistinctTerm
        )
        where
 
@@ -69,7 +76,9 @@ type CntrEx = [(F.Symbol,F.Expr)]
 data SolverState = SS { ssCtx     :: !Context      -- ^ SMT Solver Context
                       , ssBinds   :: !F.SolEnv     -- ^ All variables and types
                       , ssStats   :: !Stats        -- ^ Solver Statistics
-                      , ssPts     :: ![CntrEx]      -- ^ CEs for synthesis
+                      , ssPts     :: ![CntrEx]     -- ^ CEs for synthesis
+                      , ssTerms   :: ![F.Expr]
+                      , ssPreds   :: ![F.Expr]
                       }
 
 data Stats = Stats { numCstr :: !Int -- ^ # Horn Constraints
@@ -104,7 +113,7 @@ runSolverM cfg sI act =
     smtWrite ctx "(exit)"
     return (fst res)
   where
-    s0 ctx   = SS ctx be (stats0 fi) []
+    s0 ctx   = SS ctx be (stats0 fi) [] [] []
     act'     = {- declare initEnv >> -} assumesAxioms (F.asserts fi) >> act
     release  = cleanupContext
     acquire  = makeContextWithSEnv cfg file initEnv
@@ -123,6 +132,11 @@ getBinds :: SolveM F.SolEnv
 --------------------------------------------------------------------------------
 getBinds = ssBinds <$> get
 
+getTerms :: SolveM [F.Expr]
+getTerms = ssTerms <$> get
+putTerms :: [F.Expr] -> SolveM ()
+putTerms ts = modify $ (\ s -> s { ssTerms = ts })
+getPts = ssPts <$> get
 --------------------------------------------------------------------------------
 getIter :: SolveM Int
 --------------------------------------------------------------------------------
@@ -246,21 +260,19 @@ smtEnablembqi
       smtWrite me "(set-option :smt.mbqi true)"
 
 --------------------------------------------------------------------------------
-filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual)
-                    -> SolveM [(F.KVar, F.EQual)]
+filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand a
+                    -> SolveM [a]
 --------------------------------------------------------------------------------
 filterValidCEGIS _sp p qs = do
-  ss <- get
-  let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
+  xs <- fmap snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
   qs' <- getContext >>= \me ->
            smtBracket me "filterValidLHS" $ catMaybes<$> do
     def <- lift $ getValuesExpr me xs
     liftIO $ smtAssert me p
     forM qs $ \(q, x) ->
       smtBracket me "filterValidRHS" $ do
-        pts <- ssPts <$> get
-        let checkPt pt = (toBool $ eval $ ev def $ ev pt p) <= (toBool $ eval $ ev def $ ev pt q)
-        if and $ checkPt <$> pts
+        pts <- getPts
+        if and $ isCoveredBy def p q <$> pts
           then do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
@@ -271,6 +283,44 @@ filterValidCEGIS _sp p qs = do
   incChck (length qs)
   incVald (length qs')
   return qs'
+
+
+isCoveredBy :: CntrEx -> F.Expr -> F.Expr -> CntrEx -> Bool
+isCoveredBy def pre term pt =
+  (toBool $ eval $ ev def $ ev pt pre) <= (toBool $ eval $ ev def $ ev pt term)
+
+--------------------------------------------------------------------------------
+dcSolve :: F.SrcSpan -> F.Expr -> F.Cand a
+                    -> SolveM [a]
+--------------------------------------------------------------------------------
+dcSolve _sp p qs = getContext >>= \me -> do
+  return ()
+  valid <- undefined
+  x <- undefined
+  if valid
+    then return [x]
+    else smtGetModel me >> dcSolve _sp p qs
+
+-- Find a set terms that satisfies all examples (pts)
+-- Build decision tree (loop)
+--    Gen a new term that solves a distinct set of examples (pts)
+--    Gen a new predicate that applies to a distinct set of examples (pts)
+--    Attempt to learn a DT ????
+
+nextDistinctTerm :: CntrEx -> F.Expr -> [CntrEx] ->
+                    M.HashMap F.Expr [CntrEx] -> SolveM (M.HashMap F.Expr [CntrEx])
+nextDistinctTerm def pre pts cover = getTerms >>= \case
+  [] -> return cover
+  (t:termLib) -> do
+    putTerms termLib
+    let satisfied = filter (isCoveredBy def pre t) pts
+    let isUnique = or $ (satisfied ==) <$> M.elems cover
+    if isUnique
+      then return $ M.insert t satisfied cover
+      else nextDistinctTerm def pre pts cover
+
+
+  -- let terms' = nextTerm : terms
 
 snd3 :: (a,b,c) -> b
 snd3 (_,x,_) = x

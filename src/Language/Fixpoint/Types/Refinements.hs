@@ -13,6 +13,7 @@
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE PatternSynonyms            #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 
 -- | This module has the types for representing terms in the refinement logic.
 
@@ -215,7 +216,7 @@ instance Hashable Constant
 -- | Substitutions -------------------------------------------------------------
 --------------------------------------------------------------------------------
 newtype Subst = Su (M.HashMap Symbol Expr)
-                deriving (Eq, Data, Typeable, Generic)
+                deriving (Eq, Data, Typeable, Generic, Hashable)
 
 instance Show Subst where
   show = showFix
@@ -282,6 +283,8 @@ data Expr = ESym !SymConst
           | PGrad  !KVar !Subst !GradInfo !Expr
           deriving (Eq, Show, Data, Typeable, Generic)
 
+instance Hashable Expr where
+
 type Pred = Expr
 
 pattern PTrue         = PAnd []
@@ -297,6 +300,8 @@ pattern ERDiv e1 e2   = EBin RDiv   e1 e2
 
 data GradInfo = GradInfo {gsrc :: SrcSpan, gused :: Maybe SrcSpan}
           deriving (Eq, Show, Data, Typeable, Generic)
+
+instance Hashable GradInfo
 
 srcGradInfo :: SourcePos -> GradInfo
 srcGradInfo src = GradInfo (SS src src) Nothing
