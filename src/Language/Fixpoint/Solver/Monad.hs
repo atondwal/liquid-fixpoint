@@ -44,6 +44,7 @@ import           Language.Fixpoint.Types   (pprint)
 import           Language.Fixpoint.Smt.Serialize ()
 import           Language.Fixpoint.Types.PrettyPrint ()
 import           Language.Fixpoint.Smt.Interface
+import           Language.Fixpoint.Types.Visitor
 -- import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Solver.Sanitize
 import           Language.Fixpoint.Graph.Types (SolverInfo (..))
@@ -250,8 +251,7 @@ filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual)
                     -> SolveM [(F.KVar, F.EQual)]
 --------------------------------------------------------------------------------
 filterValidCEGIS _sp p qs = do
-  ss <- get
-  let xs = fmap snd3 $ F.bindEnvToList $ F.soeBinds $ ssBinds ss
+  xs  <- fmap snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
   qs' <- getContext >>= \me ->
            smtBracket me "filterValidLHS" $ catMaybes<$> do
     def <- lift $ getValuesExpr me xs
@@ -259,18 +259,32 @@ filterValidCEGIS _sp p qs = do
     forM qs $ \(q, x) ->
       smtBracket me "filterValidRHS" $ do
         pts <- ssPts <$> get
-        let checkPt pt = (toBool $ eval $ ev def $ ev pt p) <= (toBool $ eval $ ev def $ ev pt q)
-        if and $ checkPt <$> pts
+        if and $ isImpliedAt def (ctxSymEnv me) p q <$> pts
           then do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
-            if valid then return $ Just x else (smtGetModel me >> return Nothing)
+            if valid then return $ Just x else smtGetModel me >> return Nothing
           else return Nothing
   -- stats
   incBrkt
   incChck (length qs)
   incVald (length qs')
   return qs'
+
+
+-- smt2 (ctxSymEnv me)
+monomorphizeApp :: F.SymEnv -> F.Expr -> F.Expr
+monomorphizeApp env (F.ECst (F.EVar f) t@F.FFunc{}) | f == F.applyName
+  = F.EVar $ F.symbolAtName F.applyName env e t
+  where e = error "eval called on unknown expression" :: Int
+monomorphizeApp _ e = e
+
+isImpliedAt def env p q pt = termAtPoint def env p pt <= termAtPoint def env q pt
+
+termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
+termAtPoint def env term pt = toBool $ eval $
+                              ev def $ ev pt $
+                              mapExpr (monomorphizeApp env) term
 
 snd3 :: (a,b,c) -> b
 snd3 (_,x,_) = x

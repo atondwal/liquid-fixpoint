@@ -587,9 +587,48 @@ Okay it wasn't that, it was that when we run getModel, we only get values for th
 
 Okay FIXED THAT!!! Whew that was a lot of work... 
 
+### EApp
+
 Now to implement EApp. Not only do we need to actually implement it, we need to fix the way we're reading in functions from the model --- right not we're just reading in the name and the body, but we should read them in as a lamdba, because otherwise we don't know what to do with the formal arguments.
 
 Okay we tried to read in lambdas properly, but we can't un-defunc them right, becaue apply gets mangeled to apply##1, apply##0 etc.
 
 Alright, fuck it, if we run into an EApp, we just give up and make the CE always pass.
 Here are the results:
+
+()
+
+
+So to fix this, we need a way to read in applications of these functions in a way that corresponds to their names in fixpoint.
+
+Ranjit says the function that converts apply to apply##n is `symbolAtName`. I want to open a repl to see how it works, but it needs a SymEnv and stuff. Hopefully I can use mempty?
+
+```
+monomorphizeApp :: F.SymEnv -> F.Expr -> F.Expr
+monomorphizeApp env (F.ECst (F.EVar f) t@F.FFunc{}) | f == F.applyName
+  = F.EVar $ F.symbolAtName F.applyName env e t
+  where e = error "eval called on unknown expression" :: Int
+monomorphizeApp _ e = e
+
+termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
+termAtPoint def env term pt = toBool $ eval $
+                              ev def $ ev pt $
+                              mapExpr (monomorphizeApp env) term
+
+```
+
+This works! It introduces a new bug though: MergeSort.fq seems to take forever (everything else is fine!)
+
+Still failing are:
+
+listqual.hs.fq (ADTs)
+elim00.fq (no value for Elim.PP#r1x)
+
+Not too worried about these tbh. Also the ones with elim, obviously:
+
+test2.fq (elim, EXISTS)
+wl00.fq (elim, EXISTS)
+
+What's up with MergeSort?
+
+MergeSort.fq (times out)

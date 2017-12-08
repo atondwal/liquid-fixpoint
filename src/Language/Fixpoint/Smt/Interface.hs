@@ -166,7 +166,6 @@ getValuesText me xts p xs = do
 
 getValuesExpr :: Context -> [Symbol] -> IO [(Symbol, Expr)]
 getValuesExpr me xs = smtBracket me "getDefModel" $ do
-  smtAssert me PTrue
   smtCheckUnsat me
   map (second lispToExpr) <$> smtGetValues me xs
 
@@ -334,7 +333,7 @@ relDenote Ne = (/=)
 relDenote Ueq = (/=)
 relDenote Une = (/=)
 
-data SpecVal = B_ Bool | I_ Integer | D_ Double
+data SpecVal = B_ Bool | I_ Integer | D_ Double | L_ (Expr -> Maybe SpecVal)
 
 toBool :: Maybe SpecVal -> Maybe Bool
 toBool (Just (B_ b)) = Just b
@@ -387,13 +386,11 @@ eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s ++
                      " Please file a bug!               \
                      \ http://github.com/ucsd-progsys/liquid-fixpoint"
 
-eval ELam{}   = error "--cegis doesn't support top-level lambdas\
-                      \ and uninterpreted measures.\n\
-                      \ If you want to use a λ or a measure, please\
-                      \ make sure to apply it to a concrete term in\
-                      \ the domain of that λ/measure"
--- eval (EApp (ELam (x,_) e) ex)  = eval $ subst1 e (x,ex)
-eval EApp{}   = Nothing -- error "EApp not implemented in CEGIS"
+eval (ELam (x,_) e)  = Just $ L_ $ \ex -> eval $ subst1 e (x,ex)
+-- eval (EApp e'@EApp{} ex)       = eval $ EApp (eval e') x
+eval (EApp f e)  = f' e
+  where Just (L_ f') = eval f
+-- eval e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
 
 eval PAll{}   = error "quantifiers are incompatible with --cegis"
 eval PExist{} = error "quantifiers are incompatible with --cegis"
