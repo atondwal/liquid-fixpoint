@@ -37,6 +37,7 @@ import           Language.Fixpoint.Utils.Progress
 import qualified Language.Fixpoint.Types.Config  as C
 import           Language.Fixpoint.Types.Config  (Config)
 import qualified Language.Fixpoint.Types   as F
+import qualified Language.Fixpoint.Misc    as Misc
 -- import           Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types.Solutions as F
 import           Language.Fixpoint.Types   (pprint)
@@ -44,6 +45,7 @@ import           Language.Fixpoint.Types   (pprint)
 import           Language.Fixpoint.Smt.Serialize ()
 import           Language.Fixpoint.Types.PrettyPrint ()
 import           Language.Fixpoint.Smt.Interface
+import           Language.Fixpoint.Smt.Types (CntrEx)
 import           Language.Fixpoint.Types.Visitor
 -- import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Solver.Sanitize
@@ -64,8 +66,6 @@ import           Control.Exception.Base (bracket)
 --------------------------------------------------------------------------------
 
 type SolveM = StateT SolverState IO
-
-type CntrEx = [(F.Symbol,F.Expr)]
 
 data SolverState = SS { ssCtx     :: !Context      -- ^ SMT Solver Context
                       , ssBinds   :: !F.SolEnv     -- ^ All variables and types
@@ -247,11 +247,11 @@ smtEnablembqi
       smtWrite me "(set-option :smt.mbqi true)"
 
 --------------------------------------------------------------------------------
-filterValidCEGIS :: F.SrcSpan -> F.Expr -> F.Cand (F.KVar, F.EQual)
+filterValidCEGIS :: F.Expr -> F.Cand (F.KVar, F.EQual)
                     -> SolveM [(F.KVar, F.EQual)]
 --------------------------------------------------------------------------------
-filterValidCEGIS _sp p qs = do
-  xs  <- fmap snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
+filterValidCEGIS p qs = do
+  xs  <- fmap Misc.snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
   qs' <- getContext >>= \me ->
            smtBracket me "filterValidLHS" $ catMaybes<$> do
     def <- lift $ getValuesExpr me xs
@@ -264,7 +264,7 @@ filterValidCEGIS _sp p qs = do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
             if valid then return $ Just x else smtGetModel me >> return Nothing
-          else return Nothing
+          else lift (print "WIN") >> return Nothing
   -- stats
   incBrkt
   incChck (length qs)
@@ -284,13 +284,11 @@ isImpliedAt def env p q pt = termAtPoint def env p pt <= termAtPoint def env q p
 termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
 termAtPoint def env term pt = toBool $ eval $
                               ev def $ ev pt $
-                              mapExpr (monomorphizeApp env) term
-
-snd3 :: (a,b,c) -> b
-snd3 (_,x,_) = x
+                              mapExpr (monomorphizeApp env) $
+                              term
 
 ev :: CntrEx -> F.Expr -> F.Expr
-ev pts e = foldr (flip F.subst1) e pts
+ev pt e = F.subst (F.Su pt) e
 
 smtGetModel :: Context -> SolveM ()
 smtGetModel me = do

@@ -19,12 +19,13 @@ pbRef :: IORef (Maybe ProgressBar)
 pbRef = unsafePerformIO (newIORef Nothing)
 
 withProgress :: Int -> IO a -> IO a
-withProgress n act = displayConsoleRegions $ do
+withProgress _n act = act {- displayConsoleRegions $ do
   -- putStrLn $ "withProgress: " ++ show n
   progressInit n
   r <- act
   progressClose
   return r
+  -}
 
 progressInit :: Int -> IO ()
 progressInit n = do

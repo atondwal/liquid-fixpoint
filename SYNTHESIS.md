@@ -632,3 +632,5 @@ wl00.fq (elim, EXISTS)
 What's up with MergeSort?
 
 MergeSort.fq (times out)
+
+No clue, it stops at 20% and doesn't make any more progress. Lets see how our speed compares first, and then look at the other stuff. Still no idea. It's evaluating a lot of stuff, so I suspect call-by-name semantics may be the culprit here.

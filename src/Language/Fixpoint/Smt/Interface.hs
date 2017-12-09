@@ -164,10 +164,10 @@ getValuesText me xts p xs = do
   smtCheckUnsat me
   map (second lispToText) <$> smtGetValues me xs
 
-getValuesExpr :: Context -> [Symbol] -> IO [(Symbol, Expr)]
+getValuesExpr :: Context -> [Symbol] -> IO CntrEx
 getValuesExpr me xs = smtBracket me "getDefModel" $ do
   smtCheckUnsat me
-  map (second lispToExpr) <$> smtGetValues me xs
+  M.fromList <$> map (second lispToExpr) <$> smtGetValues me xs
 
 
 -- debugFile :: FilePath
@@ -228,7 +228,7 @@ lispToText :: Lisp -> T.Text
 lispToText (Lisp xs) = "(" `T.append` foldr (\ x y -> x `T.append` " " `T.append` y) ")" (lispToText <$> xs)
 lispToText (Sym s) = symbolText s
 
-toModel ls = Model $ lispToModel <$> ls
+toModel ls = Model $ M.fromList $ lispToModel <$> ls
 
 lispToModel (Lisp [_,Sym sym, Lisp args,_,expr]) = (sym, foldr abstract (lispToExpr expr) args)
       where abstract (Lisp [Sym x,_]) e = ELam (x,FInt) e
