@@ -60,7 +60,7 @@ module Language.Fixpoint.Smt.Interface (
     , getValuesExpr
 
     -- * Evaluate SMT2LIB Lisp
-    , eval
+    , eval'
     , SpecVal (..)
     , toBool
     , toDouble
@@ -113,7 +113,6 @@ import           Language.Fixpoint.SortCheck
 -- import qualified Language.Fixpoint.Types as F
 -- import           Language.Fixpoint.Types.PrettyPrint (tracepp)
 import           Control.Monad.IO.Class
-
 {-
 runFile f
   = readFile f >>= runString
@@ -334,8 +333,10 @@ relDenote Ne = (/=)
 relDenote Ueq = (/=)
 relDenote Une = (/=)
 
-data SpecVal = B_ Bool | I_ Integer | D_ Double | L_ (Expr -> Maybe SpecVal)
+type Gamma = M.HashMap Symbol SpecVal
 
+data SpecVal = B_ Bool | I_ Integer | D_ Double | L_ Gamma (Symbol, Sort) Expr 
+    deriving Show
 toBool :: Maybe SpecVal -> Maybe Bool
 toBool (Just (B_ b)) = Just b
 toBool _ = Nothing
@@ -347,59 +348,67 @@ toDouble _ = Nothing
 
 
 lookupDM (m1, m2) s = M.lookup s m1 <|> M.lookup s m2
-
-eval :: (CntrEx,CntrEx) -> Expr -> Maybe SpecVal
-eval ctx (EIte b e1 e2)
-  = (\b' -> if b' then eval ctx e1 else eval ctx e2) =<<
-    toBool (eval ctx b)
-eval ctx (PAtom r e1 e2)
+{- eval' ctx vars e = trace ("\n\nREDUCING: " ++ (show vars) ++ "\n--------\n" ++ (show e)) $ eval ctx vars e
+-}
+eval' = eval
+eval :: (CntrEx,CntrEx) -> Gamma -> Expr -> Maybe SpecVal
+eval ctx vars (EIte b e1 e2)
+  = (\b' -> if b' then eval' ctx vars e1 else eval' ctx vars e2) =<<
+    toBool (eval' ctx vars b)
+eval ctx vars (PAtom r e1 e2)
   = fmap B_ $ relDenote r <$> a <*> b
-  where a = toDouble $ eval ctx e1
-        b = toDouble $ eval ctx e2
-eval ctx (EBin o e1 e2)
+  where a = toDouble $ eval' ctx vars e1
+        b = toDouble $ eval' ctx vars e2
+eval ctx vars (EBin o e1 e2)
   = fmap D_ $ opDenote o <$> a <*> b
-  where a = toDouble $ eval ctx e1
-        b = toDouble $ eval ctx e2
-eval ctx (ENeg e)
-  = fmap D_ $ negate <$> toDouble (eval ctx e)
-eval ctx (PNot e)
-  = fmap B_ $ not <$> toBool (eval ctx e)
-eval ctx (PImp e1 e2)
+  where a = toDouble $ eval' ctx vars e1
+        b = toDouble $ eval' ctx vars e2
+eval ctx vars (ENeg e)
+  = fmap D_ $ negate <$> toDouble (eval' ctx vars e)
+eval ctx vars (PNot e)
+  = fmap B_ $ not <$> toBool (eval' ctx vars e)
+eval ctx vars (PImp e1 e2)
   = fmap B_ $ (<=) <$> b <*> a
-  where a = toBool $ eval ctx e1
-        b = toBool $ eval ctx e2
-eval ctx (PIff e1 e2)
+  where a = toBool $ eval' ctx vars e1
+        b = toBool $ eval' ctx vars e2
+eval ctx vars (PIff e1 e2)
   = fmap B_ $ (==) <$> a <*> b
-  where a = toBool $ eval ctx e1
-        b = toBool $ eval ctx e2
-eval ctx (PAnd es)
-  = B_ . and <$> sequence (toBool . eval ctx <$> es)
-eval ctx (POr es)
-  = B_ . or <$> sequence (toBool . eval ctx <$> es)
+  where a = toBool $ eval' ctx vars e1
+        b = toBool $ eval' ctx vars e2
+eval ctx vars (PAnd es)
+  = B_ . and <$> sequence (toBool . eval' ctx vars <$> es)
+eval ctx vars (POr es)
+  = B_ . or <$> sequence (toBool . eval' ctx vars <$> es)
 
-eval ctx (ECst e _) = eval ctx e
-eval _ (ECon (I n)) = Just $ I_ n
-eval _ (ECon (R n)) = Just $ D_ n
-eval ctx (ETApp e _) = eval ctx e
-eval ctx (ETAbs e _) = eval ctx e
+eval ctx vars (ECst e _) = eval' ctx vars e
+eval _ _ (ECon (I n)) = Just $ I_ n
+eval _ _ (ECon (R n)) = Just $ D_ n
+eval ctx vars (ETApp e _) = eval' ctx vars e
+eval ctx vars (ETAbs e _) = eval' ctx vars e
 
-eval _ PKVar{}  = error "Someone forgot to subst a KVar.\n\
+eval _ _ PKVar{}  = error "Someone forgot to subst a KVar.\n\
                      \ Please file a bug!               \
                      \ http://github.com/ucsd-progsys/liquid-fixpoint"
-eval ctx (EVar s) = eval ctx $ flip fromMaybe (lookupDM ctx s) $ error $ "Unknown variable: " ++ (show s)
+eval ctx vars (EVar s) = M.lookup s vars <|>
+                         (eval' ctx vars =<< lookupDM ctx s) <|> 
+                         (error $ "Unknown variable: " ++ (show s) ++ (show vars))
 
-eval ctx (ELam (x,_) e)  = Just $ L_ $ \ex -> eval ctx $ subst1 e (x,ex)
--- eval ctx (EApp e'@EApp{} ex)       = eval ctx $ EApp (eval ctx e') x
-eval ctx (EApp f e)  = f' e
-  where Just (L_ f') = eval ctx f
--- eval ctx e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
+eval _ vars (ELam (x,s) e)  = Just $ L_ vars (x, s) e
 
-eval _ PAll{}   = error "quantifiers are incompatible with --cegis"
-eval _ PExist{} = error "quantifiers are incompatible with --cegis"
+-- eval ctx vars (EApp e'@EApp{} ex)       = eval ctx vars $ EApp (eval ctx vars e') x
+eval ctx vars (EApp f e)  = eval' ctx vars' fe
+  where
+      vars' = M.insert x e' (M.union lGamma vars)
+      Just e' = eval' ctx vars e
+      Just (L_ lGamma (x, _) fe) = eval' ctx vars f
+-- eval ctx vars e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
 
-eval _ PGrad{}  = error "--cegis is incompatible with --gradual"
-eval _ (ESym _) = error "--cegis doesn't yet support string lits"
-eval _ (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
+eval _ _ PAll{}   = error "quantifiers are incompatible with --cegis"
+eval _ _ PExist{} = error "quantifiers are incompatible with --cegis"
+
+eval _ _ PGrad{}  = error "--cegis is incompatible with --gradual"
+eval _ _ (ESym _) = error "--cegis doesn't yet support string lits"
+eval _ _ (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
 
 
 smtWriteRaw      :: Context -> Raw -> IO ()

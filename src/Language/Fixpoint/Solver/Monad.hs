@@ -252,18 +252,21 @@ filterValidCEGIS :: F.Expr -> F.Cand (F.KVar, F.EQual)
 --------------------------------------------------------------------------------
 filterValidCEGIS p qs = do
   xs  <- fmap Misc.snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
+  liftIO $ print "Uhhhhh...."
   qs' <- getContext >>= \me ->
            smtBracket me "filterValidLHS" $ catMaybes<$> do
     def <- lift $ getValuesExpr me xs
     liftIO $ smtAssert me p
     forM qs $ \(q, x) ->
       smtBracket me "filterValidRHS" $ do
+        liftIO $ print (F.showpp q)
         pts <- ssPts <$> get
         if and $ isImpliedAt def (ctxSymEnv me) p q <$> pts
           then do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
             if valid then return $ Just x else smtGetModel me >> return Nothing
+
           else {-lift (print "WIN") >>-} return Nothing
   -- stats
   incBrkt
@@ -282,7 +285,7 @@ monomorphizeApp _ e = e
 isImpliedAt def env p q pt = termAtPoint def env p pt <= termAtPoint def env q pt
 
 termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
-termAtPoint def env term pt = toBool $ eval (pt, def) $
+termAtPoint def env term pt = toBool $ eval' (pt, def) M.empty $
                               mapExpr (monomorphizeApp env) $
                               term
 {-

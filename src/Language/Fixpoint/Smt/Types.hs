@@ -85,8 +85,8 @@ data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, Lisp)]
-                  | Model CntrEx
+                  | Values ![(Symbol, Lisp)]
+                  | Model !CntrEx
                   | Error !T.Text
                   deriving (Eq, Show)
 
