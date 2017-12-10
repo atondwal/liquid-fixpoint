@@ -264,7 +264,7 @@ filterValidCEGIS p qs = do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
             if valid then return $ Just x else smtGetModel me >> return Nothing
-          else lift (print "WIN") >> return Nothing
+          else {-lift (print "WIN") >>-} return Nothing
   -- stats
   incBrkt
   incChck (length qs)
@@ -282,14 +282,13 @@ monomorphizeApp _ e = e
 isImpliedAt def env p q pt = termAtPoint def env p pt <= termAtPoint def env q pt
 
 termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
-termAtPoint def env term pt = toBool $ eval $
-                              ev def $ ev pt $
+termAtPoint def env term pt = toBool $ eval (pt, def) $
                               mapExpr (monomorphizeApp env) $
                               term
-
+{-
 ev :: CntrEx -> F.Expr -> F.Expr
 ev pt e = F.subst (F.Su pt) e
-
+-}
 smtGetModel :: Context -> SolveM ()
 smtGetModel me = do
   pt <- liftIO $ (\(Model x) -> x) <$> command me GetModel

@@ -78,18 +78,18 @@ instK :: Bool
       -> [F.Qualifier]
       -> Sol.QBind
 --------------------------------------------------------------------------------
-instK ho env v t = Sol.qb . powerCands . unique . concatMap (instKQ ho env v t)
+instK ho env v t = Sol.qb {- . powerCands -} . unique . concatMap (instKQ ho env v t)
   where
     unique       = L.nubBy ((. Sol.eqPred) . (==) . Sol.eqPred)
 
-powerCands :: [Sol.EQual] -> [Sol.EQual]
-powerCands cnds = disjunctCands <$> powerCands_ cnds
+_powerCands :: [Sol.EQual] -> [Sol.EQual]
+_powerCands cnds = _disjunctCands <$> _powerCands_ cnds
 
-powerCands_ :: [Sol.EQual] -> [[Sol.EQual]]
-powerCands_ cnds = [[a,b,c] | a <- cnds, b <- cnds, c <- cnds]
+_powerCands_ :: [Sol.EQual] -> [[Sol.EQual]]
+_powerCands_ cnds = [[a,b,c] | a <- cnds, b <- cnds, c <- cnds]
 
-disjunctCands :: [Sol.EQual] -> Sol.EQual
-disjunctCands eqs = Sol.trueEqual { Sol.eqPred =  e }
+_disjunctCands :: [Sol.EQual] -> Sol.EQual
+_disjunctCands eqs = Sol.trueEqual { Sol.eqPred =  e }
   where e = F.POr $ Sol.eqPred <$> eqs
 
 {-

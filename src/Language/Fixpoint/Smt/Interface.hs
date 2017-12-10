@@ -344,60 +344,61 @@ toDouble (Just (D_ d)) = Just d
 toDouble (Just (I_ d)) = Just $ fromIntegral d
 toDouble _ = Nothing
 
-eval :: Expr -> Maybe SpecVal
-eval (EIte b e1 e2)
-  = (\b' -> if b' then eval e1 else eval e2) =<<
-    toBool (eval b)
-eval (PAtom r e1 e2)
+
+lookupDM (m1, m2) s = M.lookup s m1 <|> M.lookup s m2
+
+eval :: (CntrEx,CntrEx) -> Expr -> Maybe SpecVal
+eval ctx (EIte b e1 e2)
+  = (\b' -> if b' then eval ctx e1 else eval ctx e2) =<<
+    toBool (eval ctx b)
+eval ctx (PAtom r e1 e2)
   = fmap B_ $ relDenote r <$> a <*> b
-  where a = toDouble $ eval e1
-        b = toDouble $ eval e2
-eval (EBin o e1 e2)
+  where a = toDouble $ eval ctx e1
+        b = toDouble $ eval ctx e2
+eval ctx (EBin o e1 e2)
   = fmap D_ $ opDenote o <$> a <*> b
-  where a = toDouble $ eval e1
-        b = toDouble $ eval e2
-eval (ENeg e)
-  = fmap D_ $ negate <$> toDouble (eval e)
-eval (PNot e)
-  = fmap B_ $ not <$> toBool (eval e)
-eval (PImp e1 e2)
+  where a = toDouble $ eval ctx e1
+        b = toDouble $ eval ctx e2
+eval ctx (ENeg e)
+  = fmap D_ $ negate <$> toDouble (eval ctx e)
+eval ctx (PNot e)
+  = fmap B_ $ not <$> toBool (eval ctx e)
+eval ctx (PImp e1 e2)
   = fmap B_ $ (<=) <$> b <*> a
-  where a = toBool $ eval e1
-        b = toBool $ eval e2
-eval (PIff e1 e2)
+  where a = toBool $ eval ctx e1
+        b = toBool $ eval ctx e2
+eval ctx (PIff e1 e2)
   = fmap B_ $ (==) <$> a <*> b
-  where a = toBool $ eval e1
-        b = toBool $ eval e2
-eval (PAnd es)
-  = B_ . and <$> sequence (toBool . eval <$> es)
-eval (POr es)
-  = B_ . or <$> sequence (toBool . eval <$> es)
+  where a = toBool $ eval ctx e1
+        b = toBool $ eval ctx e2
+eval ctx (PAnd es)
+  = B_ . and <$> sequence (toBool . eval ctx <$> es)
+eval ctx (POr es)
+  = B_ . or <$> sequence (toBool . eval ctx <$> es)
 
-eval (ECst e _) = eval e
-eval (ECon (I n)) = Just $ I_ n
-eval (ECon (R n)) = Just $ D_ n
-eval (ETApp e _) = eval e
-eval (ETAbs e _) = eval e
+eval ctx (ECst e _) = eval ctx e
+eval _ (ECon (I n)) = Just $ I_ n
+eval _ (ECon (R n)) = Just $ D_ n
+eval ctx (ETApp e _) = eval ctx e
+eval ctx (ETAbs e _) = eval ctx e
 
-eval PKVar{}  = error "Someone forgot to subst a KVar.\n\
+eval _ PKVar{}  = error "Someone forgot to subst a KVar.\n\
                      \ Please file a bug!               \
                      \ http://github.com/ucsd-progsys/liquid-fixpoint"
-eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s ++
-                     " Please file a bug!               \
-                     \ http://github.com/ucsd-progsys/liquid-fixpoint"
+eval ctx (EVar s) = eval ctx $ flip fromMaybe (lookupDM ctx s) $ error $ "Unknown variable: " ++ (show s)
 
-eval (ELam (x,_) e)  = Just $ L_ $ \ex -> eval $ subst1 e (x,ex)
--- eval (EApp e'@EApp{} ex)       = eval $ EApp (eval e') x
-eval (EApp f e)  = f' e
-  where Just (L_ f') = eval f
--- eval e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
+eval ctx (ELam (x,_) e)  = Just $ L_ $ \ex -> eval ctx $ subst1 e (x,ex)
+-- eval ctx (EApp e'@EApp{} ex)       = eval ctx $ EApp (eval ctx e') x
+eval ctx (EApp f e)  = f' e
+  where Just (L_ f') = eval ctx f
+-- eval ctx e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
 
-eval PAll{}   = error "quantifiers are incompatible with --cegis"
-eval PExist{} = error "quantifiers are incompatible with --cegis"
+eval _ PAll{}   = error "quantifiers are incompatible with --cegis"
+eval _ PExist{} = error "quantifiers are incompatible with --cegis"
 
-eval PGrad{}  = error "--cegis is incompatible with --gradual"
-eval (ESym _) = error "--cegis doesn't yet support string lits"
-eval (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
+eval _ PGrad{}  = error "--cegis is incompatible with --gradual"
+eval _ (ESym _) = error "--cegis doesn't yet support string lits"
+eval _ (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
 
 
 smtWriteRaw      :: Context -> Raw -> IO ()
