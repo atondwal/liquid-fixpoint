@@ -15,7 +15,9 @@ module Language.Fixpoint.Smt.Types (
       Command  (..)
 
     -- * Responses
+    , CntrEx
     , Response (..)
+    , Lisp (..)
 
     -- * Typeclass for SMTLIB2 conversion
     , SMTLIB2 (..)
@@ -29,6 +31,7 @@ module Language.Fixpoint.Smt.Types (
 import           Language.Fixpoint.Types
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy.Builder   as LT
+import qualified Data.HashMap.Strict      as M
 import           Text.PrettyPrint.HughesPJ
 
 import           System.IO                (Handle)
@@ -54,6 +57,7 @@ data Command      = Push
                   | AssertAx !(Triggered Expr)
                   | Distinct [Expr] -- {v:[Expr] | 2 <= len v}
                   | GetValue [Symbol]
+                  | GetModel
                   | CMany    [Command]
                   deriving (Eq, Show)
 
@@ -71,16 +75,22 @@ ppCmd (Assert _ e)  = text "Assert" <+> pprint e
 ppCmd (AssertAx _)  = text "AssertAxiom ..."
 ppCmd (Distinct {}) = text "Distinct ..."
 ppCmd (GetValue {}) = text "GetValue ..."
+ppCmd (GetModel)    = text "GetModel"
 ppCmd (CMany {})    = text "CMany ..."
+
+type CntrEx = M.HashMap Symbol Expr
 
 -- | Responses received from SMT engine
 data Response     = Ok
                   | Sat
                   | Unsat
                   | Unknown
-                  | Values [(Symbol, T.Text)]
+                  | Values [(Symbol, Lisp)]
+                  | Model CntrEx
                   | Error !T.Text
                   deriving (Eq, Show)
+
+data Lisp = Sym Symbol | Lisp [Lisp] deriving (Eq,Show)
 
 -- | Information about the external SMT process
 data Context = Ctx

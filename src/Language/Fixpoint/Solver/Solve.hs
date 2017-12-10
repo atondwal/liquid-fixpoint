@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 --------------------------------------------------------------------------------
 -- | Solve a system of horn-clause constraints ---------------------------------
@@ -33,7 +34,7 @@ import qualified Data.HashSet        as S
 import qualified Data.List as L
 
 --------------------------------------------------------------------------------
-solve :: (NFData a, F.Fixpoint a, Show a, F.Loc a) => Config -> F.SInfo a -> IO (F.Result (Integer, a))
+solve :: forall a. (NFData a, F.Fixpoint a, Show a, F.Loc a) => Config -> F.SInfo a -> IO (F.Result (Integer, a))
 --------------------------------------------------------------------------------
 
 solve cfg fi = do
@@ -44,7 +45,7 @@ solve cfg fi = do
     -- print (numIter stat)
     return res
   where
-    act  = solve_ cfg fi s0 ks  wkl
+    act  = solve_ cfg fi s0 ks (siDeps sI) wkl
     sI   = solverInfo cfg fi
     wkl  = W.init sI
     s0   = siSol  sI
@@ -64,7 +65,7 @@ printStats fi w s = putStrLn "\n" >> ppTs [ ptable fi, ptable s, ptable w ]
     ppTs          = putStrLn . showpp . mconcat
 
 --------------------------------------------------------------------------------
-solverInfo :: Config -> F.SInfo a -> SolverInfo a b
+-- solverInfo :: Show b => Config -> F.SInfo a -> SolverInfo a b
 --------------------------------------------------------------------------------
 solverInfo cfg fI
   | useElim cfg = E.solverInfo cfg fI
@@ -81,13 +82,16 @@ solve_ :: (NFData a, F.Fixpoint a, F.Loc a)
        -> F.SInfo a
        -> Sol.Solution
        -> S.HashSet F.KVar
+       -> CDeps
        -> W.Worklist a
        -> SolveM (F.Result (Integer, a), Stats)
 --------------------------------------------------------------------------------
-solve_ cfg fi s0 ks wkl = do
+solve_ cfg fi s0 ks _cD wkl = do
   let s1  = mappend s0 $ {-# SCC "sol-init" #-} S.init cfg fi ks
-  s       <- {-# SCC "sol-refine" #-} refine s1 wkl
+  lift $ print "REFINING"
+  s       <- {-# SCC "sol-refine" #-} refine cfg s1 wkl
   res     <- {-# SCC "sol-result" #-} result cfg wkl s
+  -- (_,s') <- Q.synthesisProject cfg fi cD res s ([],s1)
   st      <- stats
   let res' = {-# SCC "sol-tidy"   #-} tidyResult res
   return $!! (res', st)
@@ -106,15 +110,15 @@ tidyPred :: F.Expr -> F.Expr
 tidyPred = F.substf (F.eVar . F.tidySymbol)
 
 --------------------------------------------------------------------------------
-refine :: (F.Loc a) => Sol.Solution -> W.Worklist a -> SolveM Sol.Solution
+refine :: (F.Loc a) => Config -> Sol.Solution -> W.Worklist a -> SolveM Sol.Solution
 --------------------------------------------------------------------------------
-refine s w
+refine cfg s w
   | Just (c, w', newScc, rnk) <- W.pop w = do
      i       <- tickIter newScc
-     (b, s') <- refineC i s c
+     (b, s') <- refineC cfg i s c
      lift $ writeLoud $ refineMsg i c b rnk
      let w'' = if b then W.push c w' else w'
-     refine s' w''
+     refine cfg s' w''
   | otherwise = return s
   where
     -- DEBUG
@@ -124,18 +128,20 @@ refine s w
 ---------------------------------------------------------------------------
 -- | Single Step Refinement -----------------------------------------------
 ---------------------------------------------------------------------------
-refineC :: (F.Loc a) => Int -> Sol.Solution -> F.SimpC a
+refineC :: (F.Loc a) => Config -> Int -> Sol.Solution -> F.SimpC a
         -> SolveM (Bool, Sol.Solution)
 ---------------------------------------------------------------------------
-refineC _i s c
+-- | returned Bool : constraint is to be revisited
+refineC cfg _i s c
   | null rhs  = return (False, s)
   | otherwise = do be     <- getBinds
                    let lhs = S.lhsPred be s c
-                   kqs    <- filterValid (cstrSpan c) lhs rhs
+                   kqs    <- filterV lhs rhs
                    return  $ S.update s ks kqs
   where
     _ci       = F.subcId c
     (ks, rhs) = rhsCands s c
+    filterV = if cegis cfg then filterValidCEGIS else filterValid (cstrSpan c)
     -- msg       = printf "refineC: iter = %d, sid = %s, soln = \n%s\n"
     --               _i (show (F.sid c)) (showpp s)
     _msg ks xs ys = printf "refineC: iter = %d, sid = %s, s = %s, rhs = %d, rhs' = %d \n"

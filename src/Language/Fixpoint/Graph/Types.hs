@@ -159,7 +159,7 @@ data CDeps = CDs { cSucc   :: !(F.CMap [F.SubcId]) -- ^ Constraints *written by*
                  , cPrev   :: !(F.CMap [F.KVar])   -- ^ (Cut) KVars *read by*    a SubcId
                  , cRank   :: !(F.CMap Rank)       -- ^ SCC rank of a SubcId
                  , cNumScc :: !Int                 -- ^ Total number of Sccs
-                 }
+                 } deriving Show
 
 
 -- | Ranks ---------------------------------------------------------------------
@@ -181,4 +181,4 @@ data SolverInfo a b = SI
   , siQuery   :: !(F.SInfo a)                   -- ^ the whole input query
   , siDeps    :: !CDeps                         -- ^ dependencies between constraints/ranks etc.
   , siVars    :: !(S.HashSet F.KVar)            -- ^ set of KVars to actually solve for
-  }
+  } deriving Show

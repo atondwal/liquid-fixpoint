@@ -5,6 +5,8 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE PatternGuards             #-}
+{-# LANGUAGE LambdaCase                #-}
 
 -- | This module contains an SMTLIB2 interface for
 --   1. checking the validity, and,
@@ -54,7 +56,14 @@ module Language.Fixpoint.Smt.Interface (
     , checkValid'
     , checkValidWithContext
     , checkValids
+    , getValuesText
+    , getValuesExpr
 
+    -- * Evaluate SMT2LIB Lisp
+    , eval
+    , SpecVal (..)
+    , toBool
+    , toDouble
     ) where
 
 import           Language.Fixpoint.Types.Config ( SMTSolver (..)
@@ -75,6 +84,7 @@ import           Language.Fixpoint.Smt.Types
 import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Smt.Serialize ()
 import           Control.Applicative      ((<|>))
+import           Control.Arrow
 import           Control.Monad
 import           Control.Exception
 import           Data.Char
@@ -87,6 +97,7 @@ import qualified Data.Text.IO             as TIO
 import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as Builder
 import qualified Data.Text.Lazy.IO        as LTIO
+import           Data.Text.Read              (decimal)
 import           System.Directory
 import           System.Console.CmdArgs.Verbosity
 import           System.Exit              hiding (die)
@@ -97,9 +108,11 @@ import qualified Data.Attoparsec.Text     as A
 -- import qualified Data.HashMap.Strict      as M
 import           Data.Attoparsec.Internal.Types (Parser)
 import           Text.PrettyPrint.HughesPJ (text)
+import           Text.Read (readMaybe)
 import           Language.Fixpoint.SortCheck
 -- import qualified Language.Fixpoint.Types as F
 -- import           Language.Fixpoint.Types.PrettyPrint (tracepp)
+import           Control.Monad.IO.Class
 
 {-
 runFile f
@@ -145,6 +158,19 @@ checkValids cfg f xts ps
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
 
+getValuesText :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
+getValuesText me xts p xs = do
+  smtDecls me xts
+  smtAssert me p
+  smtCheckUnsat me
+  map (second lispToText) <$> smtGetValues me xs
+
+getValuesExpr :: Context -> [Symbol] -> IO CntrEx
+getValuesExpr me xs = smtBracket me "getDefModel" $ do
+  smtCheckUnsat me
+  M.fromList <$> map (second lispToExpr) <$> smtGetValues me xs
+
+
 -- debugFile :: FilePath
 -- debugFile = "DEBUG.smt2"
 
@@ -161,6 +187,7 @@ command me !cmd       = say cmd >> hear cmd
     say               = smtWrite me . Builder.toLazyText . runSmt2 env
     hear CheckSat     = smtRead me
     hear (GetValue _) = smtRead me
+    hear (GetModel)   = smtRead me
     hear _            = return Ok
 
 
@@ -182,42 +209,197 @@ smtRead me = {-# SCC "smtRead" #-} do
 type SmtParser a = Parser T.Text a
 
 responseP :: SmtParser Response
-responseP = {-# SCC "responseP" #-} A.char '(' *> sexpP
-         <|> A.string "sat"     *> return Sat
-         <|> A.string "unsat"   *> return Unsat
-         <|> A.string "unknown" *> return Unknown
+responseP = {-# SCC "responseP" #-} A.peekChar' >>= \case
+              '(' -> responseBodyP
+              _ ->     A.string "sat"     *> return Sat
+                   <|> A.string "unsat"   *> return Unsat
+                   <|> A.string "unknown" *> return Unknown
 
-sexpP :: SmtParser Response
-sexpP = {-# SCC "sexpP" #-} A.string "error" *> (Error <$> errorP)
-     <|> Values <$> valuesP
+responseBodyP :: SmtParser Response
+responseBodyP = {-# SCC "responseBodyP" #-} A.string "(error" *> (Error <$> errorP)
+     <|> modelOrValues <$> lispP
+
+modelOrValues :: Lisp -> Response
+modelOrValues (Lisp ((Sym s):ls))
+  | symbolText s == "model" = toModel $ ls
+modelOrValues (Lisp ls) = Values $ map (\(Lisp [(Sym sym), e]) -> (sym, e)) ls
+modelOrValues (Sym s) = error $ "unknown symbol when expecting Model or Values" ++ show s
+
+lispToText :: Lisp -> T.Text
+lispToText (Lisp xs) = "(" `T.append` foldr (\ x y -> x `T.append` " " `T.append` y) ")" (lispToText <$> xs)
+lispToText (Sym s) = symbolText s
+
+toModel ls = Model $ M.fromList $ lispToModel <$> ls
+
+lispToModel (Lisp [_,Sym sym, Lisp args,_,expr]) = (sym, foldr abstract (lispToExpr expr) args)
+      where abstract (Lisp [Sym x,_]) e = ELam (x,FInt) e
+            abstract _ _ = error "reading in a bad list of formals"
+
+            -- Since we can't recover full typing information from the SMT
+            -- Sovler, we just give up and give it FInt. Hopefully this make
+            -- everyone who tries to use it wrong crash.
+
+lispToModel l = error $ "Expecting Lisp Define-fun, Got " ++ show l
+
 
 errorP :: SmtParser T.Text
 errorP = A.skipSpace *> A.char '"' *> A.takeWhile1 (/='"') <* A.string "\")"
 
-valuesP :: SmtParser [(Symbol, T.Text)]
-valuesP = A.many1' pairP <* A.char ')'
-
-pairP :: SmtParser (Symbol, T.Text)
-pairP = {-# SCC "pairP" #-}
-  do A.skipSpace
-     A.char '('
-     !x <- symbolP
-     A.skipSpace
-     !v <- valueP
-     A.char ')'
-     return (x,v)
-
 symbolP :: SmtParser Symbol
-symbolP = {-# SCC "symbolP" #-} symbol <$> A.takeWhile1 (not . isSpace)
+symbolP = {-# SCC "symbolP" #-} symbol . decode <$> A.takeWhile1 (\x -> x /= ')' && not (isSpace x) && not (A.isEndOfLine x))
 
-valueP :: SmtParser T.Text
-valueP = {-# SCC "valueP" #-} negativeP
-      <|> A.takeWhile1 (\c -> not (c == ')' || isSpace c))
+fromRight (Right a) = a
+fromRight (Left _) = error "FROMRIGHT LEFT"
 
-negativeP :: SmtParser T.Text
-negativeP
-  = do v <- A.char '(' *> A.takeWhile1 (/=')') <* A.char ')'
-       return $ "(" <> v <> ")"
+decode :: T.Text -> T.Text
+decode s = T.concat $ zipWith ($) (cycle [id, T.singleton . chr . fst . fromRight . decimal]) (T.split (=='$') s)
+
+lispP = {-# SCC "lispP" #-}
+      (Lisp <$> (A.char '(' *> A.sepBy' lispP (A.skipWhile space2) <* A.char ')'))
+  <|> (Sym <$> symbolP)
+
+space2 c = isSpace c && not (A.isEndOfLine c)
+
+binOpStrings :: [T.Text]
+binOpStrings = [ "+", "-", "*", "/", "mod"]
+
+strToOp :: T.Text -> Bop
+strToOp "+" = Plus
+strToOp "-" = Minus
+strToOp "*" = Times
+strToOp "/" = Div
+strToOp "mod" = Mod
+strToOp _ = error "Op not found"
+
+binRelStrings :: [T.Text]
+binRelStrings = [ ">", "<", "<=", ">="]
+
+strToRel :: T.Text -> Brel
+strToRel ">" = Gt
+strToRel ">=" = Ge
+strToRel "<" = Lt
+strToRel "<=" = Le
+-- Do I need Ne Une Ueq?
+strToRel _ = error "Rel not found"
+
+lispToExpr :: Lisp -> Expr
+lispToExpr (Sym s)
+  | symbolText s == "true"  = PTrue
+  | symbolText s == "false" = PFalse
+  -- | Just n <- readMaybe (symbolString s) :: Maybe Integer = (ECon (I n))
+  | Just n <- readMaybe (symbolString s) :: Maybe Double  = (ECon (R n))
+  | otherwise               = EVar s
+lispToExpr l@(Lisp xs)
+  | [Sym s, x] <- xs, symbolText s == "not"     =
+    PNot (lispToExpr x)
+  | [Sym s, x] <- xs, symbolText s == "-"       =
+    ENeg (lispToExpr x)
+  | [Sym s, x, y] <- xs, symbolText s == "=>"   =
+    PImp (lispToExpr x) (lispToExpr y)
+  | [Sym s, x, y] <- xs, symbolText s == "="    =
+    PAtom Eq (lispToExpr x) (lispToExpr y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binOpStrings  =
+    EBin (strToOp $ symbolText s) (lispToExpr x) (lispToExpr y)
+  | [Sym s, x, y] <- xs, symbolText s `elem` binRelStrings =
+    PAtom (strToRel $ symbolText s) (lispToExpr x) (lispToExpr y)
+  | [Sym s,x,y,z] <- xs, symbolText s == "ite"  =
+    EIte (lispToExpr x) (lispToExpr y) (lispToExpr z)
+  | (Sym s:xs) <- xs, symbolText s == "and"     =
+    PAnd $ lispToExpr <$> xs
+  | (Sym s:xs) <- xs, symbolText s == "or"      =
+    POr $ lispToExpr <$> xs
+  | otherwise                                   =
+    lispToFunc l
+  where lispToFunc (Lisp xs) = foldr1 EApp $ map lispToExpr xs
+        -- this should not be called
+        lispToFunc (Sym s)   = EVar s
+
+opDenote :: Bop -> Double -> Double -> Double
+opDenote Plus  = (+)
+opDenote Minus = (-)
+opDenote Times = (*)
+opDenote Div   = (/)
+-- Below here, untested
+opDenote Mod   = \a b -> fromIntegral $ mod (floor a) (floor b)
+opDenote RTimes = (*)
+opDenote RDiv  = (/)
+
+relDenote Gt = (>)
+relDenote Ge = (>=)
+relDenote Lt = (<)
+relDenote Le = (<=)
+relDenote Eq = (==)
+relDenote Ne = (/=)
+-- Not sure what these two do
+relDenote Ueq = (/=)
+relDenote Une = (/=)
+
+data SpecVal = B_ Bool | I_ Integer | D_ Double | L_ (Expr -> Maybe SpecVal)
+
+toBool :: Maybe SpecVal -> Maybe Bool
+toBool (Just (B_ b)) = Just b
+toBool _ = Nothing
+
+toDouble :: Maybe SpecVal -> Maybe Double
+toDouble (Just (D_ d)) = Just d
+toDouble (Just (I_ d)) = Just $ fromIntegral d
+toDouble _ = Nothing
+
+eval :: Expr -> Maybe SpecVal
+eval (EIte b e1 e2)
+  = (\b' -> if b' then eval e1 else eval e2) =<<
+    toBool (eval b)
+eval (PAtom r e1 e2)
+  = fmap B_ $ relDenote r <$> a <*> b
+  where a = toDouble $ eval e1
+        b = toDouble $ eval e2
+eval (EBin o e1 e2)
+  = fmap D_ $ opDenote o <$> a <*> b
+  where a = toDouble $ eval e1
+        b = toDouble $ eval e2
+eval (ENeg e)
+  = fmap D_ $ negate <$> toDouble (eval e)
+eval (PNot e)
+  = fmap B_ $ not <$> toBool (eval e)
+eval (PImp e1 e2)
+  = fmap B_ $ (<=) <$> b <*> a
+  where a = toBool $ eval e1
+        b = toBool $ eval e2
+eval (PIff e1 e2)
+  = fmap B_ $ (==) <$> a <*> b
+  where a = toBool $ eval e1
+        b = toBool $ eval e2
+eval (PAnd es)
+  = B_ . and <$> sequence (toBool . eval <$> es)
+eval (POr es)
+  = B_ . or <$> sequence (toBool . eval <$> es)
+
+eval (ECst e _) = eval e
+eval (ECon (I n)) = Just $ I_ n
+eval (ECon (R n)) = Just $ D_ n
+eval (ETApp e _) = eval e
+eval (ETAbs e _) = eval e
+
+eval PKVar{}  = error "Someone forgot to subst a KVar.\n\
+                     \ Please file a bug!               \
+                     \ http://github.com/ucsd-progsys/liquid-fixpoint"
+eval (EVar s) = error $ "Z3 didn't give us a value for" ++ show s ++
+                     " Please file a bug!               \
+                     \ http://github.com/ucsd-progsys/liquid-fixpoint"
+
+eval (ELam (x,_) e)  = Just $ L_ $ \ex -> eval $ subst1 e (x,ex)
+-- eval (EApp e'@EApp{} ex)       = eval $ EApp (eval e') x
+eval (EApp f e)  = f' e
+  where Just (L_ f') = eval f
+-- eval e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
+
+eval PAll{}   = error "quantifiers are incompatible with --cegis"
+eval PExist{} = error "quantifiers are incompatible with --cegis"
+
+eval PGrad{}  = error "--cegis is incompatible with --gradual"
+eval (ESym _) = error "--cegis doesn't yet support string lits"
+eval (ECon (L _ _)) = error "--cegis doesn't yet support string lits"
+
 
 smtWriteRaw      :: Context -> Raw -> IO ()
 smtWriteRaw me !s = {-# SCC "smtWriteRaw" #-} do
@@ -384,15 +566,18 @@ smtDistinct me az = interact' me (Distinct az)
 smtCheckUnsat :: Context -> IO Bool
 smtCheckUnsat me  = respSat <$> command me CheckSat
 
+smtGetValues :: Context -> [Symbol] -> IO [(Symbol, Lisp)]
+smtGetValues me xs = (\(Values x) -> x) <$> command me (GetValue xs)
+
 smtBracketAt :: SrcSpan -> Context -> String -> IO a -> IO a
 smtBracketAt sp x y z = smtBracket x y z `catch` dieAt sp
 
 
-smtBracket :: Context -> String -> IO a -> IO a
+smtBracket :: MonadIO io => Context -> String -> io a -> io a
 smtBracket me _msg a   = do
-  smtPush me
+  liftIO $ smtPush me
   r <- a
-  smtPop me
+  liftIO $ smtPop me
   return r
 
 respSat :: Response -> Bool

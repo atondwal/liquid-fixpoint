@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExplicitForAll    #-}
+{-# LANGUAGE RankNTypes        #-}
 
 -- | This is a wrapper around IO that permits SMT queries
 
@@ -16,6 +18,7 @@ module Language.Fixpoint.Solver.Monad
          -- * SMT Query
        , filterRequired
        , filterValid
+       , filterValidCEGIS
        , filterValidGradual
        , checkSat
        , smtEnablembqi
@@ -34,7 +37,7 @@ import           Language.Fixpoint.Utils.Progress
 import qualified Language.Fixpoint.Types.Config  as C
 import           Language.Fixpoint.Types.Config  (Config)
 import qualified Language.Fixpoint.Types   as F
--- import qualified Language.Fixpoint.Misc    as Misc
+import qualified Language.Fixpoint.Misc    as Misc
 -- import           Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types.Solutions as F
 import           Language.Fixpoint.Types   (pprint)
@@ -42,12 +45,15 @@ import           Language.Fixpoint.Types   (pprint)
 import           Language.Fixpoint.Smt.Serialize ()
 import           Language.Fixpoint.Types.PrettyPrint ()
 import           Language.Fixpoint.Smt.Interface
+import           Language.Fixpoint.Smt.Types (CntrEx)
+import           Language.Fixpoint.Types.Visitor
 -- import qualified Language.Fixpoint.Smt.Theories as Thy
 import           Language.Fixpoint.Solver.Sanitize
 import           Language.Fixpoint.Graph.Types (SolverInfo (..))
 -- import           Language.Fixpoint.Solver.Solution
 -- import           Data.Maybe           (catMaybes)
 import           Data.List            (partition)
+-- import           Data.Either
 -- import           Data.Char            (isUpper)
 import           Text.PrettyPrint.HughesPJ (text)
 import           Control.Monad.State.Strict
@@ -61,9 +67,10 @@ import           Control.Exception.Base (bracket)
 
 type SolveM = StateT SolverState IO
 
-data SolverState = SS { ssCtx     :: !Context          -- ^ SMT Solver Context
-                      , ssBinds   :: !F.SolEnv         -- ^ All variables and types
-                      , ssStats   :: !Stats            -- ^ Solver Statistics
+data SolverState = SS { ssCtx     :: !Context      -- ^ SMT Solver Context
+                      , ssBinds   :: !F.SolEnv     -- ^ All variables and types
+                      , ssStats   :: !Stats        -- ^ Solver Statistics
+                      , ssPts     :: ![CntrEx]      -- ^ CEs for synthesis
                       }
 
 data Stats = Stats { numCstr :: !Int -- ^ # Horn Constraints
@@ -98,7 +105,7 @@ runSolverM cfg sI act =
     smtWrite ctx "(exit)"
     return (fst res)
   where
-    s0 ctx   = SS ctx be (stats0 fi)
+    s0 ctx   = SS ctx be (stats0 fi) []
     act'     = {- declare initEnv >> -} assumesAxioms (F.asserts fi) >> act
     release  = cleanupContext
     acquire  = makeContextWithSEnv cfg file initEnv
@@ -171,6 +178,7 @@ filterRequired = error "TBD:filterRequired"
 
 > unsat (b2 bR)
 -}
+--
 
 --------------------------------------------------------------------------------
 -- | `filterValid p [(x1, q1),...,(xn, qn)]` returns the list `[ xi | p => qi]`
@@ -237,6 +245,55 @@ smtEnablembqi :: SolveM ()
 smtEnablembqi
   = withContext $ \me ->
       smtWrite me "(set-option :smt.mbqi true)"
+
+--------------------------------------------------------------------------------
+filterValidCEGIS :: F.Expr -> F.Cand (F.KVar, F.EQual)
+                    -> SolveM [(F.KVar, F.EQual)]
+--------------------------------------------------------------------------------
+filterValidCEGIS p qs = do
+  xs  <- fmap Misc.snd3 . F.bindEnvToList . F.soeBinds <$> getBinds
+  qs' <- getContext >>= \me ->
+           smtBracket me "filterValidLHS" $ catMaybes<$> do
+    def <- lift $ getValuesExpr me xs
+    liftIO $ smtAssert me p
+    forM qs $ \(q, x) ->
+      smtBracket me "filterValidRHS" $ do
+        pts <- ssPts <$> get
+        if and $ isImpliedAt def (ctxSymEnv me) p q <$> pts
+          then do
+            liftIO $ smtAssert me (F.PNot q)
+            valid <- liftIO $ smtCheckUnsat me
+            if valid then return $ Just x else smtGetModel me >> return Nothing
+          else lift (print "WIN") >> return Nothing
+  -- stats
+  incBrkt
+  incChck (length qs)
+  incVald (length qs')
+  return qs'
+
+
+-- smt2 (ctxSymEnv me)
+monomorphizeApp :: F.SymEnv -> F.Expr -> F.Expr
+monomorphizeApp env (F.ECst (F.EVar f) t@F.FFunc{}) | f == F.applyName
+  = F.EVar $ F.symbolAtName F.applyName env e t
+  where e = error "eval called on unknown expression" :: Int
+monomorphizeApp _ e = e
+
+isImpliedAt def env p q pt = termAtPoint def env p pt <= termAtPoint def env q pt
+
+termAtPoint :: CntrEx -> F.SymEnv -> F.Expr -> CntrEx -> Maybe Bool
+termAtPoint def env term pt = toBool $ eval $
+                              ev def $ ev pt $
+                              mapExpr (monomorphizeApp env) $
+                              term
+
+ev :: CntrEx -> F.Expr -> F.Expr
+ev pt e = F.subst (F.Su pt) e
+
+smtGetModel :: Context -> SolveM ()
+smtGetModel me = do
+  pt <- liftIO $ (\(Model x) -> x) <$> command me GetModel
+  modify (\s -> s { ssPts = pt : ssPts s })
 
 --------------------------------------------------------------------------------
 checkSat :: F.Expr -> SolveM  Bool

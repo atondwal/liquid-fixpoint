@@ -1,0 +1,46 @@
+// (1) gcd(M,N,R) ← M = N ∧ R = M
+// (2) gcd(M,N,R) ← M > N ∧ M1 = M − N ∧ gcd(M1,N,R)
+// (3) gcd(M,N,R) ← M < N ∧ N1 = N − M ∧ gcd(M,N1,R)
+// (4) false ← M ≥ 0 ∧ M = N ∧ gcd(M,N,R) ∧ R > M
+// gcd(M,N,R) as the predicate (M = N) → (M ≥ R)
+
+// This qualifier saves the day. Solve the constraints WITHOUT IT
+// qualif Zog(v:a, m:a, n:a) : ((m = n) => (m >= v))
+// NB: v has to come first in the qualif
+// Remember this or you will spend a few hours confused, like I just did
+
+// qualif Bar(v:a, m:a, n:a) : (m = n)
+qualif Baz(v:a, m:a) : (m >= v)
+
+bind 0 m : {v: int | true }
+bind 1 n : {v: int | true }
+bind 4 mo : {v: int | [(m > n); (mo = m - n) ] }
+bind 5 no : {v: int | [(m < n); (no = n - m) ] }
+
+constraint:
+  env [0; 1]
+  lhs {v : int | [(m = n); (v = m)]}
+  rhs {v : int | $k0 }
+  id 1 tag []
+
+constraint:
+  env [0; 1; 4]
+  lhs {v : int | $k0[m:=mo]}
+  rhs {v : int | $k0 }
+  id 2 tag []
+
+constraint:
+  env [0; 1; 5]
+  lhs {v : int | $k0[n:=no]}
+  rhs {v : int | $k0 }
+  id 3 tag []
+
+constraint:
+  env [0; 1]
+  lhs {v : int | [(m >= 0); (m = n); ($k0); (v > m)] }
+  rhs {v : int | false }
+  id 4 tag []
+
+wf:
+  env [ 0; 1 ]
+  reft {v: int | $k0}
