@@ -259,13 +259,13 @@ filterValidCEGIS p qs = do
     liftIO $ smtAssert me p
     forM qs $ \(q, x) ->
       smtBracket me "filterValidRHS" $ do
-        liftIO $ print (F.showpp q)
+        -- liftIO $ print (F.showpp q)
         pts <- ssPts <$> get
         if and $ isImpliedAt def (ctxSymEnv me) p q <$> pts
           then do
             liftIO $ smtAssert me (F.PNot q)
             valid <- liftIO $ smtCheckUnsat me
-            if valid then return $ Just x else smtGetModel me >> return Nothing
+            if valid then return $ Just x else if length pts > 20 then smtGetModel me >> return Nothing else return Nothing
 
           else {-lift (print "WIN") >>-} return Nothing
   -- stats

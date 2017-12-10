@@ -89,7 +89,6 @@ import           Control.Monad
 import           Control.Exception
 import           Data.Char
 import qualified Data.HashMap.Strict      as M
-import           Data.Monoid
 import           Data.Maybe                  (fromMaybe)
 import qualified Data.Text                as T
 import           Data.Text.Format
@@ -157,12 +156,8 @@ checkValids cfg f xts ps
           smtBracket me "checkValids" $
             smtAssert me (PNot p) >> smtCheckUnsat me
 
-getValuesText :: Context -> [(Symbol, Sort)] -> Expr -> [Symbol] -> IO [(Symbol, T.Text)]
-getValuesText me xts p xs = do
-  smtDecls me xts
-  smtAssert me p
-  smtCheckUnsat me
-  map (second lispToText) <$> smtGetValues me xs
+getValuesText :: Context -> [Symbol] -> IO [(Symbol, T.Text)]
+getValuesText me xs = map (second lispToText) <$> smtGetValues me xs
 
 getValuesExpr :: Context -> [Symbol] -> IO CntrEx
 getValuesExpr me xs = smtBracket me "getDefModel" $ do
@@ -352,6 +347,7 @@ lookupDM (m1, m2) s = M.lookup s m1 <|> M.lookup s m2
 -}
 eval' = eval
 eval :: (CntrEx,CntrEx) -> Gamma -> Expr -> Maybe SpecVal
+eval ctx vars (ECoerc _ _ e) = eval ctx vars e
 eval ctx vars (EIte b e1 e2)
   = (\b' -> if b' then eval' ctx vars e1 else eval' ctx vars e2) =<<
     toBool (eval' ctx vars b)
@@ -390,17 +386,18 @@ eval _ _ PKVar{}  = error "Someone forgot to subst a KVar.\n\
                      \ Please file a bug!               \
                      \ http://github.com/ucsd-progsys/liquid-fixpoint"
 eval ctx vars (EVar s) = M.lookup s vars <|>
-                         (eval' ctx vars =<< lookupDM ctx s) <|> 
-                         (error $ "Unknown variable: " ++ (show s) ++ (show vars))
+                         (eval' ctx vars =<< lookupDM ctx s) -- <|>
+                         -- (error $ "Unknown variable: " ++ (show s) ++ (show vars))
 
 eval _ vars (ELam (x,s) e)  = Just $ L_ vars (x, s) e
 
 -- eval ctx vars (EApp e'@EApp{} ex)       = eval ctx vars $ EApp (eval ctx vars e') x
-eval ctx vars (EApp f e)  = eval' ctx vars' fe
-  where
-      vars' = M.insert x e' (M.union lGamma vars)
-      Just e' = eval' ctx vars e
-      Just (L_ lGamma (x, _) fe) = eval' ctx vars f
+eval ctx vars (EApp f e)
+  | Just (L_ lGamma (x, _) fe) <- eval' ctx vars f
+  = let Just e' = eval' ctx vars e in
+    let vars' = M.insert x e' (M.union lGamma vars) in
+    eval' ctx vars' fe
+eval _ _ (EApp{}) = Nothing
 -- eval ctx vars e@EApp{} = error $ "EApp not implemented in CEGIS for " ++ show e
 
 eval _ _ PAll{}   = error "quantifiers are incompatible with --cegis"
