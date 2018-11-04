@@ -166,11 +166,21 @@ result :: (F.Fixpoint a, F.Loc a, NFData a) => Config -> W.Worklist a -> Sol.Sol
 result cfg wkl s = do
   lift $ writeLoud "Computing Result"
   stat <- result_ wkl s
-  ebInhabs s
   lift $ whenLoud $ putStrLn $ "RESULT: " ++ show (F.sid <$> stat)
-  F.Result (ci <$> stat) <$> solResult cfg s <*> return mempty
-  where
-    ci c = (F.subcId c, F.sinfo c)
+  inhabRes <- ebInhabs s
+  -- see [note-clean-mapppend]
+  let res = cleanMappend stat inhabRes
+  F.Result res <$> solResult cfg s <*> return mempty
+
+-- [note-clean-mappend] We want to write
+--   let ci c = (F.subcId c, F.sinfo c)
+--   let res = ci <$> mappend stat inhabRes
+-- but inhabRes reutrns FR (SimpC ()), whereas stat is FR (SimpC a), so we
+-- need to use the cid to look up the corresponding SimpC in the SInfo of stat
+
+cleanMappend stat inhabRes = ci <$> stat
+  where ci c = (F.subcId c, F.sinfo c)
+
 
 solResult :: Config -> Sol.Solution -> SolveM (M.HashMap F.KVar F.Expr)
 solResult cfg = minimizeResult cfg . Sol.result
@@ -203,9 +213,9 @@ ebInhabs s = do
   sats <- mapM checkSat (snd <$> ebRes)
   lift $ writeLoud (show sats)
 
-  -- FIXME: Make a real error message
-  if and sats then return () else error "eb uninhabited"
-  return ebRes
+  return $ if and sats
+    then F.Safe
+    else F.Unsafe (fst <$> ebRes)
 
 --------------------------------------------------------------------------------
 -- | `minimizeResult` transforms each KVar's result by removing
